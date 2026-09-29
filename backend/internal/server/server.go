@@ -11,17 +11,19 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 )
 
 // WebDir holds the built web app; empty serves the API only.
 type WebDir string
 
-func New(keys *auth.Service, graphql *gql.Handler, web WebDir, logger *log.Logger) http.Handler {
+func New(keys *auth.Service, graphql *gql.Handler, agents *mcpapi.Handler, web WebDir, logger *log.Logger) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.Handle("/graphql", cors(authenticate(keys, graphql, logger)))
+	mux.Handle("/mcp", cors(agents))
 	if web != "" {
 		mux.Handle("/", spa(string(web)))
 	}

@@ -35,6 +35,23 @@ curl -s localhost:7400/graphql -H "Authorization: $KEY" -H 'Content-Type: applic
 
 Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: the exact documents [linear-cli](https://github.com/gluonfield/linear-cli) sends, run against the server in `go test`.
 
+## MCP
+
+`/mcp` is a Streamable HTTP MCP server for agents, built on the same service layer as the API. Authenticate with `Authorization: Bearer <key>`. Tools take names rather than ids (teams by key or name, people by name or email, `me`, `none` to clear):
+
+| Tool | Does |
+| --- | --- |
+| `list_teams` | teams with keys, workflow states and usable labels |
+| `list_users`, `list_projects` | people and projects to refer to |
+| `list_issues` | filter by team, state or state type, assignee, project, label, priority, full-text query |
+| `get_issue` | description, sub-issues and comments |
+| `create_issue`, `update_issue` | every property, including moving teams and clearing fields |
+| `add_comment` | markdown comment as the key's user |
+
+```sh
+claude mcp add --transport http jaz-tasks http://localhost:7400/mcp --header "Authorization: Bearer $KEY"
+```
+
 ## Web app
 
 A Linear-style UI built with TanStack Start (SPA mode), TanStack Query, Tailwind v4 and shadcn/ui. It talks to the server only through `/graphql`: list and board views grouped by status, issue pages with activity and comments, inline property pickers, a create dialog (`C`), a command palette (`⌘K`), optimistic updates, and light and dark themes.

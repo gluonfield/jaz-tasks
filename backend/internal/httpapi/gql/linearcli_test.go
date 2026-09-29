@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/postgrestest"
@@ -47,7 +48,7 @@ func newClient(t *testing.T) *client {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
-	srv := httptest.NewServer(server.New(keys, gql.NewHandler(svc, logger), "", logger))
+	srv := httptest.NewServer(server.New(keys, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys), "", logger))
 	t.Cleanup(srv.Close)
 	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}}
 }
@@ -218,5 +219,32 @@ func TestErrorsUseLinearShape(t *testing.T) {
 	_, out = c.do(`mutation { issueUpdate(id: "ENG-1", input: { priority: 9 }) { success } }`, c.key)
 	if len(out.Errors) != 1 || out.Errors[0].Extensions["type"] != "invalid input" {
 		t.Fatalf("invalid input: %+v", out)
+	}
+}
+
+// Nested connections narrow the caller's filter to their owner, with or
+// without a filter argument.
+func TestNestedIssueConnections(t *testing.T) {
+	c := newClient(t)
+	_, out := c.do(`{
+		team(id: "DES") { issues { nodes { identifier } } }
+		viewer { assignedIssues(filter: { state: { type: { eq: "completed" } } }) { nodes { identifier } } }
+		issue(id: "ENG-11") { children { nodes { identifier } } }
+		cycles(filter: { isActive: { eq: true } }) { nodes { issues { nodes { identifier } } } }
+		teams(filter: { key: { eq: "ENG" } }) { nodes { issues(filter: { team: { key: { eq: "DES" } } }) { nodes { identifier } } } }
+	}`, c.key)
+	if len(out.Errors) > 0 {
+		t.Fatalf("errors = %+v", out.Errors)
+	}
+	for path, want := range map[string]any{
+		"team.issues.nodes.#":           5.0,
+		"viewer.assignedIssues.nodes.#": 1.0,
+		"issue.children.nodes.#":        2.0,
+		"cycles.nodes.0.issues.nodes.#": 6.0,
+		"teams.nodes.0.issues.nodes.#":  0.0,
+	} {
+		if got := get(out.Data, path); got != want {
+			t.Errorf("%s = %#v, want %#v", path, got, want)
+		}
 	}
 }

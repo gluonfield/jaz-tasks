@@ -337,45 +337,54 @@ func (c *IDComparator) and(id string) *IDComparator {
 	return &out
 }
 
-// The With* helpers AND a nested connection's owner onto a caller's filter.
+// The With* helpers AND a nested connection's owner onto a caller's filter,
+// which may be nil.
 
 func (f *IssueFilter) WithTeam(id string) *IssueFilter {
-	g, team := deref(f), deref(f.Team)
+	g := deref(f)
+	team := deref(g.Team)
 	team.ID = team.ID.and(id)
 	g.Team = &team
 	return &g
 }
 
 func (f *IssueFilter) WithAssignee(id string) *IssueFilter {
-	g, user := deref(f), deref(f.Assignee)
-	user.ID = user.ID.and(id)
-	g.Assignee = &user
+	g := deref(f)
+	g.Assignee = narrowUser(g.Assignee, id)
 	return &g
 }
 
 func (f *IssueFilter) WithCreator(id string) *IssueFilter {
-	g, user := deref(f), deref(f.Creator)
-	user.ID = user.ID.and(id)
-	g.Creator = &user
+	g := deref(f)
+	g.Creator = narrowUser(g.Creator, id)
 	return &g
 }
 
+func narrowUser(f *UserFilter, id string) *UserFilter {
+	user := deref(f)
+	user.ID = user.ID.and(id)
+	return &user
+}
+
 func (f *IssueFilter) WithProject(id string) *IssueFilter {
-	g, project := deref(f), deref(f.Project)
+	g := deref(f)
+	project := deref(g.Project)
 	project.ID = project.ID.and(id)
 	g.Project = &project
 	return &g
 }
 
 func (f *IssueFilter) WithCycle(id string) *IssueFilter {
-	g, cycle := deref(f), deref(f.Cycle)
+	g := deref(f)
+	cycle := deref(g.Cycle)
 	cycle.ID = cycle.ID.and(id)
 	g.Cycle = &cycle
 	return &g
 }
 
 func (f *IssueFilter) WithParent(id string) *IssueFilter {
-	g, parent := deref(f), deref(f.Parent)
+	g := deref(f)
+	parent := deref(g.Parent)
 	parent.ID = parent.ID.and(id)
 	g.Parent = &parent
 	return &g
