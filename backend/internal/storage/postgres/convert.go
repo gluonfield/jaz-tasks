@@ -2,13 +2,11 @@ package postgres
 
 import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
-	authdb "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/auth"
 	db "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/tracker"
 )
 
 func toWorkspace(r db.Workspace) storage.Workspace          { return storage.Workspace(r) }
 func toUser(r db.User) storage.User                         { return storage.User(r) }
-func toAuthUser(r authdb.User) storage.User                 { return storage.User(r) }
 func toTeam(r db.Team) storage.Team                         { return storage.Team(r) }
 func toState(r db.WorkflowState) storage.WorkflowState      { return storage.WorkflowState(r) }
 func toLabel(r db.IssueLabel) storage.IssueLabel            { return storage.IssueLabel(r) }

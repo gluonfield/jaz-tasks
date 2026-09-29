@@ -43,7 +43,7 @@ func Run(ctx context.Context, store storage.TrackerStore, keys *auth.Service, sv
 		users[u.handle] = created
 	}
 	actor := auth.Actor{UserID: users["mira"].ID, WorkspaceID: workspace.ID}
-	if apiKey, err = keys.CreateKey(ctx, actor.UserID, "Seeded development key", apiKey); err != nil {
+	if apiKey, _, err = keys.CreateKey(ctx, actor.UserID, "Seeded development key", apiKey); err != nil {
 		return Result{}, false, err
 	}
 	if err := populate(ctx, svc, workspace.ID, users, time.Now()); err != nil {

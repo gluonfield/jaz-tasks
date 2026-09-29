@@ -17,7 +17,8 @@ const instructions = `Jaz Tasks is a Linear-style issue tracker. Issues belong t
 identified as ENG-123. Refer to teams, states, people, projects and labels by name; "me" is the
 authenticated user. Call list_teams first to learn team keys, workflow states and labels.`
 
-// Handler serves /mcp. Requests carry the same API keys as /graphql, as Bearer tokens.
+// Handler serves /mcp. Requests carry an OAuth access token or API key as a
+// Bearer token; a 401 points clients at the protected-resource metadata.
 type Handler struct {
 	http.Handler
 }
@@ -40,7 +41,8 @@ func NewHandler(svc *tracker.Service, keys *auth.Service) *Handler {
 		}, nil
 	}
 	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
-	return &Handler{Handler: mcpauth.RequireBearerToken(verify, nil)(streamable)}
+	requireToken := mcpauth.RequireBearerToken(verify, &mcpauth.RequireBearerTokenOptions{ResourceMetadataURL: keys.ResourceMetadataURL("/mcp")})
+	return &Handler{Handler: requireToken(streamable)}
 }
 
 const workspaceKey = "workspace"

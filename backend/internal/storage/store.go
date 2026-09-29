@@ -8,16 +8,12 @@ import (
 var (
 	ErrNotFound = errors.New("not found")
 	ErrConflict = errors.New("already exists")
+	// ErrReused reports a rotated refresh token presented again; its grant is revoked.
+	ErrReused = errors.New("token reused")
 )
 
 // IssueMutation edits a locked issue. A nil history records nothing.
 type IssueMutation func(Issue) (Issue, *NewIssueHistory, error)
-
-type AuthStore interface {
-	UserByAPIKey(ctx context.Context, keyHash []byte) (User, error)
-	CreateAPIKey(ctx context.Context, userID, label string, keyHash []byte) error
-	UsersByEmail(ctx context.Context, email string) ([]User, error)
-}
 
 type TrackerStore interface {
 	CountWorkspaces(ctx context.Context) (int64, error)

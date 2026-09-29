@@ -8,6 +8,50 @@ import (
 	"time"
 )
 
+type APIKey struct {
+	ID        string
+	UserID    string
+	Label     string
+	KeyHash   []byte
+	CreatedAt time.Time
+	Hint      string
+}
+
+type OAuthClient struct {
+	ID           string
+	Name         string
+	RedirectURIs []string
+	CreatedAt    time.Time
+}
+
+type OAuthCode struct {
+	CodeHash      []byte
+	ClientID      string
+	UserID        string
+	RedirectURI   string
+	CodeChallenge string
+	Scope         string
+	ExpiresAt     time.Time
+}
+
+type OAuthGrant struct {
+	ID        string
+	ClientID  string
+	UserID    string
+	Scope     string
+	CreatedAt time.Time
+	RevokedAt *time.Time
+}
+
+type OAuthToken struct {
+	TokenHash []byte
+	GrantID   string
+	Kind      string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	RevokedAt *time.Time
+}
+
 type User struct {
 	ID          string
 	WorkspaceID string
@@ -19,4 +63,12 @@ type User struct {
 	Active      bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+}
+
+type Workspace struct {
+	ID        string
+	Name      string
+	URLKey    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
@@ -41,14 +42,18 @@ type client struct {
 func newClient(t *testing.T) *client {
 	t.Helper()
 	store := postgrestest.New(t)
-	keys := auth.NewService(store)
+	keys := auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"})
 	svc := tracker.NewService(store, "http://tasks.test")
 	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
-	srv := httptest.NewServer(server.New(keys, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys), "", logger))
+	authn, err := authapi.NewHandler(keys, auth.NewOIDC(auth.OIDCConfig{}), false, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys), "", logger))
 	t.Cleanup(srv.Close)
 	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}}
 }

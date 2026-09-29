@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 )
@@ -17,12 +18,15 @@ import (
 // WebDir holds the built web app; empty serves the API only.
 type WebDir string
 
-func New(keys *auth.Service, graphql *gql.Handler, agents *mcpapi.Handler, web WebDir, logger *log.Logger) http.Handler {
+func New(authn *authapi.Handler, graphql *gql.Handler, agents *mcpapi.Handler, web WebDir, logger *log.Logger) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
-	mux.Handle("/graphql", cors(authenticate(keys, graphql, logger)))
+	mux.Handle("/auth/", authn)
+	mux.Handle("/oauth/", cors(authn))
+	mux.Handle("/.well-known/", cors(authn))
+	mux.Handle("/graphql", cors(authenticate(authn, graphql, logger)))
 	mux.Handle("/mcp", cors(agents))
 	if web != "" {
 		mux.Handle("/", spa(string(web)))
@@ -30,16 +34,19 @@ func New(keys *auth.Service, graphql *gql.Handler, agents *mcpapi.Handler, web W
 	return mux
 }
 
-// authenticate resolves the API key and answers failures in GraphQL's error shape.
-func authenticate(keys *auth.Service, next http.Handler, logger *log.Logger) http.Handler {
+// authenticate accepts a session cookie, an OAuth access token or an API key,
+// answering failures in GraphQL's error shape with a pointer to the OAuth
+// protected-resource metadata.
+func authenticate(authn *authapi.Handler, next http.Handler, logger *log.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		actor, err := keys.Authenticate(r.Context(), r.Header.Get("Authorization"))
+		actor, err := authn.Actor(r)
 		if err != nil {
 			status := http.StatusUnauthorized
 			if !errors.Is(err, auth.ErrUnauthenticated) {
 				logger.Error("authenticate", "error", err)
 				status = http.StatusInternalServerError
 			}
+			w.Header().Set("WWW-Authenticate", `Bearer resource_metadata="`+authn.ResourceMetadataURL(r.URL.Path)+`"`)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(status)
 			_ = json.NewEncoder(w).Encode(map[string]any{"errors": []any{map[string]any{
@@ -59,6 +66,7 @@ func cors(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version")
+			w.Header().Set("Access-Control-Expose-Headers", "WWW-Authenticate, Mcp-Session-Id")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 			w.WriteHeader(http.StatusNoContent)
 			return

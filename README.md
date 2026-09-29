@@ -8,25 +8,48 @@ A self-hosted, Linear-like issue tracker. One Go server exposes the task API for
 docker compose up
 ```
 
-This starts Postgres (host port 55432) and the server on http://localhost:7400, which serves both the API and the web app. On first start the server seeds a demo workspace ("Jaz", teams ENG and DES, labels, projects, cycles, issues) and logs an API key:
+This starts Postgres (host port 55432) and the server on http://localhost:7400, which serves both the API and the web app. On first start the server seeds a demo workspace ("Jaz", teams ENG and DES, labels, projects, cycles, issues). Open http://localhost:7400 and choose **Continue as the demo owner**: without an OIDC provider configured, compose enables `DEV_LOGIN`, a one-click sign-in that only works on a localhost `PUBLIC_URL`.
 
-```
-INFO seeded demo workspace api_key=jt_api_...
-```
+## Authentication
 
-Set `SEED_API_KEY` in `.env` (see `.env.example`) to pin the key before the first start. Lost the key? Mint another for any user:
+- **People** sign in with OpenID Connect (Google first, but any provider: Microsoft, Okta, Keycloak, Cognito). The server keeps a session in Postgres behind an HttpOnly, SameSite=Lax cookie.
+- **Agents, MCP clients and Jaz** use OAuth 2.1: Jaz Tasks is its own authorization server with protected-resource metadata (RFC 9728, advertised in `WWW-Authenticate` on every 401 from `/graphql` and `/mcp`), authorization-server metadata (RFC 8414), dynamic client registration (RFC 7591), authorization code with PKCE S256, refresh token rotation with reuse detection, and revocation (RFC 7009). Tokens are opaque and stored hashed. The same access token works for `/graphql` and `/mcp`.
+- **Scripts** can use personal API keys, created and revoked in Settings, sent like Linear's in a raw `Authorization` header. The seed also creates one for the demo owner and logs it (`SEED_API_KEY` pins it); `docker compose exec server /app/server apikey <email>` mints another.
+
+Configuration (see `.env.example`):
+
+| Variable | Purpose |
+| --- | --- |
+| `PUBLIC_URL` | Base URL of the deployment; source of the OIDC redirect URI (`PUBLIC_URL/auth/callback`), OAuth issuer, metadata URLs and cookie domain |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | OpenID Connect provider; keys come from its discovery document |
+| `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS` | Who may sign in for the first time; with both empty only the first sign-in (the owner) and existing users get in. `email_verified` is always required |
+| `DEV_LOGIN` | `1` enables one-click sign-in as the seeded owner when OIDC is unset; refused unless `PUBLIC_URL` is localhost |
+| `DATABASE_URL`, `ADDR`, `WEB_DIR`, `SEED_API_KEY`, `LOG_LEVEL` | Server basics |
+
+**Google:** in Google Cloud Console, APIs & Services > Credentials, create an OAuth client ID of type *Web application* and add `<PUBLIC_URL>/auth/callback` as an authorized redirect URI. Then set:
 
 ```sh
-docker compose exec server /app/server apikey mira@jaz.local
+PUBLIC_URL=https://tasks.example.com
+OIDC_ISSUER=https://accounts.google.com
+OIDC_CLIENT_ID=1234-abc.apps.googleusercontent.com
+OIDC_CLIENT_SECRET=GOCSPX-...
+ALLOWED_EMAIL_DOMAINS=example.com
+DEV_LOGIN=0
 ```
 
-Open http://localhost:7400 and paste the key to sign in.
+**AWS Cognito:** create an app client with a secret, enable the authorization code grant with the `openid`, `email` and `profile` scopes, and add `<PUBLIC_URL>/auth/callback` as a callback URL:
+
+```sh
+OIDC_ISSUER=https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_AbCdEf123
+OIDC_CLIENT_ID=...
+OIDC_CLIENT_SECRET=...
+```
 
 ## API
 
 `POST /graphql` implements the subset of [Linear's GraphQL schema](https://github.com/linear/linear/blob/master/packages/sdk/src/schema.graphql) that existing Linear clients use, with the same names and shapes: `issues`, `issue`, `searchIssues`, `issueCreate`, `issueUpdate`, `issueBatchCreate`, `issueArchive`, `issueDelete`, `teams`, `workflowStates`, `users`, `viewer`, `projects`, `cycles`, `issueLabels`, `commentCreate`, connection shapes with `nodes`/`pageInfo`, identifiers like `ENG-123`, Linear's filter inputs and error format. The full supported surface is `backend/internal/httpapi/gql/schema.graphqls`; anything else fails validation.
 
-Authenticate like Linear: `Authorization: <key>` or `Authorization: Bearer <key>`.
+Authenticate with an OAuth access token (`Authorization: Bearer <token>`) or, like Linear, a personal API key (`Authorization: <key>`).
 
 ```sh
 curl -s localhost:7400/graphql -H "Authorization: $KEY" -H 'Content-Type: application/json' \
@@ -37,7 +60,7 @@ Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: t
 
 ## MCP
 
-`/mcp` is a Streamable HTTP MCP server for agents, built on the same service layer as the API. Authenticate with `Authorization: Bearer <key>`. Tools take names rather than ids (teams by key or name, people by name or email, `me`, `none` to clear):
+`/mcp` is a Streamable HTTP MCP server for agents, built on the same service layer as the API. MCP clients that support OAuth discover the authorization server from the 401 and walk you through sign-in and consent; others can send an API key as `Authorization: Bearer <key>`. Tools take names rather than ids (teams by key or name, people by name or email, `me`, `none` to clear):
 
 | Tool | Does |
 | --- | --- |
@@ -49,7 +72,7 @@ Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: t
 | `add_comment` | markdown comment as the key's user |
 
 ```sh
-claude mcp add --transport http jaz-tasks http://localhost:7400/mcp --header "Authorization: Bearer $KEY"
+claude mcp add --transport http jaz-tasks http://localhost:7400/mcp
 ```
 
 ## Web app
@@ -91,7 +114,8 @@ backend/
   internal/server       HTTP shell: routing, auth, CORS, web app
   internal/httpapi/gql  Linear-compatible GraphQL (gqlgen)
   internal/tracker      issue-tracking domain service
-  internal/auth         API keys
+  internal/auth         sessions, OIDC sign-in, OAuth 2.1 grants, API keys
+  internal/httpapi/authapi  sign-in, OAuth endpoints and metadata, settings endpoints
   internal/seed         demo workspace
   internal/storage      storage contracts; postgres/ holds migrations, sqlc queries and generated code
 frontend/

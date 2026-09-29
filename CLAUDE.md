@@ -36,6 +36,15 @@
 - Services take the actor explicitly (via `Scope`); services never read HTTP headers.
 - Keep multi-record writes atomic in storage methods. `UpdateIssue` locks the row and runs the service's mutation inside the transaction.
 
+## Authentication
+
+- `internal/auth` owns identity. People sign in with OIDC and hold a server-side session cookie; agents and apps get OAuth 2.1 tokens from our own authorization server; personal API keys are a secondary path for scripts. All three resolve to the same `auth.Actor`.
+- Tokens, keys, codes and session ids are opaque random values; store only their SHA-256. Never log them.
+- `PUBLIC_URL` is the single source for the OIDC redirect URI, the OAuth issuer, metadata URLs and the cookie domain. Do not add parallel settings.
+- Every 401 from a protected resource carries `WWW-Authenticate: Bearer resource_metadata=...`. Keep `/mcp` on the go-sdk bearer middleware.
+- Settings endpoints that mint or revoke credentials require a browser session, never a bearer token.
+- Development login is only for a loopback `PUBLIC_URL` without OIDC; keep it impossible to enable elsewhere.
+
 ## Postgres and sqlc
 
 - Migrations live in `backend/internal/storage/postgres/migrations` (goose, embedded, run at startup). Never edit a migration that has shipped; add a new one.

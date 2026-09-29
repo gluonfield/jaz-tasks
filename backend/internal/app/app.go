@@ -9,10 +9,12 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
@@ -27,9 +29,13 @@ type Config struct {
 	PublicURL   string
 	WebDir      string
 	SeedAPIKey  string
+	OIDC        auth.OIDCConfig
+	Auth        auth.Config
+	DevLogin    authapi.DevLogin
 }
 
-// ParseConfig reads flags, each defaulting to an environment variable.
+// ParseConfig reads flags, each defaulting to an environment variable, and
+// the auth settings, which come from the environment only.
 func ParseConfig(args []string) (Config, error) {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	cfg := Config{}
@@ -37,8 +43,34 @@ func ParseConfig(args []string) (Config, error) {
 	fs.StringVar(&cfg.DatabaseURL, "database-url", env("DATABASE_URL", "postgres://jaztasks:jaztasks@localhost:55432/jaztasks?sslmode=disable"), "Postgres URL (DATABASE_URL)")
 	fs.StringVar(&cfg.PublicURL, "public-url", env("PUBLIC_URL", "http://localhost:7400"), "URL the web app is reachable at (PUBLIC_URL)")
 	fs.StringVar(&cfg.WebDir, "web-dir", env("WEB_DIR", ""), "directory of the built web app (WEB_DIR)")
-	cfg.SeedAPIKey = os.Getenv("SEED_API_KEY")
-	return cfg, fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return cfg, err
+	}
+	cfg.PublicURL = strings.TrimRight(strings.TrimSpace(cfg.PublicURL), "/")
+	cfg.SeedAPIKey = strings.TrimSpace(os.Getenv("SEED_API_KEY"))
+	cfg.OIDC = auth.OIDCConfig{
+		Issuer:       strings.TrimSpace(os.Getenv("OIDC_ISSUER")),
+		ClientID:     strings.TrimSpace(os.Getenv("OIDC_CLIENT_ID")),
+		ClientSecret: strings.TrimSpace(os.Getenv("OIDC_CLIENT_SECRET")),
+		RedirectURL:  cfg.PublicURL + "/auth/callback",
+	}
+	cfg.Auth = auth.Config{
+		PublicURL:           cfg.PublicURL,
+		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
+		AllowedEmails:       list(os.Getenv("ALLOWED_EMAILS")),
+	}
+	cfg.DevLogin = os.Getenv("DEV_LOGIN") == "1"
+	return cfg, nil
+}
+
+func list(raw string) []string {
+	var out []string
+	for _, item := range strings.Split(raw, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
 }
 
 func env(key, fallback string) string {
@@ -50,11 +82,12 @@ func env(key, fallback string) string {
 
 func Options(cfg Config) fx.Option {
 	return fx.Options(
-		fx.Supply(cfg, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
+		fx.Supply(cfg, cfg.Auth, cfg.OIDC, cfg.DevLogin, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
 		fx.Provide(
 			NewLogger,
 			fx.Annotate(OpenStore, fx.As(fx.Self()), fx.As(new(storage.TrackerStore)), fx.As(new(storage.AuthStore))),
 			auth.NewService,
+			auth.NewOIDC,
 			tracker.NewService,
 		),
 		HTTPModule(),
@@ -122,5 +155,5 @@ func MintAPIKey(ctx context.Context, cfg Config, email string) (string, error) {
 		return "", err
 	}
 	defer store.Close()
-	return auth.NewService(store).CreateKeyForEmail(ctx, email)
+	return auth.NewService(store, cfg.Auth).CreateKeyForEmail(ctx, email)
 }

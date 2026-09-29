@@ -1,18 +1,20 @@
+// Package auth owns identity: sessions for people, OAuth 2.1 grants for
+// agents and apps, and personal API keys for scripts.
 package auth
 
 import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"errors"
-	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 )
 
-var ErrUnauthenticated = errors.New("authentication required: send an API key in the Authorization header")
+var ErrUnauthenticated = errors.New("authentication required: sign in, or send an OAuth access token or API key in the Authorization header")
 
 // Actor is the authenticated user and the workspace every request is scoped to.
 type Actor struct {
@@ -20,59 +22,65 @@ type Actor struct {
 	WorkspaceID string
 }
 
+func actorOf(user storage.User) Actor {
+	return Actor{UserID: user.ID, WorkspaceID: user.WorkspaceID}
+}
+
+type Config struct {
+	// PublicURL is the issuer of OAuth tokens and the base of every auth URL.
+	PublicURL           string
+	AllowedEmailDomains []string
+	AllowedEmails       []string
+}
+
 type Service struct {
 	store storage.AuthStore
+	cfg   Config
+	now   func() time.Time
 }
 
-func NewService(store storage.AuthStore) *Service {
-	return &Service{store: store}
+func NewService(store storage.AuthStore, cfg Config) *Service {
+	cfg.PublicURL = strings.TrimRight(cfg.PublicURL, "/")
+	return &Service{store: store, cfg: cfg, now: time.Now}
 }
 
-// Authenticate accepts an Authorization header carrying a raw key or a Bearer key.
+const (
+	apiKeyPrefix       = "jt_api_"
+	accessTokenPrefix  = "jt_at_"
+	refreshTokenPrefix = "jt_rt_"
+)
+
+// Authenticate resolves an Authorization header carrying an API key, raw or
+// as a Bearer token like Linear's, or a Bearer OAuth access token.
 func (s *Service) Authenticate(ctx context.Context, header string) (Actor, error) {
-	key := strings.TrimSpace(header)
-	if scheme, token, ok := strings.Cut(key, " "); ok && strings.EqualFold(scheme, "Bearer") {
-		key = strings.TrimSpace(token)
+	token := strings.TrimSpace(header)
+	if scheme, value, ok := strings.Cut(token, " "); ok && strings.EqualFold(scheme, "Bearer") {
+		token = strings.TrimSpace(value)
 	}
-	if key == "" {
+	var user storage.User
+	var err error
+	switch {
+	case strings.HasPrefix(token, accessTokenPrefix):
+		user, err = s.store.UserByAccessToken(ctx, hash(token))
+	case token != "":
+		user, err = s.store.UserByAPIKey(ctx, hash(token))
+	default:
 		return Actor{}, ErrUnauthenticated
 	}
-	user, err := s.store.UserByAPIKey(ctx, hash(key))
 	if errors.Is(err, storage.ErrNotFound) {
 		return Actor{}, ErrUnauthenticated
 	}
-	if err != nil {
-		return Actor{}, err
-	}
-	return Actor{UserID: user.ID, WorkspaceID: user.WorkspaceID}, nil
+	return actorOf(user), err
 }
 
-// CreateKey stores the given key for the user, generating one when key is empty.
-func (s *Service) CreateKey(ctx context.Context, userID, label, key string) (string, error) {
-	if key == "" {
-		secret := make([]byte, 20)
-		if _, err := rand.Read(secret); err != nil {
-			return "", err
-		}
-		key = "jt_api_" + hex.EncodeToString(secret)
-	}
-	return key, s.store.CreateAPIKey(ctx, userID, label, hash(key))
+func secret(prefix string) string {
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	return prefix + base64.RawURLEncoding.EncodeToString(b)
 }
 
-// CreateKeyForEmail mints a key for the one active user with that email.
-func (s *Service) CreateKeyForEmail(ctx context.Context, email string) (string, error) {
-	users, err := s.store.UsersByEmail(ctx, email)
-	if err != nil {
-		return "", err
-	}
-	if len(users) != 1 {
-		return "", fmt.Errorf("%d active users have email %q", len(users), email)
-	}
-	return s.CreateKey(ctx, users[0].ID, "Minted from the command line", "")
-}
-
-func hash(key string) []byte {
-	sum := sha256.Sum256([]byte(key))
+func hash(token string) []byte {
+	sum := sha256.Sum256([]byte(token))
 	return sum[:]
 }
 

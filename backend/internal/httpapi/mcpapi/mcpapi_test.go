@@ -30,7 +30,7 @@ func connect(t *testing.T) (*mcp.ClientSession, string) {
 	t.Helper()
 	ctx := context.Background()
 	store := postgrestest.New(t)
-	keys := auth.NewService(store)
+	keys := auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"})
 	svc := tracker.NewService(store, "http://tasks.test")
 	result, _, err := seed.Run(ctx, store, keys, svc, "")
 	if err != nil {
