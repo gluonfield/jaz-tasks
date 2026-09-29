@@ -1,7 +1,7 @@
-import { CalendarDays, CircleDashed, Hexagon, RefreshCcw, Tag, Triangle } from 'lucide-react'
+import { CalendarDays, CircleDashed, CircleSlash, GitFork, Hexagon, RefreshCcw, Tag, Triangle } from 'lucide-react'
 import { type ReactNode, forwardRef, useState } from 'react'
 import { dueStatus, entityColors, formatDay, priorities, toDateInput, workflowOrder } from '@/lib/issues'
-import { useCatalogMaps, useCreateLabel, useUpdateIssue } from '@/lib/queries'
+import { useCatalogMaps, useCreateLabel, useIssues, useSubIssueProgress, useUpdateIssue } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
 import { type PickerKind, setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
@@ -286,6 +286,70 @@ export function ProjectPicker({ value, onChange, teamId, variant, issueId, class
   )
 }
 
+// ParentPicker makes the issue a sub-issue of another. It leaves out the issue
+// itself and everything below it, which the server would reject as a loop.
+export function ParentPicker({ value, onChange, variant, issueId, className }: Props<string | null>) {
+  const { data: issues = [] } = useIssues()
+  const [open, setOpen] = usePickerOpen('parent', issueId)
+  const current = value ? issues.find((i) => i.id === value) : null
+  const below = new Set(issueId ? [issueId] : [])
+  for (let grew = true; grew; ) {
+    grew = false
+    for (const issue of issues) {
+      if (issue.parentId && below.has(issue.parentId) && !below.has(issue.id)) {
+        below.add(issue.id)
+        grew = true
+      }
+    }
+  }
+  const options: PickerOption[] = [
+    { value: '', label: 'No parent', icon: <CircleSlash className="size-3.5 text-ink-3" /> },
+    ...issues
+      .filter((i) => !below.has(i.id))
+      .map((i) => ({
+        value: i.id,
+        label: i.title,
+        keywords: [i.identifier],
+        icon: <span className="w-12 shrink-0 text-[12px] tabular-nums text-ink-3">{i.identifier}</span>,
+      })),
+  ]
+  return (
+    <Picker
+      open={open}
+      onOpenChange={setOpen}
+      placeholder="Set parent issue..."
+      options={options}
+      selected={[value ?? '']}
+      onSelect={(v) => onChange(v || null)}
+      trigger={
+        <PropertyButton
+          variant={variant}
+          className={className}
+          title="Set parent issue"
+          icon={<GitFork className="size-3.5 text-ink-3" />}
+          label={current ? `${current.identifier} ${current.title}` : 'Set parent'}
+          muted={!current}
+        />
+      }
+    />
+  )
+}
+
+// SubIssueCount shows a parent's progress through its sub-issues.
+export function SubIssueCount({ issueId, className }: { issueId: string; className?: string }) {
+  const progress = useSubIssueProgress(issueId)
+  if (!progress) {
+    return null
+  }
+  const type = progress.done === progress.total ? 'completed' : progress.done ? 'started' : 'unstarted'
+  return (
+    <span className={cn('inline-flex shrink-0 items-center gap-1 text-[12px] tabular-nums text-ink-3', className)} title="Sub-issues done">
+      <StatusIcon type={type} color="var(--color-ink-3)" progress={progress.done / progress.total} className="size-3" />
+      {progress.done}/{progress.total}
+    </span>
+  )
+}
+
 export function cycleName(cycle: { number: number; name: string | null }) {
   return cycle.name ?? `Cycle ${cycle.number}`
 }
@@ -435,6 +499,8 @@ export function ShortcutPicker({ issue, visible }: { issue: Issue; visible: Pick
       return <LabelsPicker {...shared} value={issue.labelIds} onChange={(labelIds) => patch({ labelIds })} />
     case 'project':
       return <ProjectPicker {...shared} value={issue.projectId} onChange={(projectId) => patch({ projectId })} />
+    case 'parent':
+      return <ParentPicker {...shared} value={issue.parentId} onChange={(parentId) => patch({ parentId })} />
     case 'cycle':
       return <CyclePicker {...shared} value={issue.cycleId} onChange={(cycleId) => patch({ cycleId })} />
     case 'estimate':

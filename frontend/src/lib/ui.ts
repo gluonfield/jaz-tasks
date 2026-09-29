@@ -1,11 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { readItem, writeItem } from './storage'
-import type { IssuePatch } from './types'
+import type { Issue, IssuePatch } from './types'
 
 // Shell-wide UI state shared by shortcuts, the palette and the views.
 type UIState = {
   createOpen: boolean
-  createDefaults: IssuePatch & { teamId?: string }
+  // childId makes the new issue the parent of an existing one.
+  createDefaults: IssuePatch & { teamId?: string; childId?: string }
   paletteOpen: boolean
   // focusedIssueId is the list/board row keyboard shortcuts act on.
   focusedIssueId: string | null
@@ -13,7 +14,7 @@ type UIState = {
   picker: { kind: PickerKind; issueId: string } | null
 }
 
-export type PickerKind = 'status' | 'priority' | 'assignee' | 'labels' | 'project' | 'cycle' | 'estimate' | 'dueDate'
+export type PickerKind = 'status' | 'priority' | 'assignee' | 'labels' | 'project' | 'parent' | 'cycle' | 'estimate' | 'dueDate'
 
 let state: UIState = { createOpen: false, createDefaults: {}, paletteOpen: false, focusedIssueId: null, picker: null }
 const listeners = new Set<() => void>()
@@ -40,6 +41,11 @@ export function useUI<T>(select: (s: UIState) => T): T {
 
 export function openCreateIssue(defaults: UIState['createDefaults'] = {}) {
   setUI({ createOpen: true, createDefaults: defaults })
+}
+
+// openCreateRelated starts an issue in the same team, project and cycle as issue.
+export function openCreateRelated(issue: Issue, defaults: UIState['createDefaults'] = {}) {
+  openCreateIssue({ teamId: issue.teamId, projectId: issue.projectId, cycleId: issue.cycleId, ...defaults })
 }
 
 // usePersistent keeps a small per-view preference (layout, ordering) in localStorage.

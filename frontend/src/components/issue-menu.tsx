@@ -1,4 +1,4 @@
-import { Copy, Hexagon, Link2, Tag } from 'lucide-react'
+import { CircleDot, Copy, CornerDownRight, CornerLeftUp, GitFork, Hexagon, Link2, SquarePlus, Tag } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   ContextMenu,
@@ -8,6 +8,7 @@ import {
   ContextMenuRadioGroup,
   ContextMenuRadioItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuSub,
   ContextMenuSubContent,
   ContextMenuSubTrigger,
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/context-menu'
 import { useCatalogMaps, useIssuePatch } from '@/lib/queries'
 import type { Issue } from '@/lib/types'
+import { openCreateRelated, setUI } from '@/lib/ui'
 import { Avatar, EntityIcon, PriorityIcon } from './icons'
 import type { PickerOption } from './picker'
 import { priorityOptions, useAssigneeOptions, useLabelOptions, useProjectOptions, useStateIcon, useStatusOptions } from './properties'
@@ -83,6 +85,32 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
           value={issue.projectId ?? ''}
           onChange={(projectId) => patch({ projectId: projectId || null })}
         />
+        <ContextMenuItem className="gap-2" onSelect={() => setUI({ picker: { kind: 'parent', issueId: issue.id } })}>
+          <GitFork className="size-3.5 text-ink-3" />
+          Set parent issue…
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="gap-2">
+            <SquarePlus className="size-3.5 text-ink-3" />
+            Create related
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="w-48">
+            <ContextMenuItem onSelect={() => openCreateRelated(issue)}>
+              <CircleDot className="size-3.5 text-ink-3" />
+              Issue…
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => openCreateRelated(issue, { parentId: issue.id })}>
+              <CornerDownRight className="size-3.5 text-ink-3" />
+              Sub-issue…
+              <ContextMenuShortcut>⌘⇧O</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem onSelect={() => openCreateRelated(issue, { childId: issue.id })}>
+              <CornerLeftUp className="size-3.5 text-ink-3" />
+              Parent issue…
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(issue.identifier)}>
           <Copy className="size-3.5 text-ink-3" />

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useArchiveIssue, useCatalogMaps, useIssueDetail, useIssuePatch, useIssues } from '@/lib/queries'
 import type { Issue, IssueDetail } from '@/lib/types'
-import { openCreateIssue, setUI } from '@/lib/ui'
+import { openCreateRelated, setUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { Activity } from './activity'
 import { Avatar, LabelDot, TeamBadge } from './icons'
@@ -17,6 +17,7 @@ import {
   DueDatePicker,
   EstimatePicker,
   LabelsPicker,
+  ParentPicker,
   PriorityPicker,
   ProjectPicker,
   StatusPicker,
@@ -225,7 +226,7 @@ function SubIssues({ issue }: { issue: Issue }) {
           </span>
         )}
         <button
-          onClick={() => openCreateIssue({ teamId: issue.teamId, parentId: issue.id, projectId: issue.projectId, cycleId: issue.cycleId })}
+          onClick={() => openCreateRelated(issue, { parentId: issue.id })}
           className="ml-auto flex h-6 items-center gap-1 rounded-[5px] px-1.5 text-[12.5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink"
         >
           <Plus className="size-3.5" /> Add sub-issue
@@ -300,6 +301,9 @@ function Properties({ issue }: { issue: Issue }) {
         </Row>
         <Row label="Project">
           <ProjectPicker {...shared} value={issue.projectId} onChange={(projectId) => patch({ projectId })} />
+        </Row>
+        <Row label="Parent">
+          <ParentPicker {...shared} issueId={issue.id} value={issue.parentId} onChange={(parentId) => patch({ parentId })} />
         </Row>
         {hasCycles && (
           <Row label="Cycle">

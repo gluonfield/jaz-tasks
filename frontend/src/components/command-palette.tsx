@@ -1,13 +1,13 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Command as CommandPrimitive } from 'cmdk'
-import { ArrowRight, Box, CircleDot, Copy, Inbox, Layers, Monitor, Moon, SquarePen, Sun, Tag, UserRound, UserRoundCheck } from 'lucide-react'
+import { ArrowRight, Box, CircleDot, Copy, CornerDownRight, Inbox, Layers, Monitor, Moon, SquarePen, Sun, Tag, UserRound, UserRoundCheck } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { priorities, workflowOrder } from '@/lib/issues'
 import { useCatalogMaps, useIssues, useUpdateIssue } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
 import type { IssuePatch } from '@/lib/types'
-import { getUI, openCreateIssue, setUI, useUI } from '@/lib/ui'
+import { getUI, openCreateIssue, openCreateRelated, setUI, useUI } from '@/lib/ui'
 import { Avatar, LabelDot, PriorityIcon } from './icons'
 import { Kbd } from './kbd'
 import { useStateIcon } from './properties'
@@ -137,6 +137,16 @@ function Palette() {
                 </Item>
                 <Item icon={<Tag />} shortcut="L" onSelect={() => open('labels')}>
                   Change labels...
+                </Item>
+                <Item
+                  icon={<CornerDownRight />}
+                  shortcut="⌘ ⇧ O"
+                  onSelect={() => {
+                    close()
+                    openCreateRelated(focused, { parentId: focused.id })
+                  }}
+                >
+                  Create sub-issue
                 </Item>
                 <Item icon={<ArrowRight />} onSelect={() => go(`/issue/${focused.identifier}`)}>
                   Open issue

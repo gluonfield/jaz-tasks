@@ -22,7 +22,7 @@ import { openCreateIssue, setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon, LabelDot } from './icons'
 import { type IssueGroup, useListNavigation } from './issue-view'
-import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, useStateIcon } from './properties'
+import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, SubIssueCount, useStateIcon } from './properties'
 import { IssueContextMenu } from './issue-menu'
 
 const toColumns = (groups: IssueGroup[]): Record<string, string[]> => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => i.id)]))
@@ -229,6 +229,7 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-1">
           <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
+          <SubIssueCount issueId={issue.id} className="h-[22px] rounded-full border border-border px-2" />
           {issueLabels.map((label) => (
             <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
               <LabelDot color={label.color} />

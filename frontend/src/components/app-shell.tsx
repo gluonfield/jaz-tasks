@@ -1,8 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { type ReactNode, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { useCatalog } from '@/lib/queries'
-import { type PickerKind, getUI, openCreateIssue, setUI } from '@/lib/ui'
+import type { Issue } from '@/lib/types'
+import { type PickerKind, getUI, openCreateIssue, openCreateRelated, setUI } from '@/lib/ui'
 import { CommandPalette } from './command-palette'
 import { CreateIssueDialog } from './create-issue'
 import { isTyping } from './issue-view'
@@ -22,6 +24,7 @@ export function useRouteTeamId() {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const teamId = useRouteTeamId()
+  const client = useQueryClient()
 
   useEffect(() => {
     let pendingG = false
@@ -29,6 +32,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setUI({ paletteOpen: !getUI().paletteOpen })
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'o' && !getUI().createOpen && !getUI().paletteOpen) {
+        const issue = client.getQueryData<Issue[]>(['issues'])?.find((i) => i.id === getUI().focusedIssueId)
+        if (issue) {
+          e.preventDefault()
+          openCreateRelated(issue, { parentId: issue.id })
+        }
         return
       }
       if (isTyping(e) || e.metaKey || e.ctrlKey || e.altKey || getUI().createOpen || getUI().paletteOpen) {
@@ -59,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [navigate, teamId])
+  }, [client, navigate, teamId])
 
   return (
     <div className="flex h-full min-h-0">

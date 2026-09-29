@@ -1,4 +1,4 @@
-import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type QueryClient, queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { gql } from './api'
 import type { Catalog, Comment, HistoryEntry, Issue, IssueDetail, IssuePatch } from './types'
@@ -126,8 +126,46 @@ async function fetchIssues(): Promise<Issue[]> {
   return issues
 }
 
+const issuesListQuery = queryOptions({ queryKey: ['issues'], queryFn: fetchIssues, refetchInterval: 20_000 })
+
 export function useIssues() {
-  return useQuery({ queryKey: ['issues'], queryFn: fetchIssues, refetchInterval: 20_000 })
+  return useQuery(issuesListQuery)
+}
+
+export type SubIssueProgress = { done: number; total: number }
+
+const progressByList = new WeakMap<Issue[], { catalog?: Catalog; counts: Map<string, SubIssueProgress> }>()
+
+// useSubIssueProgress counts a parent's finished and total sub-issues. Counts
+// are built once per issue list and catalog, and a row re-renders only when
+// its own count changes.
+export function useSubIssueProgress(issueId: string): SubIssueProgress | undefined {
+  const { catalog, states } = useCatalogMaps()
+  const { data } = useQuery({
+    ...issuesListQuery,
+    select: (issues: Issue[]) => {
+      let cached = progressByList.get(issues)
+      if (!cached || cached.catalog !== catalog) {
+        const counts = new Map<string, SubIssueProgress>()
+        for (const issue of issues) {
+          if (!issue.parentId) {
+            continue
+          }
+          const progress = counts.get(issue.parentId) ?? { done: 0, total: 0 }
+          const type = states.get(issue.stateId)?.type
+          progress.total++
+          if (type === 'completed' || type === 'canceled') {
+            progress.done++
+          }
+          counts.set(issue.parentId, progress)
+        }
+        cached = { catalog, counts }
+        progressByList.set(issues, cached)
+      }
+      return cached.counts.get(issueId)
+    },
+  })
+  return data
 }
 
 const issueDetailQuery = /* GraphQL */ `

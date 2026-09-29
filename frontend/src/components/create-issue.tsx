@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { workflowOrder } from '@/lib/issues'
-import { type IssueDraft, useCatalog, useCreateIssue } from '@/lib/queries'
+import { type IssueDraft, useCatalog, useCreateIssue, useIssues, useUpdateIssue } from '@/lib/queries'
 import { setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { TeamBadge } from './icons'
@@ -16,13 +16,14 @@ import {
   DueDatePicker,
   EstimatePicker,
   LabelsPicker,
+  ParentPicker,
   PriorityPicker,
   ProjectPicker,
   StatusPicker,
 } from './properties'
 
 type Draft = Required<Pick<IssueDraft, 'teamId' | 'title' | 'stateId' | 'priority' | 'labelIds'>> &
-  Pick<IssueDraft, 'description' | 'assigneeId' | 'projectId' | 'cycleId' | 'estimate' | 'dueDate' | 'parentId'>
+  Pick<IssueDraft, 'description' | 'assigneeId' | 'projectId' | 'cycleId' | 'estimate' | 'dueDate' | 'parentId'> & { childId?: string }
 
 export function CreateIssueDialog() {
   const open = useUI((s) => s.createOpen)
@@ -43,6 +44,8 @@ function CreateIssueForm() {
   const defaults = useUI((s) => s.createDefaults)
   const { data: catalog } = useCatalog()
   const create = useCreateIssue()
+  const update = useUpdateIssue()
+  const { data: issues = [] } = useIssues()
   const [createMore, setCreateMore] = useState(false)
   const [teamOpen, setTeamOpen] = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
@@ -60,6 +63,8 @@ function CreateIssueForm() {
   }))
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }))
   const team = teams.find((t) => t.id === draft.teamId)
+  const parent = issues.find((i) => i.id === draft.parentId)
+  const child = issues.find((i) => i.id === draft.childId)
 
   useEffect(() => titleRef.current?.focus(), [])
 
@@ -68,7 +73,12 @@ function CreateIssueForm() {
       return
     }
     try {
-      const issue = await create.mutateAsync({ ...draft, title: draft.title.trim() })
+      const { childId, ...input } = draft
+      const issue = await create.mutateAsync({ ...input, title: input.title.trim() })
+      if (childId) {
+        await update.mutateAsync({ id: childId, patch: { parentId: issue.id } })
+        set({ childId: undefined })
+      }
       toast(`${issue.identifier} created`, {
         description: issue.title,
         action: { label: 'View', onClick: () => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } }) },
@@ -113,7 +123,15 @@ function CreateIssueForm() {
           }
         />
         <ChevronRight className="size-3 text-ink-3" />
-        <DialogTitle className="text-[12.5px] font-normal text-ink-2">New issue</DialogTitle>
+        {parent && (
+          <>
+            <span className="text-ink-2 tabular-nums">{parent.identifier}</span>
+            <ChevronRight className="size-3 text-ink-3" />
+          </>
+        )}
+        <DialogTitle className="text-[12.5px] font-normal text-ink-2">
+          {parent ? 'New sub-issue' : child ? `New parent of ${child.identifier}` : 'New issue'}
+        </DialogTitle>
         <button
           type="button"
           aria-label="Close"
@@ -148,6 +166,7 @@ function CreateIssueForm() {
         <CyclePicker variant="chip" value={draft.cycleId ?? null} onChange={(cycleId) => set({ cycleId })} teamId={draft.teamId} />
         <EstimatePicker variant="chip" value={draft.estimate ?? null} onChange={(estimate) => set({ estimate })} teamId={draft.teamId} />
         <DueDatePicker variant="chip" value={draft.dueDate ?? null} onChange={(dueDate) => set({ dueDate })} teamId={draft.teamId} />
+        {parent && <ParentPicker variant="chip" value={parent.id} onChange={(parentId) => set({ parentId })} teamId={draft.teamId} />}
       </div>
       <div className="flex items-center justify-end gap-3 border-t border-border px-4 py-2.5">
         <label className="flex cursor-default items-center gap-2 text-[12.5px] text-ink-2 select-none">

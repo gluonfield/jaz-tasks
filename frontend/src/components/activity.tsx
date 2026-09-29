@@ -1,7 +1,7 @@
 import { ArrowUp, Trash2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { formatDay, priorities, timeAgo } from '@/lib/issues'
-import { useCatalogMaps, useCreateComment, useDeleteComment } from '@/lib/queries'
+import { useCatalogMaps, useCreateComment, useDeleteComment, useIssues } from '@/lib/queries'
 import type { Comment, HistoryEntry, IssueDetail } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Avatar, EntityIcon, LabelDot, PriorityIcon } from './icons'
@@ -58,6 +58,7 @@ function Strong({ children }: { children: ReactNode }) {
 
 function HistoryItem({ entry }: { entry: HistoryEntry }) {
   const { states, users, labels, projects, cycles, teams } = useCatalogMaps()
+  const { data: issues = [] } = useIssues()
   const stateIcon = useStateIcon()
   const lines: { icon?: ReactNode; text: ReactNode }[] = []
   const state = (id: string | null) => (id ? states.get(id) : undefined)
@@ -160,7 +161,14 @@ function HistoryItem({ entry }: { entry: HistoryEntry }) {
     lines.push({ text: entry.toDueDate ? <>set due date to <Strong>{formatDay(entry.toDueDate)}</Strong></> : 'removed the due date' })
   }
   if (entry.fromParentId !== entry.toParentId) {
-    lines.push({ text: entry.toParentId ? 'made this a sub-issue' : 'removed the parent issue' })
+    const parent = issues.find((i) => i.id === (entry.toParentId ?? entry.fromParentId))?.identifier
+    lines.push({
+      text: entry.toParentId ? (
+        <>made this a sub-issue{parent && <> of <Strong>{parent}</Strong></>}</>
+      ) : (
+        <>removed the parent issue {parent && <Strong>{parent}</Strong>}</>
+      ),
+    })
   }
   if (entry.toTeamId) {
     lines.push({

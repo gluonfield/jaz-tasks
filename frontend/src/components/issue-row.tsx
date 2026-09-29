@@ -7,7 +7,7 @@ import { setUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon, LabelDot } from './icons'
 import { IssueContextMenu } from './issue-menu'
-import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, StatusPicker } from './properties'
+import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, StatusPicker, SubIssueCount } from './properties'
 
 export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issue; focused: boolean }) {
   const navigate = useNavigate()
@@ -34,7 +34,10 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
         <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} issueId={issue.id} />
         <span className="w-[62px] shrink-0 truncate text-[12.5px] text-ink-3">{issue.identifier}</span>
         <StatusPicker variant="icon" value={issue.stateId} onChange={(stateId) => patch({ stateId })} teamId={issue.teamId} issueId={issue.id} className="-ml-1" />
-        <span className={cn('min-w-0 flex-1 truncate font-medium text-ink', done && 'text-ink-2')}>{issue.title}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className={cn('truncate font-medium text-ink', done && 'text-ink-2')}>{issue.title}</span>
+          <SubIssueCount issueId={issue.id} />
+        </span>
         <div className="flex shrink-0 items-center gap-1.5">
           {issueLabels.slice(0, 3).map((label) => (
             <span key={label.id} className="hidden h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2 md:inline-flex">
