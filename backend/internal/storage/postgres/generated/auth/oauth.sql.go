@@ -261,6 +261,18 @@ func (q *Queries) RevokeOAuthToken(ctx context.Context, tokenHash []byte) (int64
 	return result.RowsAffected(), nil
 }
 
+const revokeTokenFamily = `-- name: RevokeTokenFamily :exec
+UPDATE oauth_tokens SET revoked_at = now()
+WHERE oauth_tokens.revoked_at IS NULL AND (oauth_tokens.token_hash = $1::bytea OR oauth_tokens.grant_id = (
+  SELECT refresh.grant_id FROM oauth_tokens refresh WHERE refresh.token_hash = $1::bytea AND refresh.kind = 'refresh'
+))
+`
+
+func (q *Queries) RevokeTokenFamily(ctx context.Context, hash []byte) error {
+	_, err := q.db.Exec(ctx, revokeTokenFamily, hash)
+	return err
+}
+
 const userByAccessToken = `-- name: UserByAccessToken :one
 SELECT users.id, users.workspace_id, users.name, users.display_name, users.email, users.avatar_url, users.admin, users.active, users.created_at, users.updated_at FROM oauth_tokens
 JOIN oauth_grants ON oauth_grants.id = oauth_tokens.grant_id

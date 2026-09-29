@@ -1,14 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { readItem, writeItem } from './storage'
 import { embedded } from './api'
-import { setHostToken } from './auth'
 
 export type Scheme = 'light' | 'dark'
 export type SchemePreference = Scheme | 'system'
 
-// Messages a host posts to theme and authenticate the app (see THEMING.md).
+// ThemeMessage is what a framing page posts to theme the app (see THEMING.md).
 export type ThemeMessage = { type: 'jaz:theme'; vars?: Record<string, string>; scheme?: Scheme }
-type AuthMessage = { type: 'jaz:auth'; token: string }
 
 const preferenceKey = 'jaz-tasks:scheme'
 const listeners = new Set<() => void>()
@@ -87,14 +85,9 @@ export function installHostBridge() {
   }
   render()
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render)
-  window.addEventListener('message', (event: MessageEvent<ThemeMessage | AuthMessage>) => {
-    if (event.source !== window.parent || window.parent === window) {
-      return
-    }
-    if (event.data?.type === 'jaz:theme') {
+  window.addEventListener('message', (event: MessageEvent<ThemeMessage>) => {
+    if (event.source === window.parent && window.parent !== window && event.data?.type === 'jaz:theme') {
       applyTheme(event.data)
-    } else if (event.data?.type === 'jaz:auth' && typeof event.data.token === 'string') {
-      setHostToken(event.data.token)
     }
   })
   if (window.parent !== window && !embedded()) {

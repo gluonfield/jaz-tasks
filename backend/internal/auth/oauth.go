@@ -108,8 +108,8 @@ func (s *Service) CheckAuthorize(ctx context.Context, req AuthorizeRequest) (sto
 		return client, oauthErr("unsupported_response_type", "only the code response type is supported")
 	case req.CodeChallenge == "" || req.CodeChallengeMethod != "S256":
 		return client, oauthErr("invalid_request", "PKCE with code_challenge_method=S256 is required")
-	case req.Resource != "" && !strings.HasPrefix(req.Resource, s.cfg.PublicURL):
-		return client, oauthErr("invalid_target", "resource must be served by "+s.cfg.PublicURL)
+	case req.Resource != "" && !slices.Contains([]string{s.cfg.PublicURL, s.cfg.PublicURL + "/mcp", s.cfg.PublicURL + "/graphql"}, req.Resource):
+		return client, oauthErr("invalid_target", "resource must be "+s.cfg.PublicURL+"/mcp or "+s.cfg.PublicURL+"/graphql")
 	}
 	return client, nil
 }
@@ -254,8 +254,4 @@ func (s *Service) Grants(ctx context.Context, actor Actor) ([]storage.OAuthGrant
 
 func (s *Service) RevokeGrant(ctx context.Context, actor Actor, id string) error {
 	return s.store.RevokeOAuthGrant(ctx, actor.UserID, id)
-}
-
-func (s *Service) Client(ctx context.Context, id string) (storage.OAuthClient, error) {
-	return s.store.OAuthClient(ctx, id)
 }

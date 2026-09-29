@@ -129,8 +129,7 @@ func (s *Store) RotateOAuthTokens(ctx context.Context, grantID string, usedHash 
 }
 
 func (s *Store) RevokeOAuthToken(ctx context.Context, tokenHash []byte) error {
-	_, err := s.auth.RevokeOAuthToken(ctx, tokenHash)
-	return mapError(err)
+	return mapError(s.auth.RevokeTokenFamily(ctx, tokenHash))
 }
 
 func (s *Store) UserByAccessToken(ctx context.Context, tokenHash []byte) (storage.User, error) {

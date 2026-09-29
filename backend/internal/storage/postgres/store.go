@@ -113,5 +113,5 @@ func mapError(err error) error {
 		// A malformed id, such as a UUID column given "abc", names nothing.
 		return storage.ErrNotFound
 	}
-	return err
+	return fmt.Errorf("%w: %w", storage.ErrUnexpected, err)
 }

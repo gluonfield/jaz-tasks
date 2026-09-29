@@ -15,6 +15,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -80,7 +81,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.server.ServeHTTP(w, r.WithContext(withScope(r.Context(), h.tracker.Scope(actor))))
 }
 
-// presentError tags tracker errors the way Linear tags user errors.
+// presentError tags tracker errors the way Linear tags user errors and hides
+// storage failures behind a generic message.
 func presentError(logger *log.Logger) graphql.ErrorPresenterFunc {
 	return func(ctx context.Context, err error) *gqlerror.Error {
 		presented := graphql.DefaultErrorPresenter(ctx, err)
@@ -94,8 +96,9 @@ func presentError(logger *log.Logger) graphql.ErrorPresenterFunc {
 				"userError":              true,
 				"userPresentableMessage": presented.Message,
 			}
-		case errors.Unwrap(err) != nil:
+		case errors.Is(err, storage.ErrUnexpected):
 			logger.Error("resolver failed", "path", presented.Path, "error", err)
+			presented.Message = "Internal error"
 		}
 		return presented
 	}

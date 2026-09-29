@@ -2,7 +2,6 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouter } from '@tanstack/react-router'
 import { type ReactNode, useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { onHostToken } from '@/lib/auth'
 import { installHostBridge } from '@/lib/theme'
 import styles from '@/styles.css?url'
 
@@ -40,7 +39,6 @@ function Shell({ children }: { children: ReactNode }) {
 function Root() {
   const { queryClient } = useRouter().options.context
   useEffect(installHostBridge, [])
-  useEffect(() => onHostToken(() => queryClient.invalidateQueries()), [queryClient])
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={500}>

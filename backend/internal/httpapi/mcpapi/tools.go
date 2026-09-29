@@ -388,14 +388,14 @@ func (t tools) update(ctx context.Context, s *tracker.Scope, current storage.Iss
 	}); err != nil {
 		return update, err
 	}
-	if update.Estimate, err = optionalValue(in.Estimate, func(ref string) (int32, error) {
+	if update.Estimate, err = optional(in.Estimate, func(ref string) (int32, error) {
 		var points int32
 		_, err := fmt.Sscan(ref, &points)
 		return points, err
 	}); err != nil {
 		return update, err
 	}
-	if update.DueDate, err = optionalValue(in.DueDate, func(ref string) (time.Time, error) {
+	if update.DueDate, err = optional(in.DueDate, func(ref string) (time.Time, error) {
 		date, err := resolveDate(ref)
 		return deref(date), err
 	}); err != nil {
@@ -416,11 +416,7 @@ func (t tools) update(ctx context.Context, s *tracker.Scope, current storage.Iss
 
 // optional maps an omitted value to unchanged, "none" to cleared and
 // anything else through resolve.
-func optional(ref string, resolve func(string) (string, error)) (tracker.Optional[string], error) {
-	return optionalValue(ref, resolve)
-}
-
-func optionalValue[T any](ref string, resolve func(string) (T, error)) (tracker.Optional[T], error) {
+func optional[T any](ref string, resolve func(string) (T, error)) (tracker.Optional[T], error) {
 	if ref == "" {
 		return tracker.Optional[T]{}, nil
 	}

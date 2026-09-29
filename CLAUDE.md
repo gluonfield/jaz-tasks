@@ -61,7 +61,8 @@
 
 ## Frontend
 
-- The web app talks to the backend only through `/graphql`.
+- The web app reads and writes tracker data only through `/graphql`. The session-only account endpoints under `/auth` (sign-in, workspaces, invites, API keys, authorized apps) are the one exception; they accept only JSON.
+- The MCP App build (`bun run build`) embeds the same routes into `backend/internal/httpapi/mcpapi/app/mcp-app.html`; commit it with the frontend change that produced it. In MCP mode data flows through the `graphql` tool and `localStorage` may throw, so use `lib/storage`.
 - Every color, radius, font and shadow comes from CSS custom properties that use Jaz's token names (`--color-bg`, `--color-ink`, `--radius-control`, ...) so the Jaz host can theme the app. See `frontend/THEMING.md`; never hardcode a color in a component.
 - Shared hooks and lib code must not import component-owned types. Put cross-layer contracts in `lib`.
 - Match Linear's UI: dense, calm, keyboard-first, 13px type.

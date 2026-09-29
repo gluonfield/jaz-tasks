@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -61,8 +62,20 @@ func ParseConfig(args []string) (Config, error) {
 		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
 		AllowedEmails:       list(os.Getenv("ALLOWED_EMAILS")),
 	}
-	cfg.DevLogin = os.Getenv("DEV_LOGIN") == "1"
+	// Development login only ever applies without OIDC, and never off localhost.
+	if os.Getenv("DEV_LOGIN") == "1" && cfg.OIDC.Issuer == "" {
+		public, err := url.Parse(cfg.PublicURL)
+		if err != nil || !loopback(public.Hostname()) {
+			return cfg, fmt.Errorf("DEV_LOGIN=1 needs a localhost PUBLIC_URL, got %q; configure OIDC and unset DEV_LOGIN", cfg.PublicURL)
+		}
+		cfg.DevLogin = true
+	}
 	return cfg, nil
+}
+
+func loopback(host string) bool {
+	ip := net.ParseIP(host)
+	return host == "localhost" || ip != nil && ip.IsLoopback()
 }
 
 func list(raw string) []string {
@@ -118,19 +131,19 @@ func OpenStore(lc fx.Lifecycle, cfg Config) (*postgres.Store, error) {
 }
 
 // Seed creates the demo workspace on an empty database for development
-// login and tests; real sign-ins always get workspaces of their own.
-func Seed(store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, oidc *auth.OIDC, cfg Config, logger *log.Logger) error {
-	if !bool(cfg.DevLogin) || oidc.Enabled() {
+// login; real sign-ins always get workspaces of their own.
+func Seed(store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, cfg Config, logger *log.Logger) error {
+	if !cfg.DevLogin {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	result, seeded, err := seed.Run(ctx, store, keys, svc, cfg.SeedAPIKey)
+	_, seeded, err := seed.Run(ctx, store, keys, svc, cfg.SeedAPIKey)
 	if err != nil {
 		return fmt.Errorf("seed: %w", err)
 	}
 	if seeded {
-		logger.Info("seeded demo workspace", "api_key", result.APIKey)
+		logger.Info("seeded the demo workspace; sign in with development login, or mint an API key with `server apikey mira@jaz.local`")
 	}
 	return nil
 }

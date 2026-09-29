@@ -33,6 +33,12 @@ WHERE oauth_tokens.token_hash = $1 AND oauth_tokens.kind = 'access'
 -- name: RevokeOAuthToken :execrows
 UPDATE oauth_tokens SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL;
 
+-- name: RevokeTokenFamily :exec
+UPDATE oauth_tokens SET revoked_at = now()
+WHERE oauth_tokens.revoked_at IS NULL AND (oauth_tokens.token_hash = @hash::bytea OR oauth_tokens.grant_id = (
+  SELECT refresh.grant_id FROM oauth_tokens refresh WHERE refresh.token_hash = @hash::bytea AND refresh.kind = 'refresh'
+));
+
 -- name: RevokeGrantTokens :exec
 UPDATE oauth_tokens SET revoked_at = now() WHERE grant_id = $1 AND revoked_at IS NULL;
 

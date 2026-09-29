@@ -10,10 +10,16 @@ var (
 	ErrConflict = errors.New("already exists")
 	// ErrReused reports a rotated refresh token presented again; its grant is revoked.
 	ErrReused = errors.New("token reused")
+	// ErrUnexpected wraps storage failures callers should not show to users.
+	ErrUnexpected = errors.New("unexpected storage error")
 )
 
-// IssueMutation edits a locked issue. A nil history records nothing.
-type IssueMutation func(Issue) (Issue, *NewIssueHistory, error)
+// IssueMutation edits a locked issue, reading (and locking) any other issue
+// it needs through read, inside the same transaction. A nil history records
+// nothing.
+type IssueMutation func(prev Issue, read IssueReader) (Issue, *NewIssueHistory, error)
+
+type IssueReader func(ctx context.Context, id string) (Issue, error)
 
 type TrackerStore interface {
 	CountWorkspaces(ctx context.Context) (int64, error)

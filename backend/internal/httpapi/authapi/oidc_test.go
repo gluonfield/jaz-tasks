@@ -247,6 +247,11 @@ func TestInvitesAndSwitching(t *testing.T) {
 	if got := viewer(t, s, carol); got.Organization != home.Organization {
 		t.Fatalf("after switch: %+v", got)
 	}
+	again := browser()
+	iss.signIn(t, s, again, "carol@example.com", true).Body.Close()
+	if got := viewer(t, s, again); got.Organization != own.Organization {
+		t.Fatalf("an invite must not move where a person lands: %+v", got)
+	}
 	if status, _ := session(t, s, bob, http.MethodPost, "/auth/workspace", `{"workspaceId":"`+own.Organization+`"}`); status != http.StatusForbidden {
 		t.Fatalf("switching into a stranger's workspace: %d", status)
 	}

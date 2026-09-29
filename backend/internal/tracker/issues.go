@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"slices"
 	"strconv"
@@ -119,7 +120,10 @@ func (s *Scope) issueQuery(ctx context.Context, f *IssueFilter) (storage.IssueQu
 		}))
 	}
 	if f.Parent != nil {
-		if f.Parent.Null != nil && *f.Parent.Null {
+		if f.Parent.Null != nil && !*f.Parent.Null {
+			return q, invalid("parent filters support null: true and id")
+		}
+		if f.Parent.Null != nil {
 			q.ParentIDs, q.ParentNull = []string{}, true
 		} else if f.Parent.ID != nil {
 			if q.ParentIDs, err = f.Parent.ID.exact(); err != nil {
@@ -260,6 +264,10 @@ func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewI
 	if in.ID != nil && !isUUID(*in.ID) {
 		return storage.NewIssue{}, invalid("id must be a UUID")
 	}
+	parentID, err := s.issueID(ctx, in.ParentID)
+	if err != nil {
+		return storage.NewIssue{}, err
+	}
 	issue := storage.Issue{
 		TeamID:      team.ID,
 		Title:       strings.TrimSpace(deref(in.Title)),
@@ -269,7 +277,7 @@ func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewI
 		AssigneeID:  in.AssigneeID,
 		ProjectID:   in.ProjectID,
 		CycleID:     in.CycleID,
-		ParentID:    in.ParentID,
+		ParentID:    parentID,
 		LabelIDs:    in.LabelIDs,
 		DueDate:     in.DueDate,
 	}
@@ -278,7 +286,7 @@ func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewI
 	} else if issue.StateID, err = s.defaultState(ctx, team.ID); err != nil {
 		return storage.NewIssue{}, err
 	}
-	if err := s.check(ctx, nil, &issue); err != nil {
+	if err := s.check(ctx, nil, &issue, s.readIssue); err != nil {
 		return storage.NewIssue{}, err
 	}
 	return storage.NewIssue{
@@ -349,6 +357,11 @@ type IssueUpdateInput struct {
 }
 
 func (s *Scope) UpdateIssue(ctx context.Context, id string, in IssueUpdateInput) (storage.Issue, error) {
+	parentID, err := s.issueID(ctx, in.ParentID.Value)
+	if err != nil {
+		return storage.Issue{}, err
+	}
+	in.ParentID.Value = parentID
 	return s.mutate(ctx, id, func(next *storage.Issue) error {
 		if in.Title != nil {
 			next.Title = strings.TrimSpace(*in.Title)
@@ -451,18 +464,23 @@ func (s *Scope) DeleteIssue(ctx context.Context, id string) (storage.Issue, erro
 	return issue, notFound(s.svc.store.DeleteIssue(ctx, s.actor.WorkspaceID, issue.ID), "Issue")
 }
 
+// mutate edits an issue under its row lock. The catalog is loaded before the
+// transaction, so the transaction never waits on a second pool connection.
 func (s *Scope) mutate(ctx context.Context, id string, edit func(*storage.Issue) error) (storage.Issue, error) {
 	current, err := s.Issue(ctx, id)
 	if err != nil {
 		return current, err
 	}
+	if err := s.preload(ctx); err != nil {
+		return current, err
+	}
 	updated, err := s.svc.store.UpdateIssue(ctx, s.actor.WorkspaceID, current.ID,
-		func(prev storage.Issue) (storage.Issue, *storage.NewIssueHistory, error) {
+		func(prev storage.Issue, read storage.IssueReader) (storage.Issue, *storage.NewIssueHistory, error) {
 			next := prev
 			if err := edit(&next); err != nil {
 				return prev, nil, err
 			}
-			if err := s.check(ctx, &prev, &next); err != nil {
+			if err := s.check(ctx, &prev, &next, read); err != nil {
 				return prev, nil, err
 			}
 			return next, s.history(prev, next), nil
@@ -470,9 +488,32 @@ func (s *Scope) mutate(ctx context.Context, id string, edit func(*storage.Issue)
 	return updated, notFound(err, "Issue")
 }
 
+func (s *Scope) preload(ctx context.Context) error {
+	_, users := s.Users(ctx)
+	_, teams := s.Teams(ctx)
+	_, states := s.WorkflowStates(ctx)
+	_, labels := s.IssueLabels(ctx)
+	_, projects := s.Projects(ctx)
+	_, cycles := s.Cycles(ctx)
+	return errors.Join(users, teams, states, labels, projects, cycles)
+}
+
+// issueID resolves an optional issue reference, id or identifier, to an id.
+func (s *Scope) issueID(ctx context.Context, ref *string) (*string, error) {
+	if ref == nil {
+		return nil, nil
+	}
+	issue, err := s.Issue(ctx, *ref)
+	return &issue.ID, err
+}
+
+func (s *Scope) readIssue(ctx context.Context, id string) (storage.Issue, error) {
+	return s.svc.store.Issue(ctx, s.actor.WorkspaceID, id)
+}
+
 // check validates an issue's references against the workspace and stamps the
 // lifecycle timestamps its state implies.
-func (s *Scope) check(ctx context.Context, prev, next *storage.Issue) error {
+func (s *Scope) check(ctx context.Context, prev, next *storage.Issue, read storage.IssueReader) error {
 	if next.Title == "" {
 		return invalid("title is required")
 	}
@@ -513,33 +554,28 @@ func (s *Scope) check(ctx context.Context, prev, next *storage.Issue) error {
 			return invalid("cycle does not belong to the issue's team")
 		}
 	}
-	if next.ParentID != nil {
-		if err := s.checkParent(ctx, next); err != nil {
-			return err
-		}
+	if err := checkParent(ctx, next, read); err != nil {
+		return err
 	}
 	return s.checkLabels(ctx, next)
 }
 
-func (s *Scope) checkParent(ctx context.Context, issue *storage.Issue) error {
-	parent, err := s.Issue(ctx, *issue.ParentID)
-	if err != nil {
-		return err
-	}
-	issue.ParentID = &parent.ID
-	for ancestor := &parent; ; {
-		if ancestor.ID == issue.ID {
+// checkParent walks the ancestors, which read locks inside an update, so two
+// updates cannot close a loop between them; a loop already stored stops too.
+func checkParent(ctx context.Context, issue *storage.Issue, read storage.IssueReader) error {
+	seen := map[string]bool{}
+	for id := issue.ParentID; id != nil; {
+		if *id == issue.ID || seen[*id] {
 			return invalid("an issue cannot be its own ancestor")
 		}
-		if ancestor.ParentID == nil {
-			return nil
-		}
-		next, err := s.svc.store.Issue(ctx, s.actor.WorkspaceID, *ancestor.ParentID)
+		seen[*id] = true
+		ancestor, err := read(ctx, *id)
 		if err != nil {
 			return notFound(err, "Issue")
 		}
-		ancestor = &next
+		id = ancestor.ParentID
 	}
+	return nil
 }
 
 func (s *Scope) checkLabels(ctx context.Context, issue *storage.Issue) error {

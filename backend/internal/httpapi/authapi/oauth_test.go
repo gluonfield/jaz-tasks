@@ -186,6 +186,13 @@ func TestTokenLifecycle(t *testing.T) {
 	if status, _ := graphqlStatus(t, s.url, "Bearer "+third.AccessToken); status != http.StatusUnauthorized {
 		t.Fatalf("revoked token accepted: %d", status)
 	}
+	location = consent(t, b, authorize)
+	exchange.Set("code", location.Query().Get("code"))
+	_, fourth := post(t, s.url+"/oauth/token", exchange)
+	post(t, s.url+"/oauth/revoke", url.Values{"token": {fourth.RefreshToken}})
+	if status, _ := graphqlStatus(t, s.url, "Bearer "+fourth.AccessToken); status != http.StatusUnauthorized {
+		t.Fatalf("revoking a refresh token must end its access token: %d", status)
+	}
 	if status, _ := graphqlStatus(t, s.url, s.apiKey); status != http.StatusOK {
 		t.Fatalf("raw API key: %d", status)
 	}
@@ -243,5 +250,90 @@ func getJSON(t *testing.T, endpoint string, v any) {
 	defer res.Body.Close()
 	if err := json.NewDecoder(res.Body).Decode(v); err != nil {
 		t.Fatalf("%s: %v", endpoint, err)
+	}
+}
+
+// Sign-in redirects stay on this site whatever return_to says.
+func TestReturnToStaysOnSite(t *testing.T) {
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	for raw, want := range map[string]string{
+		"/team/ENG/all?x=1": "/team/ENG/all?x=1",
+		"/\t/evil.test":     "/",
+		"//evil.test":       "/",
+		"/\\evil.test":      "/",
+		"https://evil.test": "/",
+		"evil.test":         "/",
+	} {
+		raw = strings.ReplaceAll(raw, "\\t", "\t")
+		res, err := browser().PostForm(s.url+"/auth/dev-login", url.Values{"return_to": {raw}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if got := res.Header.Get("Location"); got != want {
+			t.Errorf("return_to %q redirected to %q", raw, got)
+		}
+	}
+}
+
+// Granting access is a person's decision: consent needs the browser session,
+// never a bearer token or API key.
+func TestConsentNeedsBrowserSession(t *testing.T) {
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	res, _ := http.Post(s.url+"/oauth/register", "application/json", strings.NewReader(`{"redirect_uris":["http://127.0.0.1:9/cb"]}`))
+	var client struct {
+		ClientID string `json:"client_id"`
+	}
+	_ = json.NewDecoder(res.Body).Decode(&client)
+	res.Body.Close()
+	query := url.Values{"response_type": {"code"}, "client_id": {client.ClientID}, "redirect_uri": {"http://127.0.0.1:9/cb"}, "code_challenge": {"c"}, "code_challenge_method": {"S256"}}
+	req, _ := http.NewRequest(http.MethodGet, s.url+"/oauth/authorize?"+query.Encode(), nil)
+	req.Header.Set("Authorization", s.apiKey)
+	res, err := browser().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusFound || !strings.HasPrefix(res.Header.Get("Location"), "/login") {
+		t.Fatalf("bearer-only consent: %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	form := url.Values{"decision": {"allow"}, "csrf": {""}}
+	for k, v := range query {
+		form[k] = v
+	}
+	req, _ = http.NewRequest(http.MethodPost, s.url+"/oauth/authorize", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", s.apiKey)
+	res, _ = browser().Do(req)
+	res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("bearer-only approval: %d", res.StatusCode)
+	}
+	query.Set("resource", "http://evil.test/mcp")
+	b := browser()
+	s.devSignIn(t, b)
+	res, _ = b.Get(s.url + "/oauth/authorize?" + query.Encode())
+	res.Body.Close()
+	if location, _ := url.Parse(res.Header.Get("Location")); location.Query().Get("error") != "invalid_target" {
+		t.Fatalf("foreign resource: %s", res.Header.Get("Location"))
+	}
+}
+
+// Cookie-authenticated changes accept only JSON, which no cross-site form can send.
+func TestSessionChangesNeedJSON(t *testing.T) {
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	b := browser()
+	s.devSignIn(t, b)
+	for _, path := range []string{"/auth/invites", "/auth/api-keys", "/auth/workspace", "/auth/logout"} {
+		req, _ := http.NewRequest(http.MethodPost, s.url+path, strings.NewReader(`{"email":"x@evil.test","label":"x"}`))
+		req.Header.Set("Content-Type", "text/plain")
+		res, err := b.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusUnsupportedMediaType {
+			t.Errorf("%s with text/plain: %d", path, res.StatusCode)
+		}
 	}
 }

@@ -40,7 +40,10 @@ func (s *Store) UpdateIssue(ctx context.Context, workspaceID, id string, mutate 
 		if err != nil {
 			return err
 		}
-		next, history, err := mutate(storage.Issue(locked))
+		read := func(ctx context.Context, id string) (storage.Issue, error) {
+			return one(toIssue)(q.LockIssue(ctx, db.LockIssueParams{WorkspaceID: workspaceID, ID: id}))
+		}
+		next, history, err := mutate(storage.Issue(locked), read)
 		if err != nil {
 			return err
 		}

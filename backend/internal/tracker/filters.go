@@ -239,8 +239,10 @@ func idSet[T any](items []T, keep func(T) (string, bool)) map[string]bool {
 
 func keys(set map[string]bool) []string {
 	out := make([]string, 0, len(set))
-	for id := range set {
-		out = append(out, id)
+	for id, in := range set {
+		if in {
+			out = append(out, id)
+		}
 	}
 	return out
 }

@@ -49,7 +49,12 @@ func (s *Service) EndSession(ctx context.Context, token string) error {
 	return s.store.DeleteSession(ctx, hash(token))
 }
 
-// Viewer is the actor's user record.
-func (s *Service) Viewer(ctx context.Context, actor Actor) (storage.User, error) {
-	return s.store.UserByID(ctx, actor.UserID)
+// Describe names who an actor is and which workspace they act in.
+func (s *Service) Describe(ctx context.Context, actor Actor) (storage.User, storage.Workspace, error) {
+	user, err := s.store.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return user, storage.Workspace{}, err
+	}
+	workspace, err := s.store.Workspace(ctx, actor.WorkspaceID)
+	return user, workspace, err
 }

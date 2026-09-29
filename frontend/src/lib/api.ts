@@ -1,4 +1,4 @@
-import { getHostToken, loginURL } from './auth'
+import { loginURL } from './auth'
 
 export class ApiError extends Error {
   constructor(
@@ -24,25 +24,19 @@ export function embedded() {
   return transport !== null
 }
 
-// gql posts to the Linear-compatible endpoint with the session cookie, or a
-// host-provided token when embedded.
+// gql posts to the Linear-compatible endpoint with the session cookie.
 export async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
   if (transport) {
     return unwrap(await transport<T>(query, variables), 200)
   }
-  const token = getHostToken()
   const res = await fetch('/graphql', {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),
   })
   if (res.status === 401) {
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: 'jaz:auth-required' }, '*')
-    } else {
-      window.location.assign(loginURL())
-    }
+    window.location.assign(loginURL())
     throw new ApiError('Not signed in', 401)
   }
   return unwrap((await res.json().catch(() => ({}))) as GraphQLResponse<T>, res.status)
@@ -58,7 +52,7 @@ function unwrap<T>(body: GraphQLResponse<T>, status: number): T {
   return body.data
 }
 
-// rest calls the session-only settings endpoints.
+// rest calls the session-only account endpoints, which accept only JSON.
 export async function rest<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (embedded()) {
     throw new ApiError('Account settings are available in the Jaz Tasks web app', 401)
@@ -66,8 +60,8 @@ export async function rest<T>(method: string, path: string, body?: unknown): Pro
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    headers: { 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
   })
   if (res.status === 401) {
     window.location.assign(loginURL())

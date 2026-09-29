@@ -38,9 +38,10 @@ func NewService(store storage.WorkspaceStore, cfg Config) *Service {
 	return &Service{store: store, cfg: cfg}
 }
 
-// SignIn returns the user a person acts as. Pending invites are accepted
-// first, landing the person in the newest one; someone with no workspace
-// gets one of their own, like Linear's onboarding.
+// SignIn returns the user a person acts as. Pending invites are accepted and
+// appear in the workspace switcher; people keep landing in their first
+// workspace, a newcomer lands in the inviting one, and someone with no
+// invite gets a workspace of their own, like Linear's onboarding.
 func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, error) {
 	if !id.EmailVerified || id.Email == "" {
 		return storage.User{}, ErrEmailUnverified
@@ -49,13 +50,18 @@ func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, e
 		return storage.User{}, ErrNotAllowed
 	}
 	identity := storage.Identity{Issuer: id.Issuer, Subject: id.Subject}
-	joined, err := s.acceptInvites(ctx, identity, member(id))
-	if err != nil || joined != nil {
-		return deref(joined), err
-	}
 	users, err := s.store.UsersByIdentity(ctx, id.Issuer, id.Subject)
-	if err != nil || len(users) > 0 {
-		return first(users), err
+	if err != nil {
+		return storage.User{}, err
+	}
+	joined, err := s.acceptInvites(ctx, identity, member(id))
+	switch {
+	case err != nil:
+		return storage.User{}, err
+	case len(users) > 0:
+		return users[0], nil
+	case joined != nil:
+		return *joined, nil
 	}
 	name := firstName(id.Name, id.Email)
 	owner := member(id)
@@ -225,16 +231,4 @@ func suffix() string {
 	b := make([]byte, 3)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
-}
-
-func first(users []storage.User) storage.User {
-	return users[0]
-}
-
-func deref[T any](v *T) T {
-	var zero T
-	if v == nil {
-		return zero
-	}
-	return *v
 }

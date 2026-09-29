@@ -71,6 +71,7 @@ type AuthStore interface {
 	DeleteAPIKey(ctx context.Context, userID, id string) error
 	UsersByEmail(ctx context.Context, email string) ([]User, error)
 	UserByID(ctx context.Context, id string) (User, error)
+	Workspace(ctx context.Context, id string) (Workspace, error)
 
 	DevUser(ctx context.Context) (User, error)
 
@@ -91,6 +92,8 @@ type AuthStore interface {
 	// grant, then issues replacements; a used token already revoked returns
 	// ErrReused after revoking the grant.
 	RotateOAuthTokens(ctx context.Context, grantID string, usedHash []byte, tokens []NewOAuthToken) error
+	// RevokeOAuthToken revokes a token; a refresh token takes every token of
+	// its grant with it (RFC 7009).
 	RevokeOAuthToken(ctx context.Context, tokenHash []byte) error
 	UserByAccessToken(ctx context.Context, tokenHash []byte) (User, error)
 	OAuthGrants(ctx context.Context, userID string) ([]OAuthGrantSummary, error)

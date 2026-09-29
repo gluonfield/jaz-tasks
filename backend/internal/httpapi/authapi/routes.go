@@ -135,6 +135,10 @@ func (h *Handler) devSignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	if !isJSON(r) {
+		writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "send application/json"})
+		return
+	}
 	if cookie, err := r.Cookie(sessionCookie); err == nil {
 		if err := h.svc.EndSession(r.Context(), cookie.Value); err != nil {
 			h.fail(w, err)
@@ -313,12 +317,11 @@ func (h *Handler) authorize(w http.ResponseWriter, r *http.Request) {
 	if !h.authorizeError(w, r, req, err) {
 		return
 	}
-	actor, err := h.Actor(r)
+	actor, cookie, err := h.browser(r)
 	if err != nil {
 		http.Redirect(w, r, "/login?return_to="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
 		return
 	}
-	cookie, _ := r.Cookie(sessionCookie)
 	consent(w, h.svc, r, client, req, actor, csrf(cookie))
 }
 
@@ -332,9 +335,8 @@ func (h *Handler) decide(w http.ResponseWriter, r *http.Request) {
 	if !h.authorizeError(w, r, req, err) {
 		return
 	}
-	cookie, _ := r.Cookie(sessionCookie)
-	actor, err := h.Actor(r)
-	if err != nil || cookie == nil || r.PostForm.Get("csrf") != csrf(cookie) {
+	actor, cookie, err := h.browser(r)
+	if err != nil || r.PostForm.Get("csrf") != csrf(cookie) {
 		page(w, http.StatusForbidden, "Authorization expired", "Please return to the application and start again.", "/")
 		return
 	}
@@ -496,4 +498,15 @@ func (h *Handler) cancelInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.noContent(w, err)
+}
+
+// browser authenticates only by session cookie: granting access to an app is
+// a person's decision, not something a token or API key can do for itself.
+func (h *Handler) browser(r *http.Request) (auth.Actor, *http.Cookie, error) {
+	cookie, err := r.Cookie(sessionCookie)
+	if err != nil {
+		return auth.Actor{}, nil, auth.ErrUnauthenticated
+	}
+	actor, err := h.svc.Session(r.Context(), cookie.Value)
+	return actor, cookie, err
 }

@@ -49,6 +49,8 @@ func TestIssueFiltersResolveLinearShapes(t *testing.T) {
 		{"label", tracker.IssueFilter{Labels: &tracker.IssueLabelFilter{Name: eq("Bug")}}, 2},
 		{"urgent", tracker.IssueFilter{Priority: &tracker.NumberComparator{Eq: ptr(1.0)}}, 3},
 		{"project lead", tracker.IssueFilter{Project: &tracker.ProjectFilter{Lead: &tracker.UserFilter{DisplayName: eq("kai")}}}, 4},
+		{"some label", tracker.IssueFilter{Labels: &tracker.IssueLabelFilter{Some: &tracker.IssueLabelFilter{Name: eq("Bug")}}}, 2},
+		{"no labels", tracker.IssueFilter{Labels: &tracker.IssueLabelFilter{Null: &yes}}, 7},
 	}
 	for _, tc := range cases {
 		page, err := s.Issues(ctx, tracker.IssueQuery{Filter: &tc.filter})
@@ -165,4 +167,12 @@ func deref[T any](v *T) T {
 		return zero
 	}
 	return *v
+}
+
+func TestUnsupportedFiltersFail(t *testing.T) {
+	s, ctx := seeded(t)
+	no := false
+	if _, err := s.Issues(ctx, tracker.IssueQuery{Filter: &tracker.IssueFilter{Parent: &tracker.IssueFilter{Null: &no}}}); err == nil {
+		t.Fatal("parent null: false must be rejected, not ignored")
+	}
 }

@@ -32,7 +32,7 @@ var messagePage = template.Must(template.Must(pages.Clone()).Parse(`{{define "bo
 <div class="actions"><a class="button" href="{{.Link}}">Back to Jaz Tasks</a></div>{{end}}`))
 
 var consentPage = template.Must(template.Must(pages.Clone()).Parse(`{{define "body"}}<h1>Authorize {{.Client}}</h1>
-<p><strong>{{.Client}}</strong> wants to access your Jaz Tasks workspace as <strong>{{.User}}</strong>.</p>
+<p><strong>{{.Client}}</strong> wants to access <strong>{{.Workspace}}</strong> as <strong>{{.User}}</strong>.</p>
 <ul><li>Read and search issues, projects and teams</li><li>Create and update issues and comments</li></ul>
 <form method="post" action="/oauth/authorize">
 {{range $k, $v := .Params}}<input type="hidden" name="{{$k}}" value="{{$v}}">{{end}}
@@ -47,9 +47,10 @@ func page(w http.ResponseWriter, status int, title, message, link string) {
 
 func consent(w http.ResponseWriter, svc *auth.Service, r *http.Request, client storage.OAuthClient, req auth.AuthorizeRequest, actor auth.Actor, token string) {
 	redirect, _ := url.Parse(req.RedirectURI)
-	user := actor.UserID
-	if users, err := svc.Viewer(r.Context(), actor); err == nil {
-		user = users.Email
+	user, workspace, err := svc.Describe(r.Context(), actor)
+	if err != nil {
+		page(w, http.StatusInternalServerError, "Something went wrong", "Please try again.", "/")
+		return
 	}
 	params := map[string]string{
 		"response_type":         req.ResponseType,
@@ -66,11 +67,12 @@ func consent(w http.ResponseWriter, svc *auth.Service, r *http.Request, client s
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = consentPage.Execute(w, map[string]any{
-		"Title":    "Authorize " + client.Name,
-		"Client":   client.Name,
-		"User":     user,
-		"Redirect": redirect.Scheme + "://" + redirect.Host,
-		"Params":   params,
+		"Title":     "Authorize " + client.Name,
+		"Client":    client.Name,
+		"User":      user.Email,
+		"Workspace": workspace.Name,
+		"Redirect":  redirect.Scheme + "://" + redirect.Host,
+		"Params":    params,
 	})
 }
 
