@@ -1,21 +1,25 @@
 import {
+  type CollisionDetection,
   DndContext,
   type DragEndEvent,
-  type DragMoveEvent,
+  type DragOverEvent,
   DragOverlay,
+  type DropAnimation,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   closestCorners,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
-import { type Ordering, sortOrderBetween } from '@/lib/issues'
+import { type Ordering, sortOrderBetween, workflowOrder } from '@/lib/issues'
 import { useCatalogMaps, useIssuePatch, useUpdateIssue } from '@/lib/queries'
 import type { Issue, IssuePatch } from '@/lib/types'
 import { openCreateIssue, setUI, useUI } from '@/lib/ui'
@@ -25,9 +29,20 @@ import { type IssueGroup, useListNavigation } from './issue-view'
 import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, SubIssueCount, useStateIcon } from './properties'
 import { IssueContextMenu } from './issue-menu'
 
-const toColumns = (groups: IssueGroup[]): Record<string, string[]> => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => i.id)]))
+type Columns = Record<string, string[]>
 
-type Drop = { column: string; index: number }
+const toColumns = (groups: IssueGroup[]): Columns => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => i.id)]))
+
+// A dropped card settles into its slot as its lift shadow fades, so the
+// overlay ends exactly as the resting card looks.
+const dropAnimation: DropAnimation = {
+  duration: 200,
+  easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+  keyframes: ({ transform }) => [
+    { transform: CSS.Transform.toString(transform.initial), boxShadow: getComputedStyle(document.documentElement).getPropertyValue('--shadow-raised') },
+    { transform: CSS.Transform.toString(transform.final), boxShadow: 'none' },
+  ],
+}
 
 export function IssueBoard({
   groups,
@@ -42,11 +57,14 @@ export function IssueBoard({
   const update = useUpdateIssue()
   const stateIcon = useStateIcon()
   const [activeId, setActiveId] = useState<string | null>(null)
-  // drop is where a card dragged from another column would land.
-  const [drop, setDrop] = useState<Drop | null>(null)
-  const columns = useMemo(() => toColumns(groups), [groups])
+  // arranged is the board as the drag left it. It holds a dropped card where it
+  // landed until the issue list it was made from changes.
+  const [arranged, setArranged] = useState<{ from: IssueGroup[]; columns: Columns } | null>(null)
+  const board = useMemo(() => [...groups].sort((a, b) => workflowOrder(a.state, b.state)), [groups])
+  const saved = useMemo(() => toColumns(board), [board])
+  const columns = arranged?.from === groups ? arranged.columns : saved
   const issues = useMemo(() => new Map(groups.flatMap((g) => g.issues).map((i) => [i.id, i])), [groups])
-  const ordered = useMemo(() => groups.flatMap((g) => g.issues), [groups])
+  const ordered = useMemo(() => board.flatMap((g) => g.issues), [board])
   useListNavigation(ordered)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -55,76 +73,88 @@ export function IssueBoard({
 
   const columnOf = (id: string) => (id in columns ? id : Object.keys(columns).find((key) => columns[key].includes(id)))
 
-  // target resolves a drop into a column and an index in it, without the
-  // dragged card; within its own column a card takes the index it hovers.
-  const target = ({ active, over }: DragMoveEvent): Drop | null => {
-    const column = over && columnOf(String(over.id))
-    if (!over || !column) {
-      return null
+  // The column under the pointer takes the card, even an empty one beside a
+  // full column, and its nearest card sets the slot. The keyboard, which has
+  // no pointer, falls back to nearest corners.
+  const collisionDetection: CollisionDetection = (args) => {
+    const column = pointerWithin(args)
+      .map(({ id }) => columnOf(String(id)))
+      .find((key) => key !== undefined)
+    if (!column) {
+      return closestCorners(args)
     }
-    const ids = columns[column].filter((id) => id !== active.id)
-    if (over.id === column) {
-      return { column, index: ids.length }
-    }
-    if (column === columnOf(String(active.id))) {
-      return { column, index: columns[column].indexOf(String(over.id)) }
-    }
-    const translated = active.rect.current.translated
-    const below = !!translated && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2
-    return { column, index: ids.indexOf(String(over.id)) + (below ? 1 : 0) }
+    const cards = args.droppableContainers.filter((c) => columns[column].includes(String(c.id)))
+    return cards.length ? closestCenter({ ...args, droppableContainers: cards }) : [{ id: column }]
   }
 
-  const onDragMove = (event: DragMoveEvent) => {
-    const next = target(event)
-    const cross = next && next.column !== columnOf(String(event.active.id)) ? next : null
-    setDrop((prev) => (prev?.column === cross?.column && prev?.index === cross?.index ? prev : cross))
-  }
-
-  const onDragEnd = (event: DragEndEvent) => {
-    setActiveId(null)
-    setDrop(null)
-    const issue = issues.get(String(event.active.id))
-    const to = target(event)
-    if (!issue || !to) {
+  // Crossing into another column moves the card there, above or below the
+  // card it hovers, so the board shows where it will land.
+  const onDragOver = ({ active, over }: DragOverEvent) => {
+    const id = String(active.id)
+    const from = columnOf(id)
+    const to = over && columnOf(String(over.id))
+    if (!over || !from || !to || from === to) {
       return
     }
-    const ids = columns[to.column].filter((id) => id !== issue.id)
-    const group = groups.find((g) => g.key === to.column)!
-    const state = catalog?.states.find((s) => s.teamId === issue.teamId && `${s.type}:${s.name}` === group.key)
+    const target = columns[to]
+    const translated = active.rect.current.translated
+    const below = !!translated && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2
+    const index = over.id === to ? target.length : target.indexOf(String(over.id)) + (below ? 1 : 0)
+    setArranged({
+      from: groups,
+      columns: { ...columns, [from]: columns[from].filter((c) => c !== id), [to]: [...target.slice(0, index), id, ...target.slice(index)] },
+    })
+  }
+
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    setActiveId(null)
+    const id = String(active.id)
+    const issue = issues.get(id)
+    const column = columnOf(id)
+    const state = catalog?.states.find((s) => s.teamId === issue?.teamId && `${s.type}:${s.name}` === column)
+    if (!issue || !column || !over || !state) {
+      setArranged(null)
+      return
+    }
+    const overIndex = columns[column].indexOf(String(over.id))
+    const ids = overIndex < 0 ? columns[column] : arrayMove(columns[column], columns[column].indexOf(id), overIndex)
+    setArranged({ from: groups, columns: { ...columns, [column]: ids } })
+    const index = ids.indexOf(id)
     const patch: IssuePatch = {}
-    if (state && state.id !== issue.stateId) {
+    if (state.id !== issue.stateId) {
       patch.stateId = state.id
     }
-    if (ordering === 'manual') {
-      const sortOrder = sortOrderBetween(issues.get(ids[to.index - 1]), issues.get(ids[to.index]))
-      if (sortOrder !== issue.sortOrder && columns[to.column].indexOf(issue.id) !== to.index) {
-        patch.sortOrder = sortOrder
-      }
+    if (ordering === 'manual' && saved[column]?.indexOf(id) !== index) {
+      patch.sortOrder = sortOrderBetween(issues.get(ids[index - 1]), issues.get(ids[index + 1]))
     }
     if (Object.keys(patch).length) {
-      update.mutate({ id: issue.id, patch })
+      update.mutate({ id, patch })
     }
   }
 
   const active = activeId ? issues.get(activeId) : undefined
+  // The lifted card shows the status of the column it is over.
+  const activeState = activeId ? board.find((g) => g.key === columnOf(activeId))?.state : undefined
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      // Scroll only from the board's outer edge; the default 20% band scrolled
+      // columns out from under the pointer.
+      autoScroll={{ threshold: { x: 0.05, y: 0.1 } }}
       onDragStart={({ active }) => setActiveId(String(active.id))}
-      onDragMove={onDragMove}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       onDragCancel={() => {
         setActiveId(null)
-        setDrop(null)
+        setArranged(null)
       }}
     >
       <div className="scrollbar-quiet flex h-full gap-2.5 overflow-x-auto p-3">
-        {groups.map((group) => {
+        {board.map((group) => {
           const ids = columns[group.key]
-          const others = ids.filter((id) => id !== activeId)
           return (
-            <Column key={group.key} id={group.key} highlighted={drop?.column === group.key}>
+            <Column key={group.key} id={group.key}>
               <div className="flex h-9 shrink-0 items-center gap-2 px-2 text-[13px] font-medium text-ink">
                 {stateIcon(group.state)}
                 <span className="truncate">{group.state.name}</span>
@@ -139,42 +169,28 @@ export function IssueBoard({
               </div>
               <SortableContext items={ids} strategy={verticalListSortingStrategy}>
                 <div className="scrollbar-quiet flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-1.5 pb-3">
-                  {ids.map((id) => {
-                    const issue = issues.get(id)!
-                    return (
-                      <div key={id} className="relative">
-                        {drop?.column === group.key && others[drop.index] === id && <DropLine />}
-                        <SortableCard issue={issue} />
-                      </div>
-                    )
-                  })}
-                  {drop?.column === group.key && drop.index >= others.length && <DropLine last />}
+                  {ids.map((id) => (
+                    <SortableCard key={id} issue={issues.get(id)!} />
+                  ))}
                 </div>
               </SortableContext>
             </Column>
           )
         })}
       </div>
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' }}>
-        {active && <IssueCard issue={active} lifted />}
+      <DragOverlay dropAnimation={dropAnimation} className="rounded-[8px] shadow-[var(--shadow-raised)]">
+        {active && <IssueCard issue={activeState ? { ...active, stateId: activeState.id } : active} lifted />}
       </DragOverlay>
     </DndContext>
   )
 }
 
-function DropLine({ last = false }: { last?: boolean }) {
-  return <span className={cn('pointer-events-none absolute inset-x-1 z-10 h-0.5 rounded-full bg-primary', last ? 'relative block' : '-top-1')} />
-}
-
-function Column({ id, highlighted, children }: { id: string; highlighted: boolean; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+function Column({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef } = useDroppable({ id })
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        'flex w-[330px] shrink-0 flex-col rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--color-surface)_55%,var(--color-bg))] transition-colors duration-150',
-        (isOver || highlighted) && 'bg-[color-mix(in_oklab,var(--color-surface)_85%,var(--color-bg))]',
-      )}
+      className="flex w-[330px] shrink-0 flex-col rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--color-surface)_55%,var(--color-bg))]"
     >
       {children}
     </div>
@@ -215,7 +231,6 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
         className={cn(
           'relative cursor-default rounded-[8px] border border-border bg-raised px-3 pb-2.5 pt-2 text-[13px] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow] duration-100 hover:border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
           focused && 'border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
-          lifted && 'rotate-[1.5deg] shadow-[var(--shadow-raised)]',
         )}
       >
         {!lifted && <ShortcutPicker issue={issue} visible={['assignee', 'priority']} />}
