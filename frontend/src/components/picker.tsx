@@ -1,6 +1,6 @@
-import { Check } from 'lucide-react'
+import { Check, Plus } from 'lucide-react'
 import { Command as CommandPrimitive } from 'cmdk'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +26,7 @@ export function Picker({
   multiple = false,
   align = 'start',
   footer,
+  onCreate,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -38,7 +39,11 @@ export function Picker({
   multiple?: boolean
   align?: 'start' | 'end' | 'center'
   footer?: ReactNode
+  // onCreate offers to create an option from unmatched filter text.
+  onCreate?: { label: string; create: (name: string) => void }
 }) {
+  const [search, setSearch] = useState('')
+  const creatable = onCreate && search.trim() && !options.some((o) => o.label.toLowerCase() === search.trim().toLowerCase())
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       {trigger && <PopoverTrigger asChild>{trigger}</PopoverTrigger>}
@@ -66,11 +71,13 @@ export function Picker({
         >
           <CommandPrimitive.Input
             autoFocus
+            value={search}
+            onValueChange={setSearch}
             placeholder={placeholder}
             className="h-9 w-full border-b border-border bg-transparent px-3 text-[13px] text-ink outline-none placeholder:text-ink-3"
           />
           <CommandPrimitive.List className="scrollbar-quiet max-h-72 overflow-y-auto p-1">
-            <CommandPrimitive.Empty className="px-2 py-3 text-center text-[12px] text-ink-3">No results</CommandPrimitive.Empty>
+            {!creatable && <CommandPrimitive.Empty className="px-2 py-3 text-center text-[12px] text-ink-3">No results</CommandPrimitive.Empty>}
             {options.map((option, index) => {
               const active = selected.includes(option.value)
               return (
@@ -104,6 +111,22 @@ export function Picker({
                 </CommandPrimitive.Item>
               )
             })}
+            {creatable && (
+              <CommandPrimitive.Item
+                value={`create ${search}`}
+                forceMount
+                onSelect={() => {
+                  onCreate.create(search.trim())
+                  setSearch('')
+                }}
+                className="flex h-8 cursor-default items-center gap-2.5 rounded-[5px] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
+              >
+                <Plus className="size-3.5 text-ink-3" />
+                <span className="truncate">
+                  {onCreate.label} <span className="font-medium">"{search.trim()}"</span>
+                </span>
+              </CommandPrimitive.Item>
+            )}
           </CommandPrimitive.List>
           {footer}
         </CommandPrimitive>

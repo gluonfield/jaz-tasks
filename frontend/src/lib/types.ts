@@ -55,7 +55,7 @@ export type Cycle = {
 
 export type Catalog = {
   viewer: User
-  organization: { id: string; name: string; urlKey: string }
+  organization: { id: string; name: string; urlKey: string; projectStatuses: Project['status'][] }
   teams: Team[]
   states: WorkflowState[]
   users: User[]

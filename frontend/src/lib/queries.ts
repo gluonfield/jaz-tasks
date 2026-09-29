@@ -11,7 +11,7 @@ const id = (ref: Ref) => ref?.id ?? null
 const catalogQuery = /* GraphQL */ `
   query Catalog {
     viewer { id }
-    organization { id name urlKey }
+    organization { id name urlKey projectStatuses { id name type color } }
     teams(first: 250) { nodes { id key name icon color } }
     workflowStates(first: 250) { nodes { id name type color position team { id } } }
     users(first: 250) { nodes { id name displayName email avatarUrl initials active isMe } }
@@ -261,5 +261,44 @@ export function useDeleteComment(identifier: string) {
   return useMutation({
     mutationFn: (id: string) => gql(`mutation ($id: String!) { commentDelete(id: $id) { success } }`, { id }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['issue', identifier] }),
+  })
+}
+
+export function useCreateLabel() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { name: string; color: string; teamId?: string }) => {
+      const data = await gql<{ issueLabelCreate: { issueLabel: { id: string } } }>(
+        `mutation ($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { issueLabel { id } } }`,
+        { input },
+      )
+      return data.issueLabelCreate.issueLabel.id
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ['catalog'] }),
+  })
+}
+
+export type ProjectDraft = {
+  name: string
+  description?: string
+  statusId: string
+  leadId?: string | null
+  teamIds: string[]
+  targetDate?: string | null
+  color: string
+  icon: string
+}
+
+export function useCreateProject() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: ProjectDraft) => {
+      const data = await gql<{ projectCreate: { project: { slugId: string } } }>(
+        `mutation ($input: ProjectCreateInput!) { projectCreate(input: $input) { project { slugId } } }`,
+        { input },
+      )
+      return data.projectCreate.project.slugId
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }

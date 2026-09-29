@@ -267,8 +267,9 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function Properties({ issue }: { issue: Issue }) {
   const patch = useIssuePatch(issue)
-  const { labels, states } = useCatalogMaps()
+  const { catalog, labels, states } = useCatalogMaps()
   const done = ['completed', 'canceled'].includes(states.get(issue.stateId)?.type ?? '')
+  const hasCycles = !!issue.cycleId || !!catalog?.cycles.some((c) => c.teamId === issue.teamId)
   const shared = { teamId: issue.teamId, issueId: issue.id, variant: 'row' as const }
   return (
     <aside className="scrollbar-quiet w-[296px] shrink-0 overflow-y-auto border-l border-border px-3 py-4">
@@ -301,9 +302,11 @@ function Properties({ issue }: { issue: Issue }) {
         <Row label="Project">
           <ProjectPicker {...shared} value={issue.projectId} onChange={(projectId) => patch({ projectId })} />
         </Row>
-        <Row label="Cycle">
-          <CyclePicker {...shared} value={issue.cycleId} onChange={(cycleId) => patch({ cycleId })} />
-        </Row>
+        {hasCycles && (
+          <Row label="Cycle">
+            <CyclePicker {...shared} value={issue.cycleId} onChange={(cycleId) => patch({ cycleId })} />
+          </Row>
+        )}
         <Row label="Estimate">
           <EstimatePicker {...shared} value={issue.estimate} onChange={(estimate) => patch({ estimate })} />
         </Row>

@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Box } from 'lucide-react'
+import { CreateProjectButton } from '@/components/create-project'
 import { Avatar, EntityIcon, ProgressRing } from '@/components/icons'
 import { ProjectStatusIcon } from '@/components/project-status'
 import { formatDay } from '@/lib/issues'
@@ -14,6 +15,7 @@ function Projects() {
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
         <Box className="size-4 text-ink-2" /> Projects
+        <CreateProjectButton />
       </header>
       <div className="grid grid-cols-[minmax(0,1fr)_140px_120px_110px_110px_90px] items-center border-b border-border px-5 py-2 text-[12px] text-ink-3">
         <span>Name</span>

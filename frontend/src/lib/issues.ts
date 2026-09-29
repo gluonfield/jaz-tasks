@@ -1,5 +1,9 @@
 import type { Issue, StateType, WorkflowState } from './types'
 
+// entityColors are Linear's default colors for new labels and projects;
+// they are stored as workspace data, not theme.
+export const entityColors = ['#bb87fc', '#4ea7fc', '#4cb782', '#f2c94c', '#f2994a', '#eb5757', '#26b5ce', '#5e6ad2']
+
 export const priorities = [
   { value: 0, label: 'No priority' },
   { value: 1, label: 'Urgent' },

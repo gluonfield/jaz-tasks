@@ -1,7 +1,7 @@
 import { CalendarDays, CircleDashed, Hexagon, RefreshCcw, Tag, Triangle } from 'lucide-react'
 import { type ReactNode, forwardRef, useState } from 'react'
-import { dueStatus, formatDay, priorities, toDateInput, workflowOrder } from '@/lib/issues'
-import { useCatalogMaps, useUpdateIssue } from '@/lib/queries'
+import { dueStatus, entityColors, formatDay, priorities, toDateInput, workflowOrder } from '@/lib/issues'
+import { useCatalogMaps, useCreateLabel, useUpdateIssue } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
 import { type PickerKind, setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
@@ -175,6 +175,7 @@ export function AssigneePicker({ value, onChange, variant, issueId, className }:
 
 export function LabelsPicker({ value, onChange, teamId, variant, issueId, className, children }: Props<string[]> & { children?: ReactNode }) {
   const { catalog, labels } = useCatalogMaps()
+  const createLabel = useCreateLabel()
   const [open, setOpen] = usePickerOpen('labels', issueId)
   const available = (catalog?.labels ?? []).filter((l) => !l.isGroup && (!l.teamId || l.teamId === teamId))
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id])
@@ -188,6 +189,10 @@ export function LabelsPicker({ value, onChange, teamId, variant, issueId, classN
       options={available.map((l) => ({ value: l.id, label: l.name, icon: <LabelDot color={l.color} /> }))}
       selected={value}
       onSelect={toggle}
+      onCreate={{
+        label: 'Create label',
+        create: (name) => createLabel.mutate({ name, color: entityColors[name.length % entityColors.length] }, { onSuccess: (id) => onChange([...value, id]) }),
+      }}
       trigger={
         children ? (
           <span>{children}</span>
