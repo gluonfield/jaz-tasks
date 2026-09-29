@@ -1,0 +1,66 @@
+version: "2"
+overrides:
+  go:
+    rename:
+      ids: IDs
+      row_offset: Offset
+      row_limit: Limit
+      label_ids: LabelIDs
+      state_ids: StateIDs
+      assignee_ids: AssigneeIDs
+      creator_ids: CreatorIDs
+      project_ids: ProjectIDs
+      cycle_ids: CycleIDs
+      parent_ids: ParentIDs
+      team_ids: TeamIDs
+      added_label_ids: AddedLabelIDs
+      removed_label_ids: RemovedLabelIDs
+      url_key: URLKey
+      avatar_url: AvatarURL
+    overrides:
+      - db_type: uuid
+        go_type: string
+      - db_type: uuid
+        nullable: true
+        go_type:
+          type: string
+          pointer: true
+      - db_type: timestamptz
+        go_type: time.Time
+      - db_type: timestamptz
+        nullable: true
+        go_type:
+          import: time
+          type: Time
+          pointer: true
+      - db_type: date
+        go_type: time.Time
+      - db_type: date
+        nullable: true
+        go_type:
+          import: time
+          type: Time
+          pointer: true
+sql:
+  - engine: postgresql
+    schema: internal/storage/postgres/migrations
+    queries: internal/storage/postgres/queries/tracker
+    gen:
+      go:
+        package: tracker
+        out: internal/storage/postgres/generated/tracker
+        sql_package: pgx/v5
+        emit_pointers_for_null_types: true
+        emit_empty_slices: true
+        omit_unused_structs: true
+  - engine: postgresql
+    schema: internal/storage/postgres/migrations
+    queries: internal/storage/postgres/queries/auth
+    gen:
+      go:
+        package: auth
+        out: internal/storage/postgres/generated/auth
+        sql_package: pgx/v5
+        emit_pointers_for_null_types: true
+        emit_empty_slices: true
+        omit_unused_structs: true

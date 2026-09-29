@@ -1,0 +1,175 @@
+package storage
+
+import "time"
+
+// Records mirror the sqlc models field for field so the Postgres adapter
+// converts rows with a plain type conversion; a schema change fails to compile
+// until the record follows.
+
+type Workspace struct {
+	ID        string
+	Name      string
+	URLKey    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type User struct {
+	ID          string
+	WorkspaceID string
+	Name        string
+	DisplayName string
+	Email       string
+	AvatarURL   *string
+	Admin       bool
+	Active      bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type Team struct {
+	ID          string
+	WorkspaceID string
+	Key         string
+	Name        string
+	Description *string
+	Icon        *string
+	Color       *string
+	IssueCount  int32
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type WorkflowState struct {
+	ID          string
+	WorkspaceID string
+	TeamID      string
+	Name        string
+	Type        string
+	Color       string
+	Position    float64
+	Description *string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type IssueLabel struct {
+	ID          string
+	WorkspaceID string
+	TeamID      *string
+	ParentID    *string
+	Name        string
+	Color       string
+	Description *string
+	IsGroup     bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type Project struct {
+	ID          string
+	WorkspaceID string
+	SlugID      string
+	Name        string
+	Description string
+	Icon        *string
+	Color       string
+	Status      string
+	LeadID      *string
+	TeamIDs     []string
+	Priority    int32
+	SortOrder   float64
+	StartDate   *time.Time
+	TargetDate  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type Cycle struct {
+	ID          string
+	WorkspaceID string
+	TeamID      string
+	Number      int32
+	Name        *string
+	Description *string
+	StartsAt    time.Time
+	EndsAt      time.Time
+	CompletedAt *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type Issue struct {
+	ID          string
+	WorkspaceID string
+	TeamID      string
+	Number      int32
+	Title       string
+	Description *string
+	StateID     string
+	Priority    int32
+	Estimate    *int32
+	AssigneeID  *string
+	CreatorID   *string
+	ProjectID   *string
+	CycleID     *string
+	ParentID    *string
+	LabelIDs    []string
+	DueDate     *time.Time
+	SortOrder   float64
+	StartedAt   *time.Time
+	CompletedAt *time.Time
+	CanceledAt  *time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	ArchivedAt  *time.Time
+}
+
+type Comment struct {
+	ID          string
+	WorkspaceID string
+	IssueID     string
+	UserID      *string
+	ParentID    *string
+	Body        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	EditedAt    *time.Time
+	ResolvedAt  *time.Time
+}
+
+type IssueHistory struct {
+	ID                 string
+	IssueID            string
+	ActorID            *string
+	FromStateID        *string
+	ToStateID          *string
+	FromAssigneeID     *string
+	ToAssigneeID       *string
+	FromPriority       *int32
+	ToPriority         *int32
+	FromTitle          *string
+	ToTitle            *string
+	FromTeamID         *string
+	ToTeamID           *string
+	FromProjectID      *string
+	ToProjectID        *string
+	FromCycleID        *string
+	ToCycleID          *string
+	FromParentID       *string
+	ToParentID         *string
+	FromEstimate       *int32
+	ToEstimate         *int32
+	FromDueDate        *time.Time
+	ToDueDate          *time.Time
+	AddedLabelIDs      []string
+	RemovedLabelIDs    []string
+	UpdatedDescription bool
+	Archived           *bool
+	CreatedAt          time.Time
+}
