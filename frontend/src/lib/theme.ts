@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from 'react'
+import { setHostToken } from './auth'
 
 export type Scheme = 'light' | 'dark'
 export type SchemePreference = Scheme | 'system'
 
-// ThemeMessage is what a host posts to theme the app (see THEMING.md).
+// Messages a host posts to theme and authenticate the app (see THEMING.md).
 export type ThemeMessage = { type: 'jaz:theme'; vars?: Record<string, string>; scheme?: Scheme }
+type AuthMessage = { type: 'jaz:auth'; token: string }
 
 const preferenceKey = 'jaz-tasks:scheme'
 const listeners = new Set<() => void>()
@@ -76,16 +78,21 @@ function themeFromURL(): Omit<ThemeMessage, 'type'> | null {
   }
 }
 
-export function installThemeBridge() {
+export function installHostBridge() {
   const fromURL = themeFromURL()
   if (fromURL) {
     applyTheme(fromURL)
   }
   render()
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render)
-  window.addEventListener('message', (event: MessageEvent<ThemeMessage>) => {
-    if (event.source === window.parent && event.data?.type === 'jaz:theme') {
+  window.addEventListener('message', (event: MessageEvent<ThemeMessage | AuthMessage>) => {
+    if (event.source !== window.parent || window.parent === window) {
+      return
+    }
+    if (event.data?.type === 'jaz:theme') {
       applyTheme(event.data)
+    } else if (event.data?.type === 'jaz:auth' && typeof event.data.token === 'string') {
+      setHostToken(event.data.token)
     }
   })
   if (window.parent !== window) {

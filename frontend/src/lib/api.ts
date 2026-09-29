@@ -1,4 +1,4 @@
-import { clearApiKey, getApiKey } from './auth'
+import { getHostToken, loginURL } from './auth'
 
 export class ApiError extends Error {
   constructor(
@@ -11,18 +11,25 @@ export class ApiError extends Error {
 
 type GraphQLResponse<T> = { data?: T; errors?: { message: string }[] }
 
-// gql posts to the Linear-compatible endpoint with the stored API key.
+// gql posts to the Linear-compatible endpoint with the session cookie, or a
+// host-provided token when embedded.
 export async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const token = getHostToken()
   const res = await fetch('/graphql', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: getApiKey() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
     body: JSON.stringify({ query, variables }),
   })
-  const body = (await res.json().catch(() => ({}))) as GraphQLResponse<T>
   if (res.status === 401) {
-    clearApiKey()
-    window.location.assign('/login')
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'jaz:auth-required' }, '*')
+    } else {
+      window.location.assign(loginURL())
+    }
+    throw new ApiError('Not signed in', 401)
   }
+  const body = (await res.json().catch(() => ({}))) as GraphQLResponse<T>
   if (body.errors?.length) {
     throw new ApiError(body.errors[0].message, res.status)
   }
@@ -30,4 +37,22 @@ export async function gql<T>(query: string, variables?: Record<string, unknown>)
     throw new ApiError(`Request failed (${res.status})`, res.status)
   }
   return body.data
+}
+
+// rest calls the session-only settings endpoints.
+export async function rest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    credentials: 'same-origin',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (res.status === 401) {
+    window.location.assign(loginURL())
+  }
+  if (!res.ok) {
+    const error = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new ApiError(error.error ?? `Request failed (${res.status})`, res.status)
+  }
+  return (res.status === 204 ? undefined : await res.json()) as T
 }

@@ -3,13 +3,13 @@ import {
   Box,
   ChevronDown,
   CircleDot,
-  Copy,
   Inbox,
   Layers,
   LogOut,
   Monitor,
   Moon,
   Search,
+  Settings,
   SquarePen,
   Sun,
   Target,
@@ -22,13 +22,14 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { clearApiKey, getApiKey } from '@/lib/auth'
+import { signOut } from '@/lib/auth'
 import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
@@ -189,16 +190,14 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuItem onSelect={() => navigator.clipboard.writeText(getApiKey())}>
-          <Copy /> Copy API key
+        <DropdownMenuItem asChild>
+          <Link to="/settings">
+            <Settings /> Settings
+            <DropdownMenuShortcut>G S</DropdownMenuShortcut>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => {
-            clearApiKey()
-            window.location.assign('/login')
-          }}
-        >
+        <DropdownMenuItem onSelect={() => signOut()}>
           <LogOut /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

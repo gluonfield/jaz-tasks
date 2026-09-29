@@ -2,7 +2,8 @@ import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouter } from '@tanstack/react-router'
 import { type ReactNode, useEffect } from 'react'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { installThemeBridge } from '@/lib/theme'
+import { onHostToken } from '@/lib/auth'
+import { installHostBridge } from '@/lib/theme'
 import styles from '@/styles.css?url'
 
 // Applies the saved or system scheme before first paint to avoid a flash.
@@ -38,7 +39,8 @@ function Shell({ children }: { children: ReactNode }) {
 
 function Root() {
   const { queryClient } = useRouter().options.context
-  useEffect(installThemeBridge, [])
+  useEffect(installHostBridge, [])
+  useEffect(() => onHostToken(() => queryClient.invalidateQueries()), [queryClient])
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={500}>

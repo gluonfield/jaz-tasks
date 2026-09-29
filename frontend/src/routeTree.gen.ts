@@ -15,6 +15,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInboxRouteImport } from './routes/_app/inbox'
 import { Route as AppMyIssuesRouteImport } from './routes/_app/my-issues'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppViewsRouteImport } from './routes/_app/views'
 import { Route as AppIssueIdentifierRouteImport } from './routes/_app/issue.$identifier'
 import { Route as AppProjectSlugIdRouteImport } from './routes/_app/project.$slugId'
@@ -50,6 +51,11 @@ const AppProjectsRoute = AppProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppViewsRoute = AppViewsRouteImport.update({
   id: '/views',
   path: '/views',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof AppInboxRoute
   '/my-issues': typeof AppMyIssuesRoute
   '/projects': typeof AppProjectsRoute
+  '/settings': typeof AppSettingsRoute
   '/views': typeof AppViewsRoute
   '/issue/$identifier': typeof AppIssueIdentifierRoute
   '/project/$slugId': typeof AppProjectSlugIdRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof AppInboxRoute
   '/my-issues': typeof AppMyIssuesRoute
   '/projects': typeof AppProjectsRoute
+  '/settings': typeof AppSettingsRoute
   '/views': typeof AppViewsRoute
   '/': typeof AppIndexRoute
   '/issue/$identifier': typeof AppIssueIdentifierRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_app/inbox': typeof AppInboxRoute
   '/_app/my-issues': typeof AppMyIssuesRoute
   '/_app/projects': typeof AppProjectsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/views': typeof AppViewsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/issue/$identifier': typeof AppIssueIdentifierRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/my-issues'
     | '/projects'
+    | '/settings'
     | '/views'
     | '/issue/$identifier'
     | '/project/$slugId'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/my-issues'
     | '/projects'
+    | '/settings'
     | '/views'
     | '/'
     | '/issue/$identifier'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/_app/inbox'
     | '/_app/my-issues'
     | '/_app/projects'
+    | '/_app/settings'
     | '/_app/views'
     | '/_app/'
     | '/_app/issue/$identifier'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProjectsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/views': {
       id: '/_app/views'
       path: '/views'
@@ -245,6 +264,7 @@ interface AppRouteChildren {
   AppInboxRoute: typeof AppInboxRoute
   AppMyIssuesRoute: typeof AppMyIssuesRoute
   AppProjectsRoute: typeof AppProjectsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppViewsRoute: typeof AppViewsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppIssueIdentifierRoute: typeof AppIssueIdentifierRoute
@@ -257,6 +277,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInboxRoute: AppInboxRoute,
   AppMyIssuesRoute: AppMyIssuesRoute,
   AppProjectsRoute: AppProjectsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppViewsRoute: AppViewsRoute,
   AppIndexRoute: AppIndexRoute,
   AppIssueIdentifierRoute: AppIssueIdentifierRoute,

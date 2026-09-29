@@ -9,7 +9,7 @@ import { isTyping } from './issue-view'
 import { Sidebar } from './sidebar'
 
 const pickerKeys: Record<string, PickerKind> = { s: 'status', p: 'priority', a: 'assignee', l: 'labels', e: 'estimate', D: 'dueDate' }
-const goKeys: Record<string, string> = { i: '/inbox', m: '/my-issues', p: '/projects', v: '/views' }
+const goKeys: Record<string, string> = { i: '/inbox', m: '/my-issues', p: '/projects', v: '/views', s: '/settings' }
 
 // useTeamFromRoute finds the team the current page belongs to, for defaults.
 export function useRouteTeamId() {
