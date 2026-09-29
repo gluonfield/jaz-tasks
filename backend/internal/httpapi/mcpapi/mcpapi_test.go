@@ -268,8 +268,10 @@ func TestMCPApp(t *testing.T) {
 		}
 	}
 	initialize := s.InitializeResult()
-	if initialize.ServerInfo.Name != "jaz-tasks" || initialize.ServerInfo.Title != "Jaz Tasks" || len(initialize.ServerInfo.Icons) != 1 ||
-		!strings.HasPrefix(initialize.ServerInfo.Icons[0].Source, "data:image/svg+xml;base64,") {
+	icons := initialize.ServerInfo.Icons
+	if initialize.ServerInfo.Name != "jaz-tasks" || initialize.ServerInfo.Title != "Jaz Tasks" || len(icons) != 2 ||
+		icons[0].Theme != mcp.IconThemeLight || icons[1].Theme != mcp.IconThemeDark ||
+		!strings.HasPrefix(icons[0].Source, "data:image/svg+xml;base64,") || !strings.HasPrefix(icons[1].Source, "data:image/svg+xml;base64,") {
 		t.Fatalf("server info: %+v", initialize.ServerInfo)
 	}
 	tools, _ := s.ListTools(ctx, nil)

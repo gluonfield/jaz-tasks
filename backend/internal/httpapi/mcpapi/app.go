@@ -23,11 +23,18 @@ const (
 //go:embed app/mcp-app.html
 var appHTML string
 
-// icon is the rail mark: a check on an indigo tile, legible at 18px on light
-// and dark backgrounds.
-var icon = "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(
-	`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#5e6ad2"/>`+
-		`<path d="M7.5 12.4l3 3 6-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`))
+// icons is the rail mark, a line-drawn circled check in the weight of the
+// host's own navigation glyphs, stroked for light and dark backgrounds.
+var icons = []mcp.Icon{
+	{Source: iconSVG("#1f2328"), MIMEType: "image/svg+xml", Sizes: []string{"any"}, Theme: mcp.IconThemeLight},
+	{Source: iconSVG("#e8e8e8"), MIMEType: "image/svg+xml", Sizes: []string{"any"}, Theme: mcp.IconThemeDark},
+}
+
+func iconSVG(stroke string) string {
+	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="` + stroke +
+		`" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`
+	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg))
+}
 
 func registerApp(server *mcp.Server, t tools) {
 	server.AddResource(&mcp.Resource{URI: appURI, Name: "Jaz Tasks", Title: "Jaz Tasks", MIMEType: appMIME},

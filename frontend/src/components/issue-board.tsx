@@ -16,14 +16,14 @@ import { useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
 import { type Ordering, sortOrderBetween } from '@/lib/issues'
-import { useCatalogMaps, useUpdateIssue } from '@/lib/queries'
+import { useCatalogMaps, useIssuePatch, useUpdateIssue } from '@/lib/queries'
 import type { Issue, IssuePatch } from '@/lib/types'
 import { openCreateIssue, setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon, LabelDot } from './icons'
 import { type IssueGroup, useListNavigation } from './issue-view'
 import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, useStateIcon } from './properties'
-import { useIssuePatch } from './issue-row'
+import { IssueContextMenu } from './issue-menu'
 
 const toColumns = (groups: IssueGroup[]): Record<string, string[]> => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => i.id)]))
 
@@ -207,43 +207,45 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
   const issueLabels = issue.labelIds.map((id) => labels.get(id)).filter((l) => l !== undefined)
   const done = state?.type === 'completed' || state?.type === 'canceled'
   return (
-    <div
-      data-issue-id={issue.id}
-      onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
-      onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
-      className={cn(
-        'relative cursor-default rounded-[8px] border border-border bg-raised px-3 pb-2.5 pt-2 text-[13px] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow] duration-100 hover:border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
-        focused && 'border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
-        lifted && 'rotate-[1.5deg] shadow-[var(--shadow-raised)]',
-      )}
-    >
-      {!lifted && <ShortcutPicker issue={issue} visible={['assignee', 'priority']} />}
-      <div className="flex h-5 items-center justify-between">
-        <span className="text-[12px] text-ink-3">{issue.identifier}</span>
-        <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} className="-mr-1.5 size-5" />
-      </div>
-      <div className="mt-0.5 flex gap-2">
-        {state && <span className="mt-[3px]">{stateIcon(state)}</span>}
-        <span className={cn('line-clamp-2 font-medium leading-[19px] text-ink', done && 'text-ink-2')}>{issue.title}</span>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1">
-        <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
-        {issueLabels.map((label) => (
-          <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
-            <LabelDot color={label.color} />
-            {label.name}
-          </span>
-        ))}
-        {project && (
-          <span className="inline-flex h-[22px] max-w-44 items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
-            <EntityIcon icon={project.icon} color={project.color} className="size-3" />
-            <span className="truncate">{project.name}</span>
-          </span>
+    <IssueContextMenu issue={issue}>
+      <div
+        data-issue-id={issue.id}
+        onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
+        onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
+        className={cn(
+          'relative cursor-default rounded-[8px] border border-border bg-raised px-3 pb-2.5 pt-2 text-[13px] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow] duration-100 hover:border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
+          focused && 'border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
+          lifted && 'rotate-[1.5deg] shadow-[var(--shadow-raised)]',
         )}
-        {issue.dueDate && (
-          <DueDatePicker variant="chip" value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} teamId={issue.teamId} done={done} className="h-[22px] rounded-full" />
-        )}
+      >
+        {!lifted && <ShortcutPicker issue={issue} visible={['assignee', 'priority']} />}
+        <div className="flex h-5 items-center justify-between">
+          <span className="text-[12px] text-ink-3">{issue.identifier}</span>
+          <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} className="-mr-1.5 size-5" />
+        </div>
+        <div className="mt-0.5 flex gap-2">
+          {state && <span className="mt-[3px]">{stateIcon(state)}</span>}
+          <span className={cn('line-clamp-2 font-medium leading-[19px] text-ink', done && 'text-ink-2')}>{issue.title}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1">
+          <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
+          {issueLabels.map((label) => (
+            <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
+              <LabelDot color={label.color} />
+              {label.name}
+            </span>
+          ))}
+          {project && (
+            <span className="inline-flex h-[22px] max-w-44 items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
+              <EntityIcon icon={project.icon} color={project.color} className="size-3" />
+              <span className="truncate">{project.name}</span>
+            </span>
+          )}
+          {issue.dueDate && (
+            <DueDatePicker variant="chip" value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} teamId={issue.teamId} done={done} className="h-[22px] rounded-full" />
+          )}
+        </div>
       </div>
-    </div>
+    </IssueContextMenu>
   )
 })

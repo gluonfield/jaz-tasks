@@ -14,7 +14,6 @@ import {
   SquarePen,
   Sun,
   Target,
-  UserRoundCheck,
 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import {
@@ -37,7 +36,7 @@ import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
-import { TeamBadge } from './icons'
+import { MyIssuesIcon, TeamBadge } from './icons'
 import { Kbd } from './kbd'
 
 export function Sidebar() {
@@ -56,7 +55,7 @@ export function Sidebar() {
       <NavItem to="/inbox" icon={<Inbox />}>
         Inbox
       </NavItem>
-      <NavItem to="/my-issues" icon={<UserRoundCheck />}>
+      <NavItem to="/my-issues" icon={<MyIssuesIcon />}>
         My issues
       </NavItem>
       <Section title="Workspace">

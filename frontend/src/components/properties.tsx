@@ -82,15 +82,62 @@ export function useStateIcon() {
   }
 }
 
-export function StatusPicker({ value, onChange, teamId, variant, issueId, className }: Props<string>) {
-  const { catalog, states } = useCatalogMaps()
-  const [open, setOpen] = usePickerOpen('status', issueId)
+// The option lists below feed both the property pickers and the issue context
+// menu, so every surface offers the same choices in the same order.
+export function useStatusOptions(teamId: string): PickerOption[] {
+  const { catalog } = useCatalogMaps()
   const stateIcon = useStateIcon()
-  const current = states.get(value)
-  const options: PickerOption[] = (catalog?.states ?? [])
+  return (catalog?.states ?? [])
     .filter((s) => s.teamId === teamId)
     .sort(workflowOrder)
     .map((s) => ({ value: s.id, label: s.name, icon: stateIcon(s) }))
+}
+
+export const priorityOptions: PickerOption[] = priorities.map((p) => ({
+  value: String(p.value),
+  label: p.label,
+  icon: <PriorityIcon priority={p.value} />,
+}))
+
+// An empty value means no assignee.
+export function useAssigneeOptions(): PickerOption[] {
+  const { catalog } = useCatalogMaps()
+  const people = [...(catalog?.users ?? [])].filter((u) => u.active).sort((a, b) => Number(b.isMe) - Number(a.isMe))
+  return [
+    { value: '', label: 'No assignee', icon: <Avatar user={null} size={16} /> },
+    ...people.map((u) => ({
+      value: u.id,
+      label: u.name,
+      keywords: [u.displayName, u.email],
+      icon: <Avatar user={u} size={16} />,
+      detail: u.isMe ? <span className="text-[12px] text-ink-3">You</span> : undefined,
+    })),
+  ]
+}
+
+export function useLabelOptions(teamId: string): PickerOption[] {
+  const { catalog } = useCatalogMaps()
+  return (catalog?.labels ?? [])
+    .filter((l) => !l.isGroup && (!l.teamId || l.teamId === teamId))
+    .map((l) => ({ value: l.id, label: l.name, icon: <LabelDot color={l.color} /> }))
+}
+
+// An empty value means no project; the issue's team's projects come first.
+export function useProjectOptions(teamId: string): PickerOption[] {
+  const { catalog } = useCatalogMaps()
+  const projects = [...(catalog?.projects ?? [])].sort((a, b) => Number(b.teamIds.includes(teamId)) - Number(a.teamIds.includes(teamId)))
+  return [
+    { value: '', label: 'No project', icon: <Hexagon className="size-3.5 text-ink-3" /> },
+    ...projects.map((p) => ({ value: p.id, label: p.name, icon: <EntityIcon icon={p.icon} color={p.color} /> })),
+  ]
+}
+
+export function StatusPicker({ value, onChange, teamId, variant, issueId, className }: Props<string>) {
+  const { states } = useCatalogMaps()
+  const [open, setOpen] = usePickerOpen('status', issueId)
+  const stateIcon = useStateIcon()
+  const current = states.get(value)
+  const options = useStatusOptions(teamId)
   return (
     <Picker
       open={open}
@@ -120,7 +167,7 @@ export function PriorityPicker({ value, onChange, variant, issueId, className }:
       open={open}
       onOpenChange={setOpen}
       placeholder="Set priority to..."
-      options={priorities.map((p) => ({ value: String(p.value), label: p.label, icon: <PriorityIcon priority={p.value} /> }))}
+      options={priorityOptions}
       selected={[String(value)]}
       onSelect={(v) => onChange(Number(v))}
       trigger={
@@ -138,25 +185,16 @@ export function PriorityPicker({ value, onChange, variant, issueId, className }:
 }
 
 export function AssigneePicker({ value, onChange, variant, issueId, className }: Props<string | null>) {
-  const { catalog, users } = useCatalogMaps()
+  const { users } = useCatalogMaps()
   const [open, setOpen] = usePickerOpen('assignee', issueId)
   const current = value ? users.get(value) : null
-  const people = [...(catalog?.users ?? [])].filter((u) => u.active).sort((a, b) => Number(b.isMe) - Number(a.isMe))
+  const options = useAssigneeOptions()
   return (
     <Picker
       open={open}
       onOpenChange={setOpen}
       placeholder="Assign to..."
-      options={[
-        { value: '', label: 'No assignee', icon: <Avatar user={null} size={16} /> },
-        ...people.map((u) => ({
-          value: u.id,
-          label: u.name,
-          keywords: [u.displayName, u.email],
-          icon: <Avatar user={u} size={16} />,
-          detail: u.isMe ? <span className="text-[12px] text-ink-3">You</span> : undefined,
-        })),
-      ]}
+      options={options}
       selected={[value ?? '']}
       onSelect={(v) => onChange(v || null)}
       trigger={
@@ -174,10 +212,10 @@ export function AssigneePicker({ value, onChange, variant, issueId, className }:
 }
 
 export function LabelsPicker({ value, onChange, teamId, variant, issueId, className, children }: Props<string[]> & { children?: ReactNode }) {
-  const { catalog, labels } = useCatalogMaps()
+  const { labels } = useCatalogMaps()
   const createLabel = useCreateLabel()
   const [open, setOpen] = usePickerOpen('labels', issueId)
-  const available = (catalog?.labels ?? []).filter((l) => !l.isGroup && (!l.teamId || l.teamId === teamId))
+  const options = useLabelOptions(teamId)
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id])
   const chosen = value.map((id) => labels.get(id)).filter((l) => l !== undefined)
   return (
@@ -186,7 +224,7 @@ export function LabelsPicker({ value, onChange, teamId, variant, issueId, classN
       onOpenChange={setOpen}
       multiple
       placeholder="Change labels..."
-      options={available.map((l) => ({ value: l.id, label: l.name, icon: <LabelDot color={l.color} /> }))}
+      options={options}
       selected={value}
       onSelect={toggle}
       onCreate={{
@@ -222,21 +260,16 @@ export function LabelsPicker({ value, onChange, teamId, variant, issueId, classN
 }
 
 export function ProjectPicker({ value, onChange, teamId, variant, issueId, className }: Props<string | null>) {
-  const { catalog, projects } = useCatalogMaps()
+  const { projects } = useCatalogMaps()
   const [open, setOpen] = usePickerOpen('project', issueId)
   const current = value ? projects.get(value) : null
-  const options = [...(catalog?.projects ?? [])].sort(
-    (a, b) => Number(b.teamIds.includes(teamId)) - Number(a.teamIds.includes(teamId)),
-  )
+  const options = useProjectOptions(teamId)
   return (
     <Picker
       open={open}
       onOpenChange={setOpen}
       placeholder="Add to project..."
-      options={[
-        { value: '', label: 'No project', icon: <Hexagon className="size-3.5 text-ink-3" /> },
-        ...options.map((p) => ({ value: p.id, label: p.name, icon: <EntityIcon icon={p.icon} color={p.color} /> })),
-      ]}
+      options={options}
       selected={[value ?? '']}
       onSelect={(v) => onChange(v || null)}
       trigger={

@@ -188,6 +188,12 @@ function patchCaches(client: QueryClient, issueId: string, update: (issue: Issue
   )
 }
 
+// useIssuePatch applies a partial change to one issue, optimistically.
+export function useIssuePatch(issue: Issue) {
+  const update = useUpdateIssue()
+  return (patch: IssuePatch) => update.mutate({ id: issue.id, patch })
+}
+
 export function useUpdateIssue() {
   const client = useQueryClient()
   return useMutation({

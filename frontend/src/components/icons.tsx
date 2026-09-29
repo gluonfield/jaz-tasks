@@ -1,4 +1,4 @@
-import { AppWindow, Bot, Box, Cpu, Layers, Palette, Rocket, type LucideIcon } from 'lucide-react'
+import { AppWindow, Bot, Box, Cpu, Layers, Palette, Rocket, createLucideIcon, type LucideIcon } from 'lucide-react'
 import type { StateType, User } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -168,3 +168,12 @@ export function ProgressRing({ value, color = 'var(--color-primary)', className 
     </svg>
   )
 }
+
+// MyIssuesIcon is Linear's My issues mark: a focus frame around a dot.
+export const MyIssuesIcon = createLucideIcon('my-issues', [
+  ['path', { d: 'M3 8V6a3 3 0 0 1 3-3h2', key: 'tl' }],
+  ['path', { d: 'M16 3h2a3 3 0 0 1 3 3v2', key: 'tr' }],
+  ['path', { d: 'M21 16v2a3 3 0 0 1-3 3h-2', key: 'br' }],
+  ['path', { d: 'M8 21H6a3 3 0 0 1-3-3v-2', key: 'bl' }],
+  ['circle', { cx: '12', cy: '12', r: '2.25', fill: 'currentColor', key: 'dot' }],
+])

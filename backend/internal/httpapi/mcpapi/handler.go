@@ -29,7 +29,7 @@ func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) 
 		Name:    "jaz-tasks",
 		Title:   "Jaz Tasks",
 		Version: "0.1.0",
-		Icons:   []mcp.Icon{{Source: icon, MIMEType: "image/svg+xml", Sizes: []string{"any"}}},
+		Icons:   icons,
 	}, &mcp.ServerOptions{Instructions: instructions})
 	t := tools{svc: svc, graphql: graphql}
 	register(server, t)
