@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun } from 'lucide-react'
+import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun, UserPlus } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar, TeamBadge } from '@/components/icons'
@@ -257,18 +257,29 @@ function Members() {
   const cancel = useCancelInvite()
   const [email, setEmail] = useState('')
   const admin = !!catalog?.viewer.admin
+  // Typing a valid address offers it as the one option to invite; nothing is
+  // emailed, the person joins when they next sign in with it.
+  const typed = email.trim().toLowerCase()
+  const known = catalog?.users.some((u) => u.email.toLowerCase() === typed)
+    ? 'is already a member'
+    : invites.some((i) => i.email === typed)
+      ? 'is already invited'
+      : null
   return (
     <Section
       id="members"
       title="Members"
-      description={`People in ${catalog?.organization.name ?? 'this workspace'}. Invited people join when they next sign in with that email.`}
+      description="Invited people join when they next sign in with that email"
     >
       {admin && (
         <form
-          className="flex items-center gap-2 border-b border-border/70 px-4 py-3"
+          className="border-b border-border/70 px-4 py-3"
           onSubmit={(e) => {
             e.preventDefault()
-            invite.mutate(email, {
+            if (known || invite.isPending) {
+              return
+            }
+            invite.mutate(typed, {
               onSuccess: (sent) => {
                 toast(`Invited ${sent.email}`)
                 setEmail('')
@@ -281,12 +292,27 @@ function Members() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@company.com"
-            className="h-7 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-primary"
+            placeholder="Invite by email"
+            className="h-7 w-full rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-primary"
           />
-          <Button primary disabled={!email.trim() || invite.isPending}>
-            Invite
-          </Button>
+          {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typed) && (
+            <button
+              type="submit"
+              disabled={!!known}
+              className="mt-1.5 flex h-8 w-full items-center gap-2 rounded-[var(--radius-control)] bg-list-active px-2.5 text-left text-[13px] text-ink outline-none disabled:bg-transparent disabled:text-ink-3"
+            >
+              <UserPlus className="size-3.5 shrink-0 text-ink-3" />
+              {known ? (
+                <span className="truncate">
+                  {typed} {known}
+                </span>
+              ) : (
+                <span className="truncate">
+                  Invite <span className="font-medium">{typed}</span>
+                </span>
+              )}
+            </button>
+          )}
         </form>
       )}
       {catalog?.users.map((user) => (
