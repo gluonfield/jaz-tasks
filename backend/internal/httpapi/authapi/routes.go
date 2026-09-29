@@ -10,6 +10,7 @@ import (
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
 )
@@ -23,6 +24,11 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("GET /auth/api-keys", h.listKeys)
 	h.mux.HandleFunc("POST /auth/api-keys", h.createKey)
 	h.mux.HandleFunc("DELETE /auth/api-keys/{id}", h.deleteKey)
+	h.mux.HandleFunc("GET /auth/workspaces", h.listWorkspaces)
+	h.mux.HandleFunc("POST /auth/workspace", h.switchWorkspace)
+	h.mux.HandleFunc("GET /auth/invites", h.listInvites)
+	h.mux.HandleFunc("POST /auth/invites", h.invite)
+	h.mux.HandleFunc("DELETE /auth/invites/{id}", h.cancelInvite)
 	h.mux.HandleFunc("GET /auth/grants", h.listGrants)
 	h.mux.HandleFunc("DELETE /auth/grants/{id}", h.revokeGrant)
 
@@ -99,9 +105,9 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 		page(w, http.StatusUnauthorized, "Sign-in failed", "We could not verify your identity. Please try again.", "/login")
 		return
 	}
-	user, err := h.svc.SignIn(r.Context(), identity)
-	if errors.Is(err, auth.ErrNotAllowed) || errors.Is(err, auth.ErrEmailUnverified) {
-		page(w, http.StatusForbidden, "Access denied", identity.Email+": "+err.Error()+". Ask a workspace owner to invite you.", "/login")
+	user, err := h.members.SignIn(r.Context(), identity)
+	if errors.Is(err, workspaces.ErrNotAllowed) || errors.Is(err, workspaces.ErrEmailUnverified) {
+		page(w, http.StatusForbidden, "Access denied", identity.Email+": "+err.Error()+".", "/login")
 		return
 	}
 	if err != nil {
@@ -391,4 +397,103 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) listWorkspaces(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := h.sessionActor(w, r)
+	if !ok {
+		return
+	}
+	memberships, err := h.members.Memberships(r.Context(), actor)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	type workspaceView struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		URLKey  string `json:"urlKey"`
+		Current bool   `json:"current"`
+	}
+	out := []workspaceView{}
+	for _, m := range memberships {
+		out = append(out, workspaceView{ID: m.WorkspaceID, Name: m.Name, URLKey: m.URLKey, Current: m.UserID == actor.UserID})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) switchWorkspace(w http.ResponseWriter, r *http.Request) {
+	actor, token, ok := h.sessionActor(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		WorkspaceID string `json:"workspaceId"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	user, err := h.members.Switch(r.Context(), actor, in.WorkspaceID)
+	if errors.Is(err, workspaces.ErrNotMember) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
+		return
+	}
+	if err == nil {
+		err = h.svc.SwitchSession(r.Context(), token, user.ID)
+	}
+	h.noContent(w, err)
+}
+
+type inviteView struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := h.sessionActor(w, r)
+	if !ok {
+		return
+	}
+	invites, err := h.members.Invites(r.Context(), actor)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	out := []inviteView{}
+	for _, i := range invites {
+		out = append(out, inviteView{ID: i.ID, Email: i.Email, CreatedAt: i.CreatedAt})
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) invite(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := h.sessionActor(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Email string `json:"email"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&in)
+	invite, err := h.members.Invite(r.Context(), actor, in.Email)
+	switch {
+	case errors.Is(err, workspaces.ErrForbidden):
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
+	case err != nil:
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+	default:
+		writeJSON(w, http.StatusCreated, inviteView{ID: invite.ID, Email: invite.Email, CreatedAt: invite.CreatedAt})
+	}
+}
+
+func (h *Handler) cancelInvite(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := h.sessionActor(w, r)
+	if !ok {
+		return
+	}
+	err := h.members.CancelInvite(r.Context(), actor, r.PathValue("id"))
+	if errors.Is(err, workspaces.ErrForbidden) {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
+		return
+	}
+	h.noContent(w, err)
 }

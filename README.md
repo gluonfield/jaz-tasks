@@ -12,7 +12,8 @@ This starts Postgres (host port 55432) and the server on http://localhost:7400, 
 
 ## Authentication
 
-- **People** sign in with OpenID Connect (Google first, but any provider: Microsoft, Okta, Keycloak, Cognito). The server keeps a session in Postgres behind an HttpOnly, SameSite=Lax cookie.
+- **People** sign in with OpenID Connect (Google first, but any provider: Microsoft, Okta, Keycloak, Cognito). The server keeps a session in Postgres behind an HttpOnly, SameSite=Lax cookie. Anyone with a verified email may sign up unless an allowlist is set; each new person gets a workspace of their own with a first team and Linear's default workflow, and joins other workspaces only when an admin invites their email (Settings > Members). People in several workspaces switch between them from the workspace menu.
+- **Tenant isolation**: every query, resolver, MCP tool and token is scoped to one workspace; tests attack another tenant by UUID and by colliding identifiers such as ENG-1 through GraphQL and MCP.
 - **Agents, MCP clients and Jaz** use OAuth 2.1: Jaz Tasks is its own authorization server with protected-resource metadata (RFC 9728, advertised in `WWW-Authenticate` on every 401 from `/graphql` and `/mcp`), authorization-server metadata (RFC 8414), dynamic client registration (RFC 7591), authorization code with PKCE S256, refresh token rotation with reuse detection, and revocation (RFC 7009). Tokens are opaque and stored hashed. The same access token works for `/graphql` and `/mcp`.
 - **Scripts** can use personal API keys, created and revoked in Settings, sent like Linear's in a raw `Authorization` header. The seed also creates one for the demo owner and logs it (`SEED_API_KEY` pins it); `docker compose exec server /app/server apikey <email>` mints another.
 
@@ -22,8 +23,8 @@ Configuration (see `.env.example`):
 | --- | --- |
 | `PUBLIC_URL` | Base URL of the deployment; source of the OIDC redirect URI (`PUBLIC_URL/auth/callback`), OAuth issuer, metadata URLs and cookie domain |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | OpenID Connect provider; keys come from its discovery document |
-| `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS` | Who may sign in for the first time; with both empty only the first sign-in (the owner) and existing users get in. `email_verified` is always required |
-| `DEV_LOGIN` | `1` enables one-click sign-in as the seeded owner when OIDC is unset; refused unless `PUBLIC_URL` is localhost |
+| `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS` | Optional restriction on who may sign in; empty admits every verified email. `email_verified` is always required |
+| `DEV_LOGIN` | `1` seeds a demo workspace and enables one-click sign-in as its owner when OIDC is unset; refused unless `PUBLIC_URL` is localhost |
 | `DATABASE_URL`, `ADDR`, `WEB_DIR`, `SEED_API_KEY`, `LOG_LEVEL` | Server basics |
 
 **Google:** in Google Cloud Console, APIs & Services > Credentials, create an OAuth client ID of type *Web application* and add `<PUBLIC_URL>/auth/callback` as an authorized redirect URI. Then set:
@@ -115,6 +116,7 @@ backend/
   internal/httpapi/gql  Linear-compatible GraphQL (gqlgen)
   internal/tracker      issue-tracking domain service
   internal/auth         sessions, OIDC sign-in, OAuth 2.1 grants, API keys
+  internal/workspaces   sign-up policy, a workspace per new person, invites, switching
   internal/httpapi/authapi  sign-in, OAuth endpoints and metadata, settings endpoints
   internal/seed         demo workspace
   internal/storage      storage contracts; postgres/ holds migrations, sqlc queries and generated code

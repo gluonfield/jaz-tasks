@@ -10,17 +10,6 @@ import (
 	"time"
 )
 
-const countIdentities = `-- name: CountIdentities :one
-SELECT count(*) FROM identities
-`
-
-func (q *Queries) CountIdentities(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countIdentities)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createAPIKey = `-- name: CreateAPIKey :one
 INSERT INTO api_keys (user_id, label, hint, key_hash) VALUES ($1, $2, $3, $4) RETURNING id, user_id, label, key_hash, created_at, hint
 `
@@ -91,6 +80,30 @@ func (q *Queries) CreateAuthUser(ctx context.Context, arg CreateAuthUserParams) 
 	return i, err
 }
 
+const createInvite = `-- name: CreateInvite :one
+INSERT INTO workspace_invites (workspace_id, email, invited_by) VALUES ($1, lower($3::text), $2)
+RETURNING id, workspace_id, email, invited_by, created_at
+`
+
+type CreateInviteParams struct {
+	WorkspaceID string
+	InvitedBy   *string
+	Email       string
+}
+
+func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) (WorkspaceInvite, error) {
+	row := q.db.QueryRow(ctx, createInvite, arg.WorkspaceID, arg.InvitedBy, arg.Email)
+	var i WorkspaceInvite
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.InvitedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createSession = `-- name: CreateSession :exec
 INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)
 `
@@ -106,23 +119,6 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 	return err
 }
 
-const defaultWorkspace = `-- name: DefaultWorkspace :one
-SELECT id, name, url_key, created_at, updated_at FROM workspaces ORDER BY created_at LIMIT 1
-`
-
-func (q *Queries) DefaultWorkspace(ctx context.Context) (Workspace, error) {
-	row := q.db.QueryRow(ctx, defaultWorkspace)
-	var i Workspace
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.URLKey,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const deleteAPIKey = `-- name: DeleteAPIKey :execrows
 DELETE FROM api_keys WHERE user_id = $1 AND id = $2
 `
@@ -134,6 +130,23 @@ type DeleteAPIKeyParams struct {
 
 func (q *Queries) DeleteAPIKey(ctx context.Context, arg DeleteAPIKeyParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteAPIKey, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteInvite = `-- name: DeleteInvite :execrows
+DELETE FROM workspace_invites WHERE workspace_id = $1 AND id = $2
+`
+
+type DeleteInviteParams struct {
+	WorkspaceID string
+	ID          string
+}
+
+func (q *Queries) DeleteInvite(ctx context.Context, arg DeleteInviteParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteInvite, arg.WorkspaceID, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -197,9 +210,39 @@ func (q *Queries) GetUser(ctx context.Context, id string) (User, error) {
 	return i, err
 }
 
+const invitesByEmail = `-- name: InvitesByEmail :many
+SELECT id, workspace_id, email, invited_by, created_at FROM workspace_invites WHERE email = lower($1::text)
+`
+
+func (q *Queries) InvitesByEmail(ctx context.Context, email string) ([]WorkspaceInvite, error) {
+	rows, err := q.db.Query(ctx, invitesByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkspaceInvite{}
+	for rows.Next() {
+		var i WorkspaceInvite
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Email,
+			&i.InvitedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const linkIdentity = `-- name: LinkIdentity :exec
 INSERT INTO identities (issuer, subject, user_id) VALUES ($1, $2, $3)
-ON CONFLICT (issuer, subject) DO UPDATE SET user_id = excluded.user_id
+ON CONFLICT DO NOTHING
 `
 
 type LinkIdentityParams struct {
@@ -244,13 +287,95 @@ func (q *Queries) ListAPIKeys(ctx context.Context, userID string) ([]APIKey, err
 	return items, nil
 }
 
-const lockSignUps = `-- name: LockSignUps :exec
-SELECT pg_advisory_xact_lock(7400)
+const listInvites = `-- name: ListInvites :many
+SELECT id, workspace_id, email, invited_by, created_at FROM workspace_invites WHERE workspace_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) LockSignUps(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, lockSignUps)
-	return err
+func (q *Queries) ListInvites(ctx context.Context, workspaceID string) ([]WorkspaceInvite, error) {
+	rows, err := q.db.Query(ctx, listInvites, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkspaceInvite{}
+	for rows.Next() {
+		var i WorkspaceInvite
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Email,
+			&i.InvitedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const memberships = `-- name: Memberships :many
+SELECT users.id AS user_id, workspaces.id AS workspace_id, workspaces.name, workspaces.url_key
+FROM users
+JOIN workspaces ON workspaces.id = users.workspace_id
+WHERE users.active AND (users.id = $1 OR users.id IN (
+  SELECT other.user_id FROM identities mine
+  JOIN identities other ON other.issuer = mine.issuer AND other.subject = mine.subject
+  WHERE mine.user_id = $1
+))
+ORDER BY workspaces.created_at
+`
+
+type MembershipsRow struct {
+	UserID      string
+	WorkspaceID string
+	Name        string
+	URLKey      string
+}
+
+func (q *Queries) Memberships(ctx context.Context, userID string) ([]MembershipsRow, error) {
+	rows, err := q.db.Query(ctx, memberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MembershipsRow{}
+	for rows.Next() {
+		var i MembershipsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.URLKey,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateSessionUser = `-- name: UpdateSessionUser :execrows
+UPDATE sessions SET user_id = $2 WHERE token_hash = $1
+`
+
+type UpdateSessionUserParams struct {
+	TokenHash []byte
+	UserID    string
+}
+
+func (q *Queries) UpdateSessionUser(ctx context.Context, arg UpdateSessionUserParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateSessionUser, arg.TokenHash, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const userByAPIKey = `-- name: UserByAPIKey :one
@@ -261,35 +386,6 @@ WHERE api_keys.key_hash = $1 AND users.active
 
 func (q *Queries) UserByAPIKey(ctx context.Context, keyHash []byte) (User, error) {
 	row := q.db.QueryRow(ctx, userByAPIKey, keyHash)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.Name,
-		&i.DisplayName,
-		&i.Email,
-		&i.AvatarURL,
-		&i.Admin,
-		&i.Active,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const userByIdentity = `-- name: UserByIdentity :one
-SELECT users.id, users.workspace_id, users.name, users.display_name, users.email, users.avatar_url, users.admin, users.active, users.created_at, users.updated_at FROM identities
-JOIN users ON users.id = identities.user_id
-WHERE identities.issuer = $1 AND identities.subject = $2 AND users.active
-`
-
-type UserByIdentityParams struct {
-	Issuer  string
-	Subject string
-}
-
-func (q *Queries) UserByIdentity(ctx context.Context, arg UserByIdentityParams) (User, error) {
-	row := q.db.QueryRow(ctx, userByIdentity, arg.Issuer, arg.Subject)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -330,12 +426,71 @@ func (q *Queries) UserBySession(ctx context.Context, tokenHash []byte) (User, er
 	return i, err
 }
 
+const userIdentity = `-- name: UserIdentity :one
+SELECT issuer, subject, user_id, created_at FROM identities WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) UserIdentity(ctx context.Context, userID string) (Identity, error) {
+	row := q.db.QueryRow(ctx, userIdentity, userID)
+	var i Identity
+	err := row.Scan(
+		&i.Issuer,
+		&i.Subject,
+		&i.UserID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const usersByEmail = `-- name: UsersByEmail :many
 SELECT id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at FROM users WHERE lower(email) = lower($1) AND active
 `
 
 func (q *Queries) UsersByEmail(ctx context.Context, lower string) ([]User, error) {
 	rows, err := q.db.Query(ctx, usersByEmail, lower)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.DisplayName,
+			&i.Email,
+			&i.AvatarURL,
+			&i.Admin,
+			&i.Active,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const usersByIdentity = `-- name: UsersByIdentity :many
+SELECT users.id, users.workspace_id, users.name, users.display_name, users.email, users.avatar_url, users.admin, users.active, users.created_at, users.updated_at FROM identities
+JOIN users ON users.id = identities.user_id
+WHERE identities.issuer = $1 AND identities.subject = $2 AND users.active
+ORDER BY users.created_at
+`
+
+type UsersByIdentityParams struct {
+	Issuer  string
+	Subject string
+}
+
+func (q *Queries) UsersByIdentity(ctx context.Context, arg UsersByIdentityParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, usersByIdentity, arg.Issuer, arg.Subject)
 	if err != nil {
 		return nil, err
 	}

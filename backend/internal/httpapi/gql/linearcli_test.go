@@ -20,8 +20,10 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/postgrestest"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
 type response struct {
@@ -33,10 +35,11 @@ type response struct {
 }
 
 type client struct {
-	t    *testing.T
-	url  string
-	key  string
-	vars map[string]string
+	t     *testing.T
+	url   string
+	key   string
+	vars  map[string]string
+	store *postgres.Store
 }
 
 func newClient(t *testing.T) *client {
@@ -49,13 +52,13 @@ func newClient(t *testing.T) *client {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
-	authn, err := authapi.NewHandler(keys, auth.NewOIDC(auth.OIDCConfig{}), false, logger)
+	authn, err := authapi.NewHandler(keys, workspaces.NewService(store, workspaces.Config{}), auth.NewOIDC(auth.OIDCConfig{}), false, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys), "", logger))
 	t.Cleanup(srv.Close)
-	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}}
+	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}, store: store}
 }
 
 // do posts a document the way linear-cli's api.Query does: the raw key in

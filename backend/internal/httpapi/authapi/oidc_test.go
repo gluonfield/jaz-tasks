@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 )
@@ -85,9 +86,18 @@ func (iss *issuer) signIn(t *testing.T, s stack, b *http.Client, email string, v
 	return res
 }
 
-func viewer(t *testing.T, s stack, b *http.Client) (email string, admin bool) {
+type me struct {
+	Email        string
+	Admin        bool
+	Organization string
+	Teams        []string
+	Issues       int
+}
+
+// viewer reads who the browser acts as and what its workspace holds.
+func viewer(t *testing.T, s stack, b *http.Client) me {
 	t.Helper()
-	req, _ := http.NewRequest(http.MethodPost, s.url+"/graphql", strings.NewReader(`{"query":"{ viewer { email admin } }"}`))
+	req, _ := http.NewRequest(http.MethodPost, s.url+"/graphql", strings.NewReader(`{"query":"{ viewer { email admin } organization { id } teams { nodes { key } } issues { nodes { id } } }"}`))
 	req.Header.Set("Content-Type", "application/json")
 	res, err := b.Do(req)
 	if err != nil {
@@ -100,69 +110,144 @@ func viewer(t *testing.T, s stack, b *http.Client) (email string, admin bool) {
 				Email string `json:"email"`
 				Admin bool   `json:"admin"`
 			} `json:"viewer"`
+			Organization struct {
+				ID string `json:"id"`
+			} `json:"organization"`
+			Teams  struct{ Nodes []struct{ Key string } } `json:"teams"`
+			Issues struct{ Nodes []struct{ ID string } }  `json:"issues"`
 		} `json:"data"`
 	}
 	_ = json.NewDecoder(res.Body).Decode(&out)
-	return out.Data.Viewer.Email, out.Data.Viewer.Admin
+	m := me{Email: out.Data.Viewer.Email, Admin: out.Data.Viewer.Admin, Organization: out.Data.Organization.ID, Issues: len(out.Data.Issues.Nodes)}
+	for _, team := range out.Data.Teams.Nodes {
+		m.Teams = append(m.Teams, team.Key)
+	}
+	return m
 }
 
-func TestOIDCSignInWithoutAllowlist(t *testing.T) {
-	iss := newIssuer(t)
-	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1", ClientSecret: "secret"}, auth.Config{}, false)
+func session(t *testing.T, s stack, b *http.Client, method, path, body string) (int, string) {
+	t.Helper()
+	req, _ := http.NewRequest(method, s.url+path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	res, err := b.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	out, _ := io.ReadAll(res.Body)
+	return res.StatusCode, string(out)
+}
 
-	owner := browser()
-	res := iss.signIn(t, s, owner, "owner@example.com", true)
+// Anyone with a verified email signs up into a workspace of their own; the
+// demo workspace is never where a real sign-in lands.
+func TestOIDCSignUpGivesEachPersonAWorkspace(t *testing.T) {
+	iss := newIssuer(t)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1", ClientSecret: "secret"}, workspaces.Config{}, false)
+
+	ada := browser()
+	res := iss.signIn(t, s, ada, "ada@example.com", true)
 	res.Body.Close()
 	if res.StatusCode != http.StatusFound || res.Header.Get("Location") != "/team/ENG/all" {
-		t.Fatalf("first sign-in: %d %s", res.StatusCode, res.Header.Get("Location"))
+		t.Fatalf("sign-in: %d %s", res.StatusCode, res.Header.Get("Location"))
 	}
-	if email, admin := viewer(t, s, owner); email != "owner@example.com" || !admin {
-		t.Fatalf("owner viewer: %s admin=%v", email, admin)
+	first := viewer(t, s, ada)
+	if first.Email != "ada@example.com" || !first.Admin || len(first.Teams) != 1 || first.Teams[0] != "CAS" || first.Issues != 0 {
+		t.Fatalf("new workspace: %+v", first)
 	}
 
-	stranger := browser()
-	res = iss.signIn(t, s, stranger, "stranger@example.com", true)
-	body, _ := io.ReadAll(res.Body)
+	grace := browser()
+	res = iss.signIn(t, s, grace, "grace@example.com", true)
 	res.Body.Close()
-	if res.StatusCode != http.StatusForbidden || !strings.Contains(string(body), "Access denied") {
-		t.Fatalf("second new user: %d", res.StatusCode)
+	second := viewer(t, s, grace)
+	if !second.Admin || second.Organization == first.Organization {
+		t.Fatalf("second person must get another workspace: %+v vs %+v", second, first)
 	}
 
-	existing := browser()
-	res = iss.signIn(t, s, existing, "sofia@jaz.local", true)
+	demo := browser()
+	res = iss.signIn(t, s, demo, "sofia@jaz.local", true)
 	res.Body.Close()
-	if email, admin := viewer(t, s, existing); res.StatusCode != http.StatusFound || email != "sofia@jaz.local" || admin {
-		t.Fatalf("existing user: %d %s admin=%v", res.StatusCode, email, admin)
+	if got := viewer(t, s, demo); got.Issues != 0 || got.Organization == "" {
+		t.Fatalf("a seeded email must not reach the demo workspace: %+v", got)
 	}
 
-	unverified := browser()
-	res = iss.signIn(t, s, unverified, "mira@jaz.local", false)
+	again := browser()
+	res = iss.signIn(t, s, again, "ada@example.com", true)
+	res.Body.Close()
+	if got := viewer(t, s, again); got.Organization != first.Organization {
+		t.Fatalf("returning person lands elsewhere: %+v", got)
+	}
+
+	res = iss.signIn(t, s, browser(), "eve@example.com", false)
 	res.Body.Close()
 	if res.StatusCode != http.StatusForbidden {
 		t.Fatalf("unverified email: %d", res.StatusCode)
 	}
 
-	req, _ := http.NewRequest(http.MethodPost, s.url+"/auth/logout", nil)
-	res, _ = owner.Do(req)
-	res.Body.Close()
-	if email, _ := viewer(t, s, owner); email != "" {
-		t.Fatalf("session survived logout: %s", email)
+	if status, _ := session(t, s, ada, http.MethodPost, "/auth/logout", ""); status != http.StatusNoContent {
+		t.Fatalf("logout: %d", status)
+	}
+	if got := viewer(t, s, ada); got.Email != "" {
+		t.Fatalf("session survived logout: %+v", got)
 	}
 	if res, _ := http.PostForm(s.url+"/auth/dev-login", nil); res.StatusCode != http.StatusNotFound {
 		t.Fatalf("dev login must be off with OIDC: %d", res.StatusCode)
 	}
 }
 
-func TestOIDCSignInWithAllowlist(t *testing.T) {
+func TestOIDCSignInAllowlist(t *testing.T) {
 	iss := newIssuer(t)
-	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, auth.Config{AllowedEmailDomains: []string{"ml.ink"}, AllowedEmails: []string{"guest@example.com"}}, false)
-	for email, allowed := range map[string]bool{"ana@ml.ink": true, "guest@example.com": true, "first@example.com": false} {
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{AllowedEmailDomains: []string{"ml.ink"}, AllowedEmails: []string{"guest@example.com"}}, false)
+	for email, allowed := range map[string]bool{"ana@ml.ink": true, "guest@example.com": true, "other@example.com": false} {
 		b := browser()
 		res := iss.signIn(t, s, b, email, true)
 		res.Body.Close()
-		got, admin := viewer(t, s, b)
-		if allowed != (got == email) || admin {
-			t.Errorf("%s: status %d, viewer %q admin=%v", email, res.StatusCode, got, admin)
+		if got := viewer(t, s, b); allowed != (got.Email == email) {
+			t.Errorf("%s: status %d, viewer %+v", email, res.StatusCode, got)
 		}
+	}
+}
+
+// Invites are the only way into someone else's workspace: new people land
+// in the inviting workspace, signed-in people see it in their switcher.
+func TestInvitesAndSwitching(t *testing.T) {
+	iss := newIssuer(t)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{}, false)
+	owner := browser()
+	iss.signIn(t, s, owner, "owner@example.com", true).Body.Close()
+	home := viewer(t, s, owner)
+
+	if status, body := session(t, s, owner, http.MethodPost, "/auth/invites", `{"email":"Bob@Example.com"}`); status != http.StatusCreated || !strings.Contains(body, "bob@example.com") {
+		t.Fatalf("invite: %d %s", status, body)
+	}
+	bob := browser()
+	iss.signIn(t, s, bob, "bob@example.com", true).Body.Close()
+	if got := viewer(t, s, bob); got.Organization != home.Organization || got.Admin {
+		t.Fatalf("invited person should join as a member: %+v", got)
+	}
+	if status, _ := session(t, s, bob, http.MethodPost, "/auth/invites", `{"email":"x@example.com"}`); status != http.StatusForbidden {
+		t.Fatalf("members cannot invite: %d", status)
+	}
+
+	carol := browser()
+	iss.signIn(t, s, carol, "carol@example.com", true).Body.Close()
+	own := viewer(t, s, carol)
+	session(t, s, owner, http.MethodPost, "/auth/invites", `{"email":"carol@example.com"}`)
+	status, body := session(t, s, carol, http.MethodGet, "/auth/workspaces", "")
+	var list []struct {
+		ID      string `json:"id"`
+		Current bool   `json:"current"`
+	}
+	_ = json.Unmarshal([]byte(body), &list)
+	if status != http.StatusOK || len(list) != 2 {
+		t.Fatalf("workspaces: %d %s", status, body)
+	}
+	if status, _ := session(t, s, carol, http.MethodPost, "/auth/workspace", `{"workspaceId":"`+home.Organization+`"}`); status != http.StatusNoContent {
+		t.Fatalf("switch: %d", status)
+	}
+	if got := viewer(t, s, carol); got.Organization != home.Organization {
+		t.Fatalf("after switch: %+v", got)
+	}
+	if status, _ := session(t, s, bob, http.MethodPost, "/auth/workspace", `{"workspaceId":"`+own.Organization+`"}`); status != http.StatusForbidden {
+		t.Fatalf("switching into a stranger's workspace: %d", status)
 	}
 }

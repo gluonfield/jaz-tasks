@@ -11,8 +11,10 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/postgrestest"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -26,28 +28,45 @@ func (b bearer) RoundTrip(req *http.Request) (*http.Response, error) {
 	return http.DefaultTransport.RoundTrip(req)
 }
 
-func connect(t *testing.T) (*mcp.ClientSession, string) {
+type env struct {
+	url   string
+	key   string
+	store *postgres.Store
+	svc   *tracker.Service
+	keys  *auth.Service
+}
+
+func serve(t *testing.T) env {
 	t.Helper()
-	ctx := context.Background()
 	store := postgrestest.New(t)
 	keys := auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"})
 	svc := tracker.NewService(store, "http://tasks.test")
-	result, _, err := seed.Run(ctx, store, keys, svc, "")
+	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys))
 	t.Cleanup(srv.Close)
+	return env{url: srv.URL, key: result.APIKey, store: store, svc: svc, keys: keys}
+}
+
+func (e env) session(t *testing.T, key string) *mcp.ClientSession {
+	t.Helper()
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
-	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
-		Endpoint:   srv.URL,
-		HTTPClient: &http.Client{Transport: bearer{key: result.APIKey}},
+	session, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{
+		Endpoint:   e.url,
+		HTTPClient: &http.Client{Transport: bearer{key: key}},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = session.Close() })
-	return session, srv.URL
+	return session
+}
+
+func connect(t *testing.T) (*mcp.ClientSession, string) {
+	e := serve(t)
+	return e.session(t, e.key), e.url
 }
 
 func call[T any](t *testing.T, session *mcp.ClientSession, name string, args map[string]any) T {
@@ -156,5 +175,60 @@ func TestRejectsMissingKey(t *testing.T) {
 	res.Body.Close()
 	if res.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status = %d", res.StatusCode)
+	}
+}
+
+// Tenant B's agent cannot reach tenant A's workspace through any tool, by
+// id or by an identifier that also exists in B's workspace.
+func TestTenantIsolationMCP(t *testing.T) {
+	e := serve(t)
+	ctx := context.Background()
+	a := e.session(t, e.key)
+	issueA := call[struct {
+		ID string `json:"id"`
+	}](t, a, "get_issue", map[string]any{"issue": "ENG-1"})
+
+	user, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, auth.Identity{
+		Issuer: "https://idp.test", Subject: "bob", Email: "bob@b.test", EmailVerified: true, Name: "Bob Stone",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyB, _, err := e.keys.CreateKey(ctx, user.ID, "agent", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := e.session(t, keyB)
+	call[issue](t, b, "create_issue", map[string]any{"team": "BOB", "title": "Bob's own"})
+
+	for name, args := range map[string]map[string]any{
+		"get_issue":    {"issue": issueA.ID},
+		"update_issue": {"issue": issueA.ID, "title": "owned"},
+		"add_comment":  {"issue": issueA.ID, "body": "hi"},
+		"create_issue": {"team": "ENG", "title": "x"},
+	} {
+		res, err := b.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
+		if err != nil || !res.IsError {
+			t.Errorf("%s reached tenant A: %+v %v", name, res, err)
+		}
+	}
+	res, _ := b.CallTool(ctx, &mcp.CallToolParams{Name: "update_issue", Arguments: map[string]any{"issue": "BOB-1", "assignee": "mira@jaz.local"}})
+	if !res.IsError {
+		t.Errorf("assigned tenant A's user")
+	}
+	listed := call[struct {
+		Issues []issue `json:"issues"`
+	}](t, b, "list_issues", nil)
+	users := call[struct {
+		Users []struct{ Email string } `json:"users"`
+	}](t, b, "list_users", nil)
+	projects := call[struct {
+		Projects []struct{ Name string } `json:"projects"`
+	}](t, b, "list_projects", nil)
+	if len(listed.Issues) != 1 || listed.Issues[0].Identifier != "BOB-1" || len(users.Users) != 1 || len(projects.Projects) != 0 {
+		t.Fatalf("tenant B sees: %+v %+v %+v", listed, users, projects)
+	}
+	if got := call[issue](t, a, "get_issue", map[string]any{"issue": "ENG-1"}); got.Title != "Linear-compatible GraphQL endpoint" || len(got.Comments) != 2 {
+		t.Fatalf("tenant A changed: %+v", got)
 	}
 }

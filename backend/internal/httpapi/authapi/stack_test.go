@@ -20,6 +20,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/postgrestest"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
 type stack struct {
@@ -28,13 +29,12 @@ type stack struct {
 }
 
 // start runs the whole HTTP stack on a loopback URL that doubles as PUBLIC_URL.
-func start(t *testing.T, oidc auth.OIDCConfig, cfg auth.Config, devLogin bool) stack {
+func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config, devLogin bool) stack {
 	t.Helper()
 	srv := httptest.NewUnstartedServer(nil)
 	base := "http://" + srv.Listener.Addr().String()
 	store := postgrestest.New(t)
-	cfg.PublicURL = base
-	keys := auth.NewService(store, cfg)
+	keys := auth.NewService(store, auth.Config{PublicURL: base})
 	svc := tracker.NewService(store, tracker.PublicURL(base))
 	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
 	if err != nil {
@@ -42,7 +42,7 @@ func start(t *testing.T, oidc auth.OIDCConfig, cfg auth.Config, devLogin bool) s
 	}
 	logger := log.New(io.Discard)
 	oidc.RedirectURL = base + "/auth/callback"
-	authn, err := authapi.NewHandler(keys, auth.NewOIDC(oidc), authapi.DevLogin(devLogin), logger)
+	authn, err := authapi.NewHandler(keys, workspaces.NewService(store, members), auth.NewOIDC(oidc), authapi.DevLogin(devLogin), logger)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -49,44 +49,16 @@ func (s *Store) UserByID(ctx context.Context, id string) (storage.User, error) {
 	return one(toAuthUser)(s.auth.GetUser(ctx, id))
 }
 
-func (s *Store) UserByIdentity(ctx context.Context, issuer, subject string) (storage.User, error) {
-	return one(toAuthUser)(s.auth.UserByIdentity(ctx, authdb.UserByIdentityParams{Issuer: issuer, Subject: subject}))
-}
-
-func (s *Store) LinkIdentity(ctx context.Context, issuer, subject, userID string) error {
-	return mapError(s.auth.LinkIdentity(ctx, authdb.LinkIdentityParams{Issuer: issuer, Subject: subject, UserID: userID}))
-}
-
-func (s *Store) CreateIdentityUser(ctx context.Context, user storage.NewUser, issuer, subject string, firstOnly bool) (storage.User, error) {
-	var created authdb.User
-	err := s.authTx(ctx, func(q *authdb.Queries) error {
-		if err := q.LockSignUps(ctx); err != nil {
-			return err
-		}
-		if firstOnly {
-			if n, err := q.CountIdentities(ctx); err != nil || n > 0 {
-				return firstErr(err, storage.ErrConflict)
-			}
-		}
-		workspace, err := q.DefaultWorkspace(ctx)
-		if err != nil {
-			return err
-		}
-		user.WorkspaceID = workspace.ID
-		if created, err = q.CreateAuthUser(ctx, authdb.CreateAuthUserParams(user)); err != nil {
-			return err
-		}
-		return q.LinkIdentity(ctx, authdb.LinkIdentityParams{Issuer: issuer, Subject: subject, UserID: created.ID})
-	})
-	return one(toAuthUser)(created, err)
-}
-
 func (s *Store) DevUser(ctx context.Context) (storage.User, error) {
 	return one(toAuthUser)(s.auth.DevUser(ctx))
 }
 
 func (s *Store) CreateSession(ctx context.Context, tokenHash []byte, userID string, expiresAt time.Time) error {
 	return mapError(s.auth.CreateSession(ctx, authdb.CreateSessionParams{TokenHash: tokenHash, UserID: userID, ExpiresAt: expiresAt}))
+}
+
+func (s *Store) UpdateSessionUser(ctx context.Context, tokenHash []byte, userID string) error {
+	return affected(s.auth.UpdateSessionUser(ctx, authdb.UpdateSessionUserParams{TokenHash: tokenHash, UserID: userID}))
 }
 
 func (s *Store) UserBySession(ctx context.Context, tokenHash []byte) (storage.User, error) {

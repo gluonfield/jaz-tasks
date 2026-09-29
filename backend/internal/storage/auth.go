@@ -72,14 +72,10 @@ type AuthStore interface {
 	UsersByEmail(ctx context.Context, email string) ([]User, error)
 	UserByID(ctx context.Context, id string) (User, error)
 
-	UserByIdentity(ctx context.Context, issuer, subject string) (User, error)
-	LinkIdentity(ctx context.Context, issuer, subject, userID string) error
-	// CreateIdentityUser adds a user to the oldest workspace and links the
-	// identity; with firstOnly it fails with ErrConflict unless no identity exists.
-	CreateIdentityUser(ctx context.Context, user NewUser, issuer, subject string, firstOnly bool) (User, error)
 	DevUser(ctx context.Context) (User, error)
 
 	CreateSession(ctx context.Context, tokenHash []byte, userID string, expiresAt time.Time) error
+	UpdateSessionUser(ctx context.Context, tokenHash []byte, userID string) error
 	UserBySession(ctx context.Context, tokenHash []byte) (User, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
 
@@ -99,4 +95,50 @@ type AuthStore interface {
 	UserByAccessToken(ctx context.Context, tokenHash []byte) (User, error)
 	OAuthGrants(ctx context.Context, userID string) ([]OAuthGrantSummary, error)
 	RevokeOAuthGrant(ctx context.Context, userID, grantID string) error
+}
+
+// Identity links a person's OIDC subject to one user row per workspace.
+type Identity struct {
+	Issuer    string
+	Subject   string
+	UserID    string
+	CreatedAt time.Time
+}
+
+type WorkspaceInvite struct {
+	ID          string
+	WorkspaceID string
+	Email       string
+	InvitedBy   *string
+	CreatedAt   time.Time
+}
+
+// Membership is one workspace a person belongs to, through one user row.
+type Membership struct {
+	UserID      string
+	WorkspaceID string
+	Name        string
+	URLKey      string
+}
+
+type NewWorkspace struct {
+	Name   string
+	URLKey string
+}
+
+type WorkspaceStore interface {
+	UserByID(ctx context.Context, id string) (User, error)
+	UsersByIdentity(ctx context.Context, issuer, subject string) ([]User, error)
+	UserIdentity(ctx context.Context, userID string) (Identity, error)
+	// Memberships lists the workspaces of everyone sharing the user's identity.
+	Memberships(ctx context.Context, userID string) ([]Membership, error)
+	// CreateOwnedWorkspace creates a workspace, its owner linked to the
+	// identity, and a first team with its workflow, atomically.
+	CreateOwnedWorkspace(ctx context.Context, workspace NewWorkspace, owner NewUser, identity Identity, team NewTeam, states []NewWorkflowState) (User, error)
+	// JoinWorkspace turns an invite into a member linked to the identity.
+	JoinWorkspace(ctx context.Context, invite WorkspaceInvite, member NewUser, identity Identity) (User, error)
+	CreateInvite(ctx context.Context, workspaceID, email, invitedBy string) (WorkspaceInvite, error)
+	Invites(ctx context.Context, workspaceID string) ([]WorkspaceInvite, error)
+	InvitesByEmail(ctx context.Context, email string) ([]WorkspaceInvite, error)
+	DeleteInvite(ctx context.Context, workspaceID, id string) error
 }

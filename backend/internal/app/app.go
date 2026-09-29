@@ -20,6 +20,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	"go.uber.org/fx"
 )
 
@@ -31,6 +32,7 @@ type Config struct {
 	SeedAPIKey  string
 	OIDC        auth.OIDCConfig
 	Auth        auth.Config
+	Workspaces  workspaces.Config
 	DevLogin    authapi.DevLogin
 }
 
@@ -54,8 +56,8 @@ func ParseConfig(args []string) (Config, error) {
 		ClientSecret: strings.TrimSpace(os.Getenv("OIDC_CLIENT_SECRET")),
 		RedirectURL:  cfg.PublicURL + "/auth/callback",
 	}
-	cfg.Auth = auth.Config{
-		PublicURL:           cfg.PublicURL,
+	cfg.Auth = auth.Config{PublicURL: cfg.PublicURL}
+	cfg.Workspaces = workspaces.Config{
 		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
 		AllowedEmails:       list(os.Getenv("ALLOWED_EMAILS")),
 	}
@@ -82,11 +84,12 @@ func env(key, fallback string) string {
 
 func Options(cfg Config) fx.Option {
 	return fx.Options(
-		fx.Supply(cfg, cfg.Auth, cfg.OIDC, cfg.DevLogin, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
+		fx.Supply(cfg, cfg.Auth, cfg.Workspaces, cfg.OIDC, cfg.DevLogin, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
 		fx.Provide(
 			NewLogger,
-			fx.Annotate(OpenStore, fx.As(fx.Self()), fx.As(new(storage.TrackerStore)), fx.As(new(storage.AuthStore))),
+			fx.Annotate(OpenStore, fx.As(fx.Self()), fx.As(new(storage.TrackerStore)), fx.As(new(storage.AuthStore)), fx.As(new(storage.WorkspaceStore))),
 			auth.NewService,
+			workspaces.NewService,
 			auth.NewOIDC,
 			tracker.NewService,
 		),
@@ -114,8 +117,12 @@ func OpenStore(lc fx.Lifecycle, cfg Config) (*postgres.Store, error) {
 	return store, nil
 }
 
-// Seed creates the demo workspace on an empty database and prints its key.
-func Seed(store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, cfg Config, logger *log.Logger) error {
+// Seed creates the demo workspace on an empty database for development
+// login and tests; real sign-ins always get workspaces of their own.
+func Seed(store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, oidc *auth.OIDC, cfg Config, logger *log.Logger) error {
+	if !bool(cfg.DevLogin) || oidc.Enabled() {
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	result, seeded, err := seed.Run(ctx, store, keys, svc, cfg.SeedAPIKey)

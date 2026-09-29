@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
@@ -20,7 +21,7 @@ import (
 // The official MCP client discovers the authorization server from a 401,
 // registers itself, runs PKCE through the consent screen and calls a tool.
 func TestMCPClientAuthorizes(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, auth.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
 	b := browser()
 	s.devSignIn(t, b)
 	const redirect = "http://127.0.0.1:9999/callback"
@@ -84,7 +85,7 @@ func graphqlStatus(t *testing.T, base, authorization string) (int, http.Header) 
 }
 
 func TestTokenLifecycle(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, auth.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
 
 	status, header := graphqlStatus(t, s.url, "")
 	if status != http.StatusUnauthorized || header.Get("WWW-Authenticate") != `Bearer resource_metadata="`+s.url+`/.well-known/oauth-protected-resource/graphql"` {
@@ -191,7 +192,7 @@ func TestTokenLifecycle(t *testing.T) {
 }
 
 func TestAuthorizeRejectsUnsafeRequests(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, auth.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
 	b := browser()
 	cases := map[string]struct {
 		query  url.Values

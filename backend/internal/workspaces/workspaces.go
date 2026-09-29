@@ -1,0 +1,240 @@
+// Package workspaces owns membership: who may sign in, the workspace a new
+// person starts with, invites, and switching between workspaces.
+package workspaces
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"slices"
+	"strings"
+	"unicode"
+
+	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
+	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+)
+
+var (
+	ErrEmailUnverified = errors.New("your identity provider has not verified this email address")
+	ErrNotAllowed      = errors.New("this email address is not allowed to sign in here")
+	ErrForbidden       = errors.New("only workspace admins can manage invites")
+	ErrNotMember       = errors.New("you are not a member of that workspace")
+)
+
+// Config optionally restricts sign-in; empty lists admit every verified email.
+type Config struct {
+	AllowedEmailDomains []string
+	AllowedEmails       []string
+}
+
+type Service struct {
+	store storage.WorkspaceStore
+	cfg   Config
+}
+
+func NewService(store storage.WorkspaceStore, cfg Config) *Service {
+	return &Service{store: store, cfg: cfg}
+}
+
+// SignIn returns the user a person acts as. Pending invites are accepted
+// first, landing the person in the newest one; someone with no workspace
+// gets one of their own, like Linear's onboarding.
+func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, error) {
+	if !id.EmailVerified || id.Email == "" {
+		return storage.User{}, ErrEmailUnverified
+	}
+	if !s.allowed(id.Email) {
+		return storage.User{}, ErrNotAllowed
+	}
+	identity := storage.Identity{Issuer: id.Issuer, Subject: id.Subject}
+	joined, err := s.acceptInvites(ctx, identity, member(id))
+	if err != nil || joined != nil {
+		return deref(joined), err
+	}
+	users, err := s.store.UsersByIdentity(ctx, id.Issuer, id.Subject)
+	if err != nil || len(users) > 0 {
+		return first(users), err
+	}
+	name := firstName(id.Name, id.Email)
+	owner := member(id)
+	owner.Admin = true
+	return s.store.CreateOwnedWorkspace(ctx,
+		storage.NewWorkspace{Name: name + "'s workspace", URLKey: slug(name) + "-" + suffix()},
+		owner, identity,
+		storage.NewTeam{Key: teamKey(name), Name: name},
+		tracker.DefaultStates,
+	)
+}
+
+func (s *Service) allowed(email string) bool {
+	if len(s.cfg.AllowedEmailDomains) == 0 && len(s.cfg.AllowedEmails) == 0 {
+		return true
+	}
+	_, domain, _ := strings.Cut(email, "@")
+	return slices.ContainsFunc(s.cfg.AllowedEmails, func(e string) bool { return strings.EqualFold(e, email) }) ||
+		slices.ContainsFunc(s.cfg.AllowedEmailDomains, func(d string) bool { return strings.EqualFold(d, domain) })
+}
+
+// acceptInvites joins every workspace inviting the member's email that the
+// identity is not already in, returning the last one joined.
+func (s *Service) acceptInvites(ctx context.Context, identity storage.Identity, m storage.NewUser) (*storage.User, error) {
+	invites, err := s.store.InvitesByEmail(ctx, m.Email)
+	if err != nil || len(invites) == 0 {
+		return nil, err
+	}
+	users, err := s.store.UsersByIdentity(ctx, identity.Issuer, identity.Subject)
+	if err != nil {
+		return nil, err
+	}
+	var joined *storage.User
+	for _, invite := range invites {
+		if slices.ContainsFunc(users, func(u storage.User) bool { return u.WorkspaceID == invite.WorkspaceID }) {
+			if err := s.store.DeleteInvite(ctx, invite.WorkspaceID, invite.ID); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		user, err := s.store.JoinWorkspace(ctx, invite, m, identity)
+		if err != nil {
+			return nil, err
+		}
+		joined = &user
+	}
+	return joined, nil
+}
+
+// Memberships lists the actor's workspaces, first accepting invites that
+// arrived while they were signed in.
+func (s *Service) Memberships(ctx context.Context, actor auth.Actor) ([]storage.Membership, error) {
+	identity, err := s.store.UserIdentity(ctx, actor.UserID)
+	if err == nil {
+		user, err := s.store.UserByID(ctx, actor.UserID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.acceptInvites(ctx, identity, storage.NewUser{Name: user.Name, DisplayName: user.DisplayName, Email: user.Email, AvatarURL: user.AvatarURL}); err != nil {
+			return nil, err
+		}
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return nil, err
+	}
+	return s.store.Memberships(ctx, actor.UserID)
+}
+
+// Switch returns the actor's user in another of their workspaces.
+func (s *Service) Switch(ctx context.Context, actor auth.Actor, workspaceID string) (storage.User, error) {
+	memberships, err := s.store.Memberships(ctx, actor.UserID)
+	if err != nil {
+		return storage.User{}, err
+	}
+	i := slices.IndexFunc(memberships, func(m storage.Membership) bool { return m.WorkspaceID == workspaceID })
+	if i < 0 {
+		return storage.User{}, ErrNotMember
+	}
+	return s.store.UserByID(ctx, memberships[i].UserID)
+}
+
+func (s *Service) Invite(ctx context.Context, actor auth.Actor, email string) (storage.WorkspaceInvite, error) {
+	if err := s.requireAdmin(ctx, actor); err != nil {
+		return storage.WorkspaceInvite{}, err
+	}
+	email = strings.ToLower(strings.TrimSpace(email))
+	if local, domain, ok := strings.Cut(email, "@"); !ok || local == "" || !strings.Contains(domain, ".") {
+		return storage.WorkspaceInvite{}, errors.New("enter a valid email address")
+	}
+	invite, err := s.store.CreateInvite(ctx, actor.WorkspaceID, email, actor.UserID)
+	if errors.Is(err, storage.ErrConflict) {
+		return invite, errors.New(email + " is already invited")
+	}
+	return invite, err
+}
+
+func (s *Service) Invites(ctx context.Context, actor auth.Actor) ([]storage.WorkspaceInvite, error) {
+	return s.store.Invites(ctx, actor.WorkspaceID)
+}
+
+func (s *Service) CancelInvite(ctx context.Context, actor auth.Actor, id string) error {
+	if err := s.requireAdmin(ctx, actor); err != nil {
+		return err
+	}
+	return s.store.DeleteInvite(ctx, actor.WorkspaceID, id)
+}
+
+func (s *Service) requireAdmin(ctx context.Context, actor auth.Actor) error {
+	user, err := s.store.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return err
+	}
+	if !user.Admin {
+		return ErrForbidden
+	}
+	return nil
+}
+
+func member(id auth.Identity) storage.NewUser {
+	handle, _, _ := strings.Cut(id.Email, "@")
+	name := strings.TrimSpace(id.Name)
+	if name == "" {
+		name = handle
+	}
+	user := storage.NewUser{Name: name, DisplayName: strings.ToLower(handle), Email: id.Email}
+	if id.Picture != "" {
+		user.AvatarURL = &id.Picture
+	}
+	return user
+}
+
+func firstName(name, email string) string {
+	if fields := strings.Fields(name); len(fields) > 0 {
+		return fields[0]
+	}
+	handle, _, _ := strings.Cut(email, "@")
+	return handle
+}
+
+// teamKey is the name's first three ASCII letters, as Linear suggests.
+func teamKey(name string) string {
+	var key []rune
+	for _, r := range strings.ToUpper(name) {
+		if r < unicode.MaxASCII && unicode.IsLetter(r) && len(key) < 3 {
+			key = append(key, r)
+		}
+	}
+	if len(key) < 2 {
+		return "TSK"
+	}
+	return string(key)
+}
+
+func slug(name string) string {
+	var out []rune
+	for _, r := range strings.ToLower(name) {
+		if r < unicode.MaxASCII && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
+			out = append(out, r)
+		}
+	}
+	if len(out) == 0 {
+		return "workspace"
+	}
+	return string(out)
+}
+
+func suffix() string {
+	b := make([]byte, 3)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func first(users []storage.User) storage.User {
+	return users[0]
+}
+
+func deref[T any](v *T) T {
+	var zero T
+	if v == nil {
+		return zero
+	}
+	return *v
+}

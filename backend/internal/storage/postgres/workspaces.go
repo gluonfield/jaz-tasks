@@ -35,19 +35,25 @@ func (s *Store) CreateTeam(ctx context.Context, team storage.NewTeam, states []s
 	var created db.Team
 	err := s.tx(ctx, func(q *db.Queries) error {
 		var err error
-		if created, err = q.CreateTeam(ctx, db.CreateTeamParams(team)); err != nil {
-			return err
-		}
-		for _, state := range states {
-			state.WorkspaceID = created.WorkspaceID
-			state.TeamID = created.ID
-			if _, err := q.CreateWorkflowState(ctx, db.CreateWorkflowStateParams(state)); err != nil {
-				return err
-			}
-		}
-		return nil
+		created, err = createTeam(ctx, q, team, states)
+		return err
 	})
 	return one(toTeam)(created, err)
+}
+
+func createTeam(ctx context.Context, q *db.Queries, team storage.NewTeam, states []storage.NewWorkflowState) (db.Team, error) {
+	created, err := q.CreateTeam(ctx, db.CreateTeamParams(team))
+	if err != nil {
+		return created, err
+	}
+	for _, state := range states {
+		state.WorkspaceID = created.WorkspaceID
+		state.TeamID = created.ID
+		if _, err := q.CreateWorkflowState(ctx, db.CreateWorkflowStateParams(state)); err != nil {
+			return created, err
+		}
+	}
+	return created, nil
 }
 
 func (s *Store) WorkflowStates(ctx context.Context, workspaceID string) ([]storage.WorkflowState, error) {

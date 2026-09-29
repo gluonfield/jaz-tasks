@@ -28,9 +28,7 @@ func actorOf(user storage.User) Actor {
 
 type Config struct {
 	// PublicURL is the issuer of OAuth tokens and the base of every auth URL.
-	PublicURL           string
-	AllowedEmailDomains []string
-	AllowedEmails       []string
+	PublicURL string
 }
 
 type Service struct {

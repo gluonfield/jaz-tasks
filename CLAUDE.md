@@ -43,7 +43,9 @@
 - `PUBLIC_URL` is the single source for the OIDC redirect URI, the OAuth issuer, metadata URLs and the cookie domain. Do not add parallel settings.
 - Every 401 from a protected resource carries `WWW-Authenticate: Bearer resource_metadata=...`. Keep `/mcp` on the go-sdk bearer middleware.
 - Settings endpoints that mint or revoke credentials require a browser session, never a bearer token.
-- Development login is only for a loopback `PUBLIC_URL` without OIDC; keep it impossible to enable elsewhere.
+- Development login is only for a loopback `PUBLIC_URL` without OIDC; keep it impossible to enable elsewhere. The demo workspace is seeded only in that mode.
+- `internal/workspaces` owns membership: a person (OIDC identity) has one user row per workspace; new people get their own workspace; invites are the only way into another. A session or token acts as exactly one user row, so as exactly one workspace.
+- Tenant isolation is a hard requirement. Every storage query touching workspace data filters by `workspace_id` or reaches it through an already-scoped record. Extend `TestTenantIsolationGraphQL` and `TestTenantIsolationMCP` whenever you add a query, mutation or tool that takes a reference.
 
 ## Postgres and sqlc
 

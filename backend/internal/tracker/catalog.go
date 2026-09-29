@@ -171,7 +171,8 @@ type TeamCreateInput struct {
 	Color       *string
 }
 
-var defaultStates = []storage.NewWorkflowState{
+// DefaultStates is Linear's default workflow for a new team.
+var DefaultStates = []storage.NewWorkflowState{
 	{Name: "Backlog", Type: "backlog", Color: "#bec2c8", Position: 0},
 	{Name: "Todo", Type: "unstarted", Color: "#a9adb5", Position: 1},
 	{Name: "In Progress", Type: "started", Color: "#f2c94c", Position: 2},
@@ -201,7 +202,7 @@ func (s *Scope) CreateTeam(ctx context.Context, in TeamCreateInput) (storage.Tea
 		Description: in.Description,
 		Icon:        in.Icon,
 		Color:       in.Color,
-	}, defaultStates)
+	}, DefaultStates)
 	if err != nil {
 		return team, conflict(err, "a team with key "+key+" already exists")
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
 const sessionCookie = "jt_session"
@@ -26,6 +27,7 @@ type DevLogin bool
 
 type Handler struct {
 	svc      *auth.Service
+	members  *workspaces.Service
 	oidc     *auth.OIDC
 	devLogin bool
 	public   *url.URL
@@ -33,7 +35,7 @@ type Handler struct {
 	mux      *http.ServeMux
 }
 
-func NewHandler(svc *auth.Service, oidc *auth.OIDC, devLogin DevLogin, logger *log.Logger) (*Handler, error) {
+func NewHandler(svc *auth.Service, members *workspaces.Service, oidc *auth.OIDC, devLogin DevLogin, logger *log.Logger) (*Handler, error) {
 	public, err := url.Parse(svc.Issuer())
 	if err != nil {
 		return nil, err
@@ -47,7 +49,7 @@ func NewHandler(svc *auth.Service, oidc *auth.OIDC, devLogin DevLogin, logger *l
 	case enabled:
 		logger.Warn("DEV_LOGIN is on: anyone who can reach this server signs in as the seeded owner. Never enable it in production.")
 	}
-	h := &Handler{svc: svc, oidc: oidc, devLogin: enabled, public: public, logger: logger.WithPrefix("auth"), mux: http.NewServeMux()}
+	h := &Handler{svc: svc, members: members, oidc: oidc, devLogin: enabled, public: public, logger: logger.WithPrefix("auth"), mux: http.NewServeMux()}
 	h.routes()
 	return h, nil
 }
