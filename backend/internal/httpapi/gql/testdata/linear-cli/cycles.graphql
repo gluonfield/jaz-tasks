@@ -1,0 +1,1 @@
+query { cycles(first: 50, filter: { team: { key: { eq: "ENG" } } }) { nodes { id name number description isActive startsAt endsAt progress team { key } } } }

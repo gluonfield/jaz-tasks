@@ -1,0 +1,1 @@
+mutation { issueDelete(id: "ENG-20") { success } }

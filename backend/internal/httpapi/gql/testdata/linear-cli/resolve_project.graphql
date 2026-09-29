@@ -1,0 +1,1 @@
+query { projects(filter: { name: { containsIgnoreCase: "tasks" } }, first: 50) { nodes { id name } } }

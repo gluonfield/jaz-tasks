@@ -1,0 +1,1 @@
+query { workflowStates(filter: { team: { id: { eq: "{{teamId}}" } } }) { nodes { id name } } }

@@ -1,0 +1,1 @@
+query { projects(filter: { lead: { name: { eq: "Mira Chen" } }, status: { name: { eq: "In Progress" } } } first: 50) { nodes { id name slugId description status { name color } lead { name email } startDate targetDate progress createdAt } } }

@@ -1,0 +1,1 @@
+query { searchIssues(term: "board", first: 20) { nodes { id identifier title state { name } assignee { name } priority } } }

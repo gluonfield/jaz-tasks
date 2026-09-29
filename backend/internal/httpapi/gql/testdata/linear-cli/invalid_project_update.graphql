@@ -1,0 +1,1 @@
+mutation { projectUpdate(id: "{{projectId}}", input: { name: "Renamed" }) { success project { id name key } } }

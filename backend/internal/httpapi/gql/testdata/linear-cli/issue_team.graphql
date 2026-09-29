@@ -1,0 +1,1 @@
+query { issue(id: "ENG-7") { team { id } } }

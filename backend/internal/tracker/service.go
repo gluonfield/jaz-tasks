@@ -39,6 +39,7 @@ type Scope struct {
 	labels   memo[[]storage.IssueLabel]
 	projects memo[[]storage.Project]
 	cycles   memo[[]storage.Cycle]
+	counts   memo[[]storage.IssueCount]
 }
 
 func (s *Service) Scope(actor auth.Actor) *Scope {

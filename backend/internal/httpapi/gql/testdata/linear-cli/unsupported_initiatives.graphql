@@ -1,0 +1,1 @@
+query { initiatives(first: 50) { nodes { id name description status health targetDate startedAt projects { nodes { name slugId } } } } }

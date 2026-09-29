@@ -6,7 +6,8 @@ import "time"
 
 // IssueQuery filters issues. A nil ID slice leaves that dimension
 // unfiltered; an empty one matches nothing unless the matching Null flag
-// admits unset references.
+// admits unset references. Search is a Postgres tsquery over title and
+// description; Identifier (e.g. ENG-12) also matches when searching.
 type IssueQuery struct {
 	WorkspaceID     string
 	IncludeArchived bool
@@ -27,6 +28,7 @@ type IssueQuery struct {
 	LabelIDs        []string
 	LabelNull       bool
 	Search          string
+	Identifier      string
 	OrderByUpdated  bool
 	Offset          int32
 	Limit           int32

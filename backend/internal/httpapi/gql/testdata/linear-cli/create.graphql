@@ -1,0 +1,1 @@
+mutation { issueCreate(input: { title: "Ship the CLI fixtures", teamId: "{{teamId}}", description: "Created by \"linear create\"\nwith a newline", priority: 2, projectId: "{{projectId}}", assigneeId: "{{viewerId}}" }) { issue { id identifier url title } } }

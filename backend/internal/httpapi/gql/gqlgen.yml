@@ -1,0 +1,137 @@
+schema:
+  - schema.graphqls
+exec:
+  filename: generated.go
+  package: gql
+model:
+  filename: models_gen.go
+  package: gql
+omit_slice_element_pointers: true
+omit_getters: true
+omit_complexity: true
+nullable_input_omittable: true
+call_argument_directives_with_null: false
+models:
+  UserConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.UserConnection
+  TeamConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.TeamConnection
+  WorkflowStateConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.WorkflowStateConnection
+  IssueLabelConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.IssueLabelConnection
+  ProjectConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.ProjectConnection
+  CycleConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.CycleConnection
+  IssueConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.IssueConnection
+  IssueSearchPayload:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.IssueSearchPayload
+  CommentConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.CommentConnection
+  IssueHistoryConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.IssueHistoryConnection
+  ID:
+    model: github.com/99designs/gqlgen/graphql.ID
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int32
+      - github.com/99designs/gqlgen/graphql.Int
+  Float:
+    model:
+      - github.com/99designs/gqlgen/graphql.Float
+      - github.com/99designs/gqlgen/graphql.Int32
+  DateTime:
+    model: github.com/99designs/gqlgen/graphql.Time
+  TimelessDate:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.TimelessDate
+  ProjectStatusType:
+    model: github.com/99designs/gqlgen/graphql.String
+  PageInfo:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.PageInfo
+  Organization:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Workspace
+  User:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.User
+  Team:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Team
+  WorkflowState:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.WorkflowState
+  IssueLabel:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.IssueLabel
+  ProjectStatus:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ProjectStatus
+  Project:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Project
+    fields:
+      status:
+        resolver: true
+  Cycle:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Cycle
+  Issue:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Issue
+  IssueSearchResult:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Issue
+  Comment:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Comment
+  IssueHistory:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.IssueHistory
+  StringComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.StringComparator
+  IDComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IDComparator
+  IssueIDComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IDComparator
+  EntityIdentifierIDComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IDComparator
+  NumberComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.NumberComparator
+  NullableNumberComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.NumberComparator
+  BooleanComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.BooleanComparator
+  ContentComparator:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ContentComparator
+  TeamFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.TeamFilter
+  NullableTeamFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.TeamFilter
+  UserFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.UserFilter
+  NullableUserFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.UserFilter
+  WorkflowStateFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.WorkflowStateFilter
+  IssueLabelFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueLabelFilter
+  IssueLabelCollectionFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueLabelFilter
+  ProjectStatusFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ProjectStatusFilter
+  ProjectFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ProjectFilter
+  NullableProjectFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ProjectFilter
+  CycleFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.CycleFilter
+  NullableCycleFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.CycleFilter
+  IssueFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueFilter
+  NullableIssueFilter:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueFilter
+  IssueCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueCreateInput
+  CommentCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.CommentCreateInput
+  TeamCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.TeamCreateInput
+  WorkflowStateCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.WorkflowStateCreateInput
+  IssueLabelCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.IssueLabelCreateInput
+  ProjectCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.ProjectCreateInput
+  CycleCreateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.CycleCreateInput

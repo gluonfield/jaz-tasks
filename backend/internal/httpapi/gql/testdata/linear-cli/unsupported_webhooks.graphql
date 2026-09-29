@@ -1,0 +1,1 @@
+query { webhooks { nodes { id url team { key name } enabled createdAt } } }

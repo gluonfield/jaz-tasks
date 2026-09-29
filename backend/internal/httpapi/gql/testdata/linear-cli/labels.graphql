@@ -1,0 +1,1 @@
+query { issueLabels(first: 100, filter: { team: { key: { eq: "DES" } } }) { nodes { id name color isGroup } } }

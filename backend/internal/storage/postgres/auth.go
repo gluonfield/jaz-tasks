@@ -14,3 +14,7 @@ func (s *Store) UserByAPIKey(ctx context.Context, keyHash []byte) (storage.User,
 func (s *Store) CreateAPIKey(ctx context.Context, userID, label string, keyHash []byte) error {
 	return mapError(s.auth.CreateAPIKey(ctx, authdb.CreateAPIKeyParams{UserID: userID, Label: label, KeyHash: keyHash}))
 }
+
+func (s *Store) UsersByEmail(ctx context.Context, email string) ([]storage.User, error) {
+	return many(toAuthUser)(s.auth.UsersByEmail(ctx, email))
+}

@@ -1,0 +1,1 @@
+query { workflowStates(first: 100, filter: { team: { key: { eq: "ENG" } } }) { nodes { id name type color position team { key } } } }

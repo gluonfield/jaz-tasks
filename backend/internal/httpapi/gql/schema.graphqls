@@ -1,0 +1,750 @@
+# A subset of Linear's public GraphQL schema. Names, arguments and nullability
+# match packages/sdk/src/schema.graphql in linear/linear so Linear clients work
+# unchanged; anything absent here is unsupported and fails validation.
+
+scalar DateTime
+scalar TimelessDate
+
+enum PaginationOrderBy {
+  createdAt
+  updatedAt
+}
+
+enum ProjectStatusType {
+  backlog
+  canceled
+  completed
+  paused
+  planned
+  started
+}
+
+type Query {
+  viewer: User!
+  organization: Organization!
+  user(id: String!): User!
+  users(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
+  team(id: String!): Team!
+  teams(after: String, filter: TeamFilter, first: Int, includeArchived: Boolean): TeamConnection!
+  workflowState(id: String!): WorkflowState!
+  workflowStates(after: String, filter: WorkflowStateFilter, first: Int, includeArchived: Boolean): WorkflowStateConnection!
+  issue(id: String!): Issue!
+  issues(
+    after: String
+    filter: IssueFilter
+    first: Int
+    includeArchived: Boolean
+    orderBy: PaginationOrderBy
+  ): IssueConnection!
+  searchIssues(
+    after: String
+    filter: IssueFilter
+    first: Int
+    includeArchived: Boolean
+    orderBy: PaginationOrderBy
+    teamId: String
+    term: String!
+  ): IssueSearchPayload!
+  issueLabel(id: String!): IssueLabel!
+  issueLabels(after: String, filter: IssueLabelFilter, first: Int, includeArchived: Boolean): IssueLabelConnection!
+  project(id: String!): Project!
+  projects(after: String, filter: ProjectFilter, first: Int, includeArchived: Boolean): ProjectConnection!
+  cycle(id: String!): Cycle!
+  cycles(after: String, filter: CycleFilter, first: Int, includeArchived: Boolean): CycleConnection!
+  comment(id: String): Comment!
+}
+
+type Mutation {
+  issueCreate(input: IssueCreateInput!): IssuePayload!
+  issueBatchCreate(input: IssueBatchCreateInput!): IssueBatchPayload!
+  issueUpdate(id: String!, input: IssueUpdateInput!): IssuePayload!
+  issueAddLabel(id: String!, labelId: String!): IssuePayload!
+  issueRemoveLabel(id: String!, labelId: String!): IssuePayload!
+  issueArchive(id: String!): IssueArchivePayload!
+  issueUnarchive(id: String!): IssueArchivePayload!
+  issueDelete(id: String!, permanentlyDelete: Boolean): IssueArchivePayload!
+  commentCreate(input: CommentCreateInput!): CommentPayload!
+  commentUpdate(id: String!, input: CommentUpdateInput!): CommentPayload!
+  commentDelete(id: String!): DeletePayload!
+  teamCreate(input: TeamCreateInput!): TeamPayload!
+  workflowStateCreate(input: WorkflowStateCreateInput!): WorkflowStatePayload!
+  issueLabelCreate(input: IssueLabelCreateInput!): IssueLabelPayload!
+  issueLabelUpdate(id: String!, input: IssueLabelUpdateInput!): IssueLabelPayload!
+  issueLabelDelete(id: String!): DeletePayload!
+  projectCreate(input: ProjectCreateInput!): ProjectPayload!
+  projectUpdate(id: String!, input: ProjectUpdateInput!): ProjectPayload!
+  cycleCreate(input: CycleCreateInput!): CyclePayload!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+type Organization {
+  createdAt: DateTime!
+  id: ID!
+  name: String!
+  projectStatuses: [ProjectStatus!]!
+  teams(after: String, filter: TeamFilter, first: Int, includeArchived: Boolean): TeamConnection!
+  updatedAt: DateTime!
+  urlKey: String!
+  userCount: Int!
+  users(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
+}
+
+type User {
+  active: Boolean!
+  admin: Boolean!
+  assignedIssues(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  avatarUrl: String
+  createdAt: DateTime!
+  createdIssues(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  displayName: String!
+  email: String!
+  guest: Boolean!
+  id: ID!
+  initials: String!
+  isMe: Boolean!
+  lastSeen: DateTime
+  name: String!
+  organization: Organization!
+  updatedAt: DateTime!
+  url: String!
+}
+
+type UserConnection {
+  nodes: [User!]!
+  pageInfo: PageInfo!
+}
+
+type Team {
+  activeCycle: Cycle
+  archivedAt: DateTime
+  color: String
+  createdAt: DateTime!
+  cycles(after: String, filter: CycleFilter, first: Int, includeArchived: Boolean): CycleConnection!
+  description: String
+  displayName: String!
+  icon: String
+  id: ID!
+  issues(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  key: String!
+  labels(after: String, filter: IssueLabelFilter, first: Int, includeArchived: Boolean): IssueLabelConnection!
+  members(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
+  name: String!
+  organization: Organization!
+  projects(after: String, filter: ProjectFilter, first: Int, includeArchived: Boolean): ProjectConnection!
+  states(after: String, filter: WorkflowStateFilter, first: Int, includeArchived: Boolean): WorkflowStateConnection!
+  updatedAt: DateTime!
+}
+
+type TeamConnection {
+  nodes: [Team!]!
+  pageInfo: PageInfo!
+}
+
+type WorkflowState {
+  archivedAt: DateTime
+  color: String!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  name: String!
+  position: Float!
+  team: Team!
+  type: String!
+  updatedAt: DateTime!
+}
+
+type WorkflowStateConnection {
+  nodes: [WorkflowState!]!
+  pageInfo: PageInfo!
+}
+
+type IssueLabel {
+  archivedAt: DateTime
+  children(after: String, filter: IssueLabelFilter, first: Int, includeArchived: Boolean): IssueLabelConnection!
+  color: String!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  isGroup: Boolean!
+  name: String!
+  parent: IssueLabel
+  team: Team
+  updatedAt: DateTime!
+}
+
+type IssueLabelConnection {
+  nodes: [IssueLabel!]!
+  pageInfo: PageInfo!
+}
+
+type ProjectStatus {
+  color: String!
+  id: ID!
+  name: String!
+  position: Float!
+  type: ProjectStatusType!
+}
+
+type Project {
+  archivedAt: DateTime
+  color: String!
+  createdAt: DateTime!
+  description: String!
+  icon: String
+  id: ID!
+  issues(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  lead: User
+  name: String!
+  priority: Int!
+  progress: Float!
+  slugId: String!
+  sortOrder: Float!
+  startDate: TimelessDate
+  state: String! @deprecated(reason: "Use project.status instead")
+  status: ProjectStatus!
+  targetDate: TimelessDate
+  teams(after: String, filter: TeamFilter, first: Int, includeArchived: Boolean): TeamConnection!
+  updatedAt: DateTime!
+  url: String!
+}
+
+type ProjectConnection {
+  nodes: [Project!]!
+  pageInfo: PageInfo!
+}
+
+type Cycle {
+  archivedAt: DateTime
+  completedAt: DateTime
+  createdAt: DateTime!
+  description: String
+  endsAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  isFuture: Boolean!
+  isNext: Boolean!
+  isPast: Boolean!
+  isPrevious: Boolean!
+  issues(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  name: String
+  number: Float!
+  progress: Float!
+  startsAt: DateTime!
+  team: Team!
+  updatedAt: DateTime!
+}
+
+type CycleConnection {
+  nodes: [Cycle!]!
+  pageInfo: PageInfo!
+}
+
+type Issue {
+  archivedAt: DateTime
+  assignee: User
+  branchName: String!
+  canceledAt: DateTime
+  children(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  comments(after: String, first: Int): CommentConnection!
+  completedAt: DateTime
+  createdAt: DateTime!
+  creator: User
+  cycle: Cycle
+  description: String
+  dueDate: TimelessDate
+  estimate: Float
+  history(after: String, first: Int): IssueHistoryConnection!
+  id: ID!
+  identifier: String!
+  labelIds: [String!]!
+  labels(after: String, filter: IssueLabelFilter, first: Int, includeArchived: Boolean): IssueLabelConnection!
+  number: Float!
+  parent: Issue
+  priority: Float!
+  priorityLabel: String!
+  project: Project
+  sortOrder: Float!
+  startedAt: DateTime
+  state: WorkflowState!
+  team: Team!
+  title: String!
+  updatedAt: DateTime!
+  url: String!
+}
+
+type IssueConnection {
+  nodes: [Issue!]!
+  pageInfo: PageInfo!
+}
+
+type IssueSearchResult {
+  archivedAt: DateTime
+  assignee: User
+  branchName: String!
+  canceledAt: DateTime
+  children(after: String, filter: IssueFilter, first: Int, includeArchived: Boolean, orderBy: PaginationOrderBy): IssueConnection!
+  comments(after: String, first: Int): CommentConnection!
+  completedAt: DateTime
+  createdAt: DateTime!
+  creator: User
+  cycle: Cycle
+  description: String
+  dueDate: TimelessDate
+  estimate: Float
+  history(after: String, first: Int): IssueHistoryConnection!
+  id: ID!
+  identifier: String!
+  labelIds: [String!]!
+  labels(after: String, filter: IssueLabelFilter, first: Int, includeArchived: Boolean): IssueLabelConnection!
+  number: Float!
+  parent: Issue
+  priority: Float!
+  priorityLabel: String!
+  project: Project
+  sortOrder: Float!
+  startedAt: DateTime
+  state: WorkflowState!
+  team: Team!
+  title: String!
+  updatedAt: DateTime!
+  url: String!
+}
+
+type IssueSearchPayload {
+  nodes: [IssueSearchResult!]!
+  pageInfo: PageInfo!
+}
+
+type Comment {
+  body: String!
+  createdAt: DateTime!
+  editedAt: DateTime
+  id: ID!
+  issue: Issue
+  issueId: String
+  parent: Comment
+  parentId: String
+  resolvedAt: DateTime
+  updatedAt: DateTime!
+  url: String!
+  user: User
+}
+
+type CommentConnection {
+  nodes: [Comment!]!
+  pageInfo: PageInfo!
+}
+
+type IssueHistory {
+  actor: User
+  actorId: String
+  addedLabelIds: [String!]
+  addedLabels: [IssueLabel!]
+  archived: Boolean
+  createdAt: DateTime!
+  fromAssignee: User
+  fromAssigneeId: String
+  fromCycle: Cycle
+  fromCycleId: String
+  fromDueDate: TimelessDate
+  fromEstimate: Float
+  fromParent: Issue
+  fromParentId: String
+  fromPriority: Float
+  fromProject: Project
+  fromProjectId: String
+  fromState: WorkflowState
+  fromStateId: String
+  fromTeam: Team
+  fromTeamId: String
+  fromTitle: String
+  id: ID!
+  issue: Issue!
+  removedLabelIds: [String!]
+  removedLabels: [IssueLabel!]
+  toAssignee: User
+  toAssigneeId: String
+  toCycle: Cycle
+  toCycleId: String
+  toDueDate: TimelessDate
+  toEstimate: Float
+  toParent: Issue
+  toParentId: String
+  toPriority: Float
+  toProject: Project
+  toProjectId: String
+  toState: WorkflowState
+  toStateId: String
+  toTeam: Team
+  toTeamId: String
+  toTitle: String
+  updatedAt: DateTime!
+  updatedDescription: Boolean
+}
+
+type IssueHistoryConnection {
+  nodes: [IssueHistory!]!
+  pageInfo: PageInfo!
+}
+
+type IssuePayload {
+  issue: Issue
+  success: Boolean!
+}
+
+type IssueBatchPayload {
+  issues: [Issue!]!
+  success: Boolean!
+}
+
+type IssueArchivePayload {
+  entity: Issue
+  success: Boolean!
+}
+
+type CommentPayload {
+  comment: Comment!
+  success: Boolean!
+}
+
+type DeletePayload {
+  entityId: String!
+  success: Boolean!
+}
+
+type TeamPayload {
+  success: Boolean!
+  team: Team
+}
+
+type WorkflowStatePayload {
+  success: Boolean!
+  workflowState: WorkflowState!
+}
+
+type IssueLabelPayload {
+  issueLabel: IssueLabel!
+  success: Boolean!
+}
+
+type ProjectPayload {
+  project: Project
+  success: Boolean!
+}
+
+type CyclePayload {
+  cycle: Cycle
+  success: Boolean!
+}
+
+input StringComparator {
+  contains: String
+  containsIgnoreCase: String
+  endsWith: String
+  eq: String
+  eqIgnoreCase: String
+  in: [String!]
+  neq: String
+  neqIgnoreCase: String
+  nin: [String!]
+  notContains: String
+  notContainsIgnoreCase: String
+  startsWith: String
+}
+
+input IDComparator {
+  eq: ID
+  in: [ID!]
+  neq: ID
+  nin: [ID!]
+}
+
+input IssueIDComparator {
+  eq: ID
+  in: [ID!]
+  neq: ID
+  nin: [ID!]
+}
+
+input EntityIdentifierIDComparator {
+  eq: ID
+  in: [ID!]
+  neq: ID
+  nin: [ID!]
+}
+
+input NumberComparator {
+  eq: Float
+  gt: Float
+  gte: Float
+  in: [Float!]
+  lt: Float
+  lte: Float
+  neq: Float
+  nin: [Float!]
+}
+
+input NullableNumberComparator {
+  eq: Float
+  gt: Float
+  gte: Float
+  in: [Float!]
+  lt: Float
+  lte: Float
+  neq: Float
+  nin: [Float!]
+  null: Boolean
+}
+
+input BooleanComparator {
+  eq: Boolean
+  neq: Boolean
+}
+
+input ContentComparator {
+  contains: String
+}
+
+input TeamFilter {
+  id: IDComparator
+  key: StringComparator
+  name: StringComparator
+}
+
+input UserFilter {
+  active: BooleanComparator
+  admin: BooleanComparator
+  displayName: StringComparator
+  email: StringComparator
+  id: IDComparator
+  isMe: BooleanComparator
+  name: StringComparator
+}
+
+input NullableUserFilter {
+  active: BooleanComparator
+  admin: BooleanComparator
+  displayName: StringComparator
+  email: StringComparator
+  id: IDComparator
+  isMe: BooleanComparator
+  name: StringComparator
+  null: Boolean
+}
+
+input WorkflowStateFilter {
+  id: IDComparator
+  name: StringComparator
+  position: NumberComparator
+  team: TeamFilter
+  type: StringComparator
+}
+
+input IssueLabelFilter {
+  id: IDComparator
+  isGroup: BooleanComparator
+  name: StringComparator
+  parent: IssueLabelFilter
+  team: NullableTeamFilter
+}
+
+input NullableTeamFilter {
+  id: IDComparator
+  key: StringComparator
+  name: StringComparator
+}
+
+input IssueLabelCollectionFilter {
+  id: IDComparator
+  isGroup: BooleanComparator
+  name: StringComparator
+  null: Boolean
+  parent: IssueLabelFilter
+  some: IssueLabelFilter
+  team: NullableTeamFilter
+}
+
+input ProjectStatusFilter {
+  id: IDComparator
+  name: StringComparator
+  type: StringComparator
+}
+
+input ProjectFilter {
+  id: EntityIdentifierIDComparator
+  lead: NullableUserFilter
+  name: StringComparator
+  slugId: StringComparator
+  status: ProjectStatusFilter
+}
+
+input NullableProjectFilter {
+  id: EntityIdentifierIDComparator
+  lead: NullableUserFilter
+  name: StringComparator
+  null: Boolean
+  slugId: StringComparator
+  status: ProjectStatusFilter
+}
+
+input CycleFilter {
+  id: IDComparator
+  isActive: BooleanComparator
+  isFuture: BooleanComparator
+  isPast: BooleanComparator
+  name: StringComparator
+  number: NumberComparator
+  team: TeamFilter
+}
+
+input NullableCycleFilter {
+  id: IDComparator
+  isActive: BooleanComparator
+  isFuture: BooleanComparator
+  isPast: BooleanComparator
+  name: StringComparator
+  null: Boolean
+  number: NumberComparator
+  team: TeamFilter
+}
+
+input NullableIssueFilter {
+  id: IssueIDComparator
+  null: Boolean
+}
+
+input IssueFilter {
+  assignee: NullableUserFilter
+  creator: NullableUserFilter
+  cycle: NullableCycleFilter
+  id: IssueIDComparator
+  labels: IssueLabelCollectionFilter
+  parent: NullableIssueFilter
+  priority: NullableNumberComparator
+  project: NullableProjectFilter
+  searchableContent: ContentComparator
+  state: WorkflowStateFilter
+  team: TeamFilter
+}
+
+input IssueCreateInput {
+  assigneeId: String
+  cycleId: String
+  description: String
+  dueDate: TimelessDate
+  estimate: Int
+  id: String
+  labelIds: [String!]
+  parentId: String
+  priority: Int
+  projectId: String
+  sortOrder: Float
+  stateId: String
+  teamId: String!
+  title: String
+}
+
+input IssueBatchCreateInput {
+  issues: [IssueCreateInput!]!
+}
+
+input IssueUpdateInput {
+  addedLabelIds: [String!]
+  assigneeId: String
+  cycleId: String
+  description: String
+  dueDate: TimelessDate
+  estimate: Int
+  labelIds: [String!]
+  parentId: String
+  priority: Int
+  projectId: String
+  removedLabelIds: [String!]
+  sortOrder: Float
+  stateId: String
+  teamId: String
+  title: String
+}
+
+input CommentCreateInput {
+  body: String
+  issueId: String
+  parentId: String
+}
+
+input CommentUpdateInput {
+  body: String
+}
+
+input TeamCreateInput {
+  color: String
+  description: String
+  icon: String
+  key: String
+  name: String!
+}
+
+input WorkflowStateCreateInput {
+  color: String!
+  description: String
+  name: String!
+  position: Float
+  teamId: String!
+  type: String!
+}
+
+input IssueLabelCreateInput {
+  color: String
+  description: String
+  isGroup: Boolean
+  name: String!
+  parentId: String
+  teamId: String
+}
+
+input IssueLabelUpdateInput {
+  color: String
+  description: String
+  name: String
+  parentId: String
+}
+
+input ProjectCreateInput {
+  color: String
+  description: String
+  icon: String
+  leadId: String
+  name: String!
+  priority: Int
+  startDate: TimelessDate
+  statusId: String
+  targetDate: TimelessDate
+  teamIds: [String!]!
+}
+
+input ProjectUpdateInput {
+  color: String
+  description: String
+  icon: String
+  leadId: String
+  name: String
+  priority: Int
+  startDate: TimelessDate
+  statusId: String
+  targetDate: TimelessDate
+  teamIds: [String!]
+}
+
+input CycleCreateInput {
+  description: String
+  endsAt: DateTime!
+  name: String
+  startsAt: DateTime!
+  teamId: String!
+}

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
@@ -56,6 +57,18 @@ func (s *Service) CreateKey(ctx context.Context, userID, label, key string) (str
 		key = "jt_api_" + hex.EncodeToString(secret)
 	}
 	return key, s.store.CreateAPIKey(ctx, userID, label, hash(key))
+}
+
+// CreateKeyForEmail mints a key for the one active user with that email.
+func (s *Service) CreateKeyForEmail(ctx context.Context, email string) (string, error) {
+	users, err := s.store.UsersByEmail(ctx, email)
+	if err != nil {
+		return "", err
+	}
+	if len(users) != 1 {
+		return "", fmt.Errorf("%d active users have email %q", len(users), email)
+	}
+	return s.CreateKey(ctx, users[0].ID, "Minted from the command line", "")
 }
 
 func hash(key string) []byte {

@@ -16,6 +16,7 @@ type IssueMutation func(Issue) (Issue, *NewIssueHistory, error)
 type AuthStore interface {
 	UserByAPIKey(ctx context.Context, keyHash []byte) (User, error)
 	CreateAPIKey(ctx context.Context, userID, label string, keyHash []byte) error
+	UsersByEmail(ctx context.Context, email string) ([]User, error)
 }
 
 type TrackerStore interface {
@@ -44,10 +45,11 @@ type TrackerStore interface {
 	Issues(ctx context.Context, query IssueQuery) ([]Issue, error)
 	Issue(ctx context.Context, workspaceID, id string) (Issue, error)
 	IssueByNumber(ctx context.Context, workspaceID, teamKey string, number int32) (Issue, error)
-	CreateIssue(ctx context.Context, issue NewIssue) (Issue, error)
+	CreateIssues(ctx context.Context, issues []NewIssue) ([]Issue, error)
 	UpdateIssue(ctx context.Context, workspaceID, id string, mutate IssueMutation) (Issue, error)
 	DeleteIssue(ctx context.Context, workspaceID, id string) error
 	IssueHistory(ctx context.Context, issueID string) ([]IssueHistory, error)
+	CountIssuesByState(ctx context.Context, workspaceID string) ([]IssueCount, error)
 
 	Comments(ctx context.Context, workspaceID, issueID string) ([]Comment, error)
 	Comment(ctx context.Context, workspaceID, id string) (Comment, error)

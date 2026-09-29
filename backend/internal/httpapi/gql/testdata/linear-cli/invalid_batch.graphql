@@ -1,0 +1,1 @@
+mutation { issueBatchCreate(input: { issues: [{"teamId":"{{teamId}}","title":"One"}] }) { issues { id identifier title } } }

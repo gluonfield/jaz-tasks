@@ -173,3 +173,11 @@ type IssueHistory struct {
 	Archived           *bool
 	CreatedAt          time.Time
 }
+
+// IssueCount counts live issues per project, cycle and state type.
+type IssueCount struct {
+	ProjectID *string
+	CycleID   *string
+	StateType string
+	Issues    int64
+}

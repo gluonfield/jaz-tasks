@@ -323,3 +323,60 @@ func deref[T any](v *T) T {
 	}
 	return *v
 }
+
+// and narrows an id comparator to also require id.
+func (c *IDComparator) and(id string) *IDComparator {
+	out := IDComparator{}
+	if c != nil {
+		out = *c
+		if c.Eq != nil && *c.Eq != id {
+			out.In = []string{}
+		}
+	}
+	out.Eq = &id
+	return &out
+}
+
+// The With* helpers AND a nested connection's owner onto a caller's filter.
+
+func (f *IssueFilter) WithTeam(id string) *IssueFilter {
+	g, team := deref(f), deref(f.Team)
+	team.ID = team.ID.and(id)
+	g.Team = &team
+	return &g
+}
+
+func (f *IssueFilter) WithAssignee(id string) *IssueFilter {
+	g, user := deref(f), deref(f.Assignee)
+	user.ID = user.ID.and(id)
+	g.Assignee = &user
+	return &g
+}
+
+func (f *IssueFilter) WithCreator(id string) *IssueFilter {
+	g, user := deref(f), deref(f.Creator)
+	user.ID = user.ID.and(id)
+	g.Creator = &user
+	return &g
+}
+
+func (f *IssueFilter) WithProject(id string) *IssueFilter {
+	g, project := deref(f), deref(f.Project)
+	project.ID = project.ID.and(id)
+	g.Project = &project
+	return &g
+}
+
+func (f *IssueFilter) WithCycle(id string) *IssueFilter {
+	g, cycle := deref(f), deref(f.Cycle)
+	cycle.ID = cycle.ID.and(id)
+	g.Cycle = &cycle
+	return &g
+}
+
+func (f *IssueFilter) WithParent(id string) *IssueFilter {
+	g, parent := deref(f), deref(f.Parent)
+	parent.ID = parent.ID.and(id)
+	g.Parent = &parent
+	return &g
+}

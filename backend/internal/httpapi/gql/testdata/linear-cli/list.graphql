@@ -1,0 +1,1 @@
+query { issues(, filter: { team: { key: { eq: "ENG" } }, state: { name: { eq: "Todo" } }, assignee: { email: { eq: "mira@jaz.local" } }, project: { id: { eq: "{{projectId}}" } } } first: 20) { nodes { id identifier title state { name } assignee { name } priority labels { nodes { name } } project { id name } } } }

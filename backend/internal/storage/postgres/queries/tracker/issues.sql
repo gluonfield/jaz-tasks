@@ -19,11 +19,10 @@ WHERE issues.workspace_id = @workspace_id
   AND (sqlc.narg('label_ids')::uuid[] IS NULL OR label_ids && sqlc.narg('label_ids')::uuid[]
     OR (@label_null::bool AND label_ids = '{}'))
   AND (@search::text = ''
-    OR strpos(lower(title), lower(@search::text)) > 0
-    OR strpos(lower(COALESCE(description, '')), lower(@search::text)) > 0
+    OR to_tsvector('simple', title || ' ' || COALESCE(description, '')) @@ to_tsquery('simple', @search::text)
     OR EXISTS (
       SELECT 1 FROM teams
-      WHERE teams.id = issues.team_id AND lower(teams.key || '-' || issues.number) = lower(@search::text)
+      WHERE teams.id = issues.team_id AND teams.key || '-' || issues.number = @identifier::text
     ))
 ORDER BY CASE WHEN @order_by_updated::bool THEN issues.updated_at ELSE issues.created_at END DESC, issues.id
 LIMIT @row_limit OFFSET @row_offset;
@@ -101,3 +100,11 @@ INSERT INTO issue_history (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
 );
+
+-- name: CountIssuesByState :many
+SELECT issues.project_id, issues.cycle_id, workflow_states.type AS state_type, count(*) AS issues
+FROM issues
+JOIN workflow_states ON workflow_states.id = issues.state_id
+WHERE issues.workspace_id = $1 AND issues.archived_at IS NULL
+  AND (issues.project_id IS NOT NULL OR issues.cycle_id IS NOT NULL)
+GROUP BY issues.project_id, issues.cycle_id, workflow_states.type;

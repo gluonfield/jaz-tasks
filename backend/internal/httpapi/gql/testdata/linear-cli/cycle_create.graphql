@@ -1,0 +1,1 @@
+mutation { cycleCreate(input: { name: "Hardening", teamId: "{{teamId}}", description: "Stabilise", startsAt: "2027-01-04T00:00:00Z", endsAt: "2027-01-18T00:00:00Z" }) { cycle { id name number } } }

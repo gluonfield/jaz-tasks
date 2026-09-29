@@ -1,0 +1,1 @@
+query { issue(id: "ENG-1") { id identifier title description state { name } assignee { name } priority labels { nodes { name } } team { key name } project { id name } url createdAt updatedAt comments(first: 100) { nodes { id body user { name } createdAt updatedAt resolvedAt } } } }

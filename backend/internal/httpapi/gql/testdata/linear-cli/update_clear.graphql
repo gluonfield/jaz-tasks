@@ -1,0 +1,1 @@
+mutation { issueUpdate(id: "ENG-7", input: { priority: null, dueDate: null, projectId: null }) { success issue { id identifier title state { name } assignee { name } priority } } }

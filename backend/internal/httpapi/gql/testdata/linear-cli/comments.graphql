@@ -1,0 +1,1 @@
+query { issue(id: "ENG-4") { comments { nodes { id body user { name } createdAt updatedAt resolvedAt } } } }

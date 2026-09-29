@@ -1,0 +1,1 @@
+query { issues(search: "board", first: 20) { nodes { id identifier title state { name } assignee { name } priority labels { nodes { name } } project { id name } } } }

@@ -10,6 +10,47 @@ import (
 	"time"
 )
 
+const countIssuesByState = `-- name: CountIssuesByState :many
+SELECT issues.project_id, issues.cycle_id, workflow_states.type AS state_type, count(*) AS issues
+FROM issues
+JOIN workflow_states ON workflow_states.id = issues.state_id
+WHERE issues.workspace_id = $1 AND issues.archived_at IS NULL
+  AND (issues.project_id IS NOT NULL OR issues.cycle_id IS NOT NULL)
+GROUP BY issues.project_id, issues.cycle_id, workflow_states.type
+`
+
+type CountIssuesByStateRow struct {
+	ProjectID *string
+	CycleID   *string
+	StateType string
+	Issues    int64
+}
+
+func (q *Queries) CountIssuesByState(ctx context.Context, workspaceID string) ([]CountIssuesByStateRow, error) {
+	rows, err := q.db.Query(ctx, countIssuesByState, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountIssuesByStateRow{}
+	for rows.Next() {
+		var i CountIssuesByStateRow
+		if err := rows.Scan(
+			&i.ProjectID,
+			&i.CycleID,
+			&i.StateType,
+			&i.Issues,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createIssue = `-- name: CreateIssue :one
 WITH next AS (
   UPDATE teams SET issue_count = issue_count + 1
@@ -348,14 +389,13 @@ WHERE issues.workspace_id = $1
   AND ($17::uuid[] IS NULL OR label_ids && $17::uuid[]
     OR ($18::bool AND label_ids = '{}'))
   AND ($19::text = ''
-    OR strpos(lower(title), lower($19::text)) > 0
-    OR strpos(lower(COALESCE(description, '')), lower($19::text)) > 0
+    OR to_tsvector('simple', title || ' ' || COALESCE(description, '')) @@ to_tsquery('simple', $19::text)
     OR EXISTS (
       SELECT 1 FROM teams
-      WHERE teams.id = issues.team_id AND lower(teams.key || '-' || issues.number) = lower($19::text)
+      WHERE teams.id = issues.team_id AND teams.key || '-' || issues.number = $20::text
     ))
-ORDER BY CASE WHEN $20::bool THEN issues.updated_at ELSE issues.created_at END DESC, issues.id
-LIMIT $22 OFFSET $21
+ORDER BY CASE WHEN $21::bool THEN issues.updated_at ELSE issues.created_at END DESC, issues.id
+LIMIT $23 OFFSET $22
 `
 
 type ListIssuesParams struct {
@@ -378,6 +418,7 @@ type ListIssuesParams struct {
 	LabelIDs        []string
 	LabelNull       bool
 	Search          string
+	Identifier      string
 	OrderByUpdated  bool
 	Offset          int32
 	Limit           int32
@@ -404,6 +445,7 @@ func (q *Queries) ListIssues(ctx context.Context, arg ListIssuesParams) ([]Issue
 		arg.LabelIDs,
 		arg.LabelNull,
 		arg.Search,
+		arg.Identifier,
 		arg.OrderByUpdated,
 		arg.Offset,
 		arg.Limit,

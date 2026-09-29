@@ -1,0 +1,1 @@
+mutation { issueArchive(id: "ENG-19") { success } }

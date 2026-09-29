@@ -97,6 +97,38 @@ func CycleActive(c storage.Cycle, now time.Time) bool {
 	return c.CompletedAt == nil && !now.Before(c.StartsAt) && now.Before(c.EndsAt)
 }
 
+func (s *Scope) ProjectProgress(ctx context.Context, id string) (float64, error) {
+	return s.progress(ctx, func(c storage.IssueCount) bool { return deref(c.ProjectID) == id })
+}
+
+func (s *Scope) CycleProgress(ctx context.Context, id string) (float64, error) {
+	return s.progress(ctx, func(c storage.IssueCount) bool { return deref(c.CycleID) == id })
+}
+
+// progress is the completed share of the matching live, non-canceled issues.
+func (s *Scope) progress(ctx context.Context, match func(storage.IssueCount) bool) (float64, error) {
+	counts, err := s.counts.get(func() ([]storage.IssueCount, error) {
+		return s.svc.store.CountIssuesByState(ctx, s.actor.WorkspaceID)
+	})
+	if err != nil {
+		return 0, err
+	}
+	var total, completed int64
+	for _, c := range counts {
+		if !match(c) || c.StateType == "canceled" {
+			continue
+		}
+		total += c.Issues
+		if c.StateType == "completed" {
+			completed += c.Issues
+		}
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	return float64(completed) / float64(total), nil
+}
+
 func (s *Scope) Now() time.Time {
 	return s.svc.now()
 }

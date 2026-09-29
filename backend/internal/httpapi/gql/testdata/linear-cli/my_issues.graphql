@@ -1,0 +1,1 @@
+query { issues(filter: { assignee: { id: { eq: "{{viewerId}}" } } }, first: 20) { nodes { id identifier title state { name } assignee { name } priority } } }

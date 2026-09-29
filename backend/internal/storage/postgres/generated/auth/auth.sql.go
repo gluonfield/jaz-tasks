@@ -47,3 +47,38 @@ func (q *Queries) UserByAPIKey(ctx context.Context, keyHash []byte) (User, error
 	)
 	return i, err
 }
+
+const usersByEmail = `-- name: UsersByEmail :many
+SELECT id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at FROM users WHERE lower(email) = lower($1) AND active
+`
+
+func (q *Queries) UsersByEmail(ctx context.Context, lower string) ([]User, error) {
+	rows, err := q.db.Query(ctx, usersByEmail, lower)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.DisplayName,
+			&i.Email,
+			&i.AvatarURL,
+			&i.Admin,
+			&i.Active,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

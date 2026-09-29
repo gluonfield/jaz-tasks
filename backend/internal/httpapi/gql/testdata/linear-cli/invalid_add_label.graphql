@@ -1,0 +1,1 @@
+mutation { issueAddLabel(input: { issueId: "ENG-1", labelId: "Bug" }) { success } }

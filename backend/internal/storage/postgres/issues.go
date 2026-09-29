@@ -19,8 +19,18 @@ func (s *Store) IssueByNumber(ctx context.Context, workspaceID, teamKey string, 
 	return one(toIssue)(s.q.GetIssueByNumber(ctx, db.GetIssueByNumberParams{WorkspaceID: workspaceID, TeamKey: teamKey, Number: number}))
 }
 
-func (s *Store) CreateIssue(ctx context.Context, issue storage.NewIssue) (storage.Issue, error) {
-	return one(toIssue)(s.q.CreateIssue(ctx, db.CreateIssueParams(issue)))
+func (s *Store) CreateIssues(ctx context.Context, issues []storage.NewIssue) ([]storage.Issue, error) {
+	created := make([]db.Issue, len(issues))
+	err := s.tx(ctx, func(q *db.Queries) error {
+		for i, issue := range issues {
+			var err error
+			if created[i], err = q.CreateIssue(ctx, db.CreateIssueParams(issue)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return many(toIssue)(created, err)
 }
 
 func (s *Store) UpdateIssue(ctx context.Context, workspaceID, id string, mutate storage.IssueMutation) (storage.Issue, error) {
@@ -70,6 +80,10 @@ func (s *Store) DeleteIssue(ctx context.Context, workspaceID, id string) error {
 
 func (s *Store) IssueHistory(ctx context.Context, issueID string) ([]storage.IssueHistory, error) {
 	return many(toHistory)(s.q.ListIssueHistory(ctx, issueID))
+}
+
+func (s *Store) CountIssuesByState(ctx context.Context, workspaceID string) ([]storage.IssueCount, error) {
+	return many(toCount)(s.q.CountIssuesByState(ctx, workspaceID))
 }
 
 func (s *Store) Comments(ctx context.Context, workspaceID, issueID string) ([]storage.Comment, error) {

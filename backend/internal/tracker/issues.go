@@ -29,7 +29,7 @@ func (s *Scope) Issues(ctx context.Context, q IssueQuery) (Page[storage.Issue], 
 		return Page[storage.Issue]{}, err
 	}
 	if q.Search != "" {
-		query.Search = q.Search
+		query.Search, query.Identifier = searchTerms(q.Search)
 	}
 	query.IncludeArchived = q.IncludeArchived
 	query.OrderByUpdated = q.OrderByUpdated
@@ -128,7 +128,7 @@ func (s *Scope) issueQuery(ctx context.Context, f *IssueFilter) (storage.IssueQu
 		}
 	}
 	if f.SearchableContent != nil && f.SearchableContent.Contains != nil {
-		q.Search = *f.SearchableContent.Contains
+		q.Search, q.Identifier = searchTerms(*f.SearchableContent.Contains)
 	}
 	return q, nil
 }
@@ -166,7 +166,24 @@ func (s *Scope) labelReference(ctx context.Context, f *IssueLabelFilter, teams [
 	return ids, null, nil
 }
 
-var identifierPattern = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9]*)-(\d+)$`)
+var (
+	identifierPattern = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9]*)-(\d+)$`)
+	searchWord        = regexp.MustCompile(`[\p{L}\p{N}]+`)
+)
+
+// searchTerms turns free text into a prefix tsquery requiring every word, plus
+// the identifier it may name. Text without words gets a contradiction
+// (x & !x) so it matches nothing rather than everything.
+func searchTerms(term string) (query, identifier string) {
+	words := searchWord.FindAllString(strings.ToLower(term), -1)
+	for i, word := range words {
+		words[i] = word + ":*"
+	}
+	if len(words) == 0 {
+		words = []string{"x", "!x"}
+	}
+	return strings.Join(words, " & "), strings.ToUpper(strings.TrimSpace(term))
+}
 
 // Issue accepts an id or an identifier such as ENG-123.
 func (s *Scope) Issue(ctx context.Context, id string) (storage.Issue, error) {
@@ -194,10 +211,6 @@ func (s *Scope) URL(path string) string {
 	return s.svc.url + path
 }
 
-func (s *Scope) Children(ctx context.Context, parentID string, args PageArgs) (Page[storage.Issue], error) {
-	return s.Issues(ctx, IssueQuery{Filter: &IssueFilter{Parent: &IssueFilter{ID: &IDComparator{Eq: &parentID}}}, PageArgs: args})
-}
-
 func (s *Scope) IssueHistory(ctx context.Context, issueID string) ([]storage.IssueHistory, error) {
 	return s.svc.store.IssueHistory(ctx, issueID)
 }
@@ -220,12 +233,32 @@ type IssueCreateInput struct {
 }
 
 func (s *Scope) CreateIssue(ctx context.Context, in IssueCreateInput) (storage.Issue, error) {
-	team, err := s.Team(ctx, in.TeamID)
+	created, err := s.CreateIssues(ctx, []IssueCreateInput{in})
 	if err != nil {
 		return storage.Issue{}, err
 	}
+	return created[0], nil
+}
+
+// CreateIssues validates every input before creating them all atomically.
+func (s *Scope) CreateIssues(ctx context.Context, inputs []IssueCreateInput) ([]storage.Issue, error) {
+	issues := make([]storage.NewIssue, len(inputs))
+	for i, in := range inputs {
+		var err error
+		if issues[i], err = s.newIssue(ctx, in); err != nil {
+			return nil, err
+		}
+	}
+	return s.svc.store.CreateIssues(ctx, issues)
+}
+
+func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewIssue, error) {
+	team, err := s.Team(ctx, in.TeamID)
+	if err != nil {
+		return storage.NewIssue{}, err
+	}
 	if in.ID != nil && !isUUID(*in.ID) {
-		return storage.Issue{}, invalid("id must be a UUID")
+		return storage.NewIssue{}, invalid("id must be a UUID")
 	}
 	issue := storage.Issue{
 		TeamID:      team.ID,
@@ -243,12 +276,12 @@ func (s *Scope) CreateIssue(ctx context.Context, in IssueCreateInput) (storage.I
 	if in.StateID != nil {
 		issue.StateID = *in.StateID
 	} else if issue.StateID, err = s.defaultState(ctx, team.ID); err != nil {
-		return storage.Issue{}, err
+		return storage.NewIssue{}, err
 	}
 	if err := s.check(ctx, nil, &issue); err != nil {
-		return storage.Issue{}, err
+		return storage.NewIssue{}, err
 	}
-	return s.svc.store.CreateIssue(ctx, storage.NewIssue{
+	return storage.NewIssue{
 		ID:          in.ID,
 		WorkspaceID: s.actor.WorkspaceID,
 		TeamID:      issue.TeamID,
@@ -268,7 +301,7 @@ func (s *Scope) CreateIssue(ctx context.Context, in IssueCreateInput) (storage.I
 		StartedAt:   issue.StartedAt,
 		CompletedAt: issue.CompletedAt,
 		CanceledAt:  issue.CanceledAt,
-	})
+	}, nil
 }
 
 // defaultState picks the team's first unstarted state, falling back to backlog.

@@ -1,0 +1,1 @@
+mutation { projectCreate(input: { name: "CLI project", description: "From the CLI", teamId: "{{teamId}}" }) { project { id name key url } } }

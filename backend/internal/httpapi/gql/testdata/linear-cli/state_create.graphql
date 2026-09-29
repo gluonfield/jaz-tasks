@@ -1,0 +1,1 @@
+mutation { workflowStateCreate(input: { name: "QA", type: "started", teamId: "{{teamId}}", color: "#26b5ce" }) { workflowState { id name type color } } }
