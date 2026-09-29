@@ -1,9 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Check, Copy, KeyRound, Monitor, Moon, Plug, Settings as SettingsIcon, Sun } from 'lucide-react'
+import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/icons'
-import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
+import {
+  useAPIKeys,
+  useCancelInvite,
+  useCreateAPIKey,
+  useDeleteAPIKey,
+  useGrants,
+  useInvite,
+  useInvites,
+  useRevokeGrant,
+} from '@/lib/account'
 import { signOut } from '@/lib/auth'
 import { formatDate, timeAgo } from '@/lib/issues'
 import { useCatalog } from '@/lib/queries'
@@ -32,6 +41,7 @@ function Settings() {
               <Button onClick={() => signOut()}>Sign out</Button>
             </Row>
           </Section>
+          <Members />
           <Appearance />
           <APIKeys />
           <Applications />
@@ -187,6 +197,73 @@ function Applications() {
         </Row>
       ))}
       {!grants.length && <Row className="justify-center text-ink-3">No applications connected</Row>}
+    </Section>
+  )
+}
+
+function Members() {
+  const { data: catalog } = useCatalog()
+  const { data: invites = [] } = useInvites()
+  const invite = useInvite()
+  const cancel = useCancelInvite()
+  const [email, setEmail] = useState('')
+  const admin = !!catalog?.viewer.admin
+  return (
+    <Section
+      title="Members"
+      description={`People in ${catalog?.organization.name ?? 'this workspace'}. Invited people join when they next sign in with that email.`}
+    >
+      {admin && (
+        <form
+          className="flex items-center gap-2 border-b border-border/70 px-4 py-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            invite.mutate(email, {
+              onSuccess: (sent) => {
+                toast(`Invited ${sent.email}`)
+                setEmail('')
+              },
+              onError: (error) => toast.error(error.message),
+            })
+          }}
+        >
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@company.com"
+            className="h-7 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-primary"
+          />
+          <Button primary disabled={!email.trim() || invite.isPending}>
+            Invite
+          </Button>
+        </form>
+      )}
+      {catalog?.users.map((user) => (
+        <Row key={user.id}>
+          <Avatar user={user} size={24} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-ink">
+              {user.name}
+              {user.isMe && <span className="ml-1.5 font-normal text-ink-3">(you)</span>}
+            </p>
+            <p className="truncate text-[12px] text-ink-3">{user.email}</p>
+          </div>
+          <span className="text-[12px] text-ink-3">{user.admin ? 'Admin' : 'Member'}</span>
+        </Row>
+      ))}
+      {invites.map((pending) => (
+        <Row key={pending.id}>
+          <span className="flex size-6 items-center justify-center rounded-full border border-dashed border-ink-3/60 text-ink-3">
+            <Mail className="size-3" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-ink">{pending.email}</p>
+            <p className="text-[12px] text-ink-3">Invited {formatDate(pending.createdAt)}</p>
+          </div>
+          {admin && <Button onClick={() => cancel.mutate(pending.id)}>Cancel</Button>}
+        </Row>
+      ))}
     </Section>
   )
 }

@@ -14,7 +14,7 @@ const catalogQuery = /* GraphQL */ `
     organization { id name urlKey projectStatuses { id name type color } }
     teams(first: 250) { nodes { id key name icon color } }
     workflowStates(first: 250) { nodes { id name type color position team { id } } }
-    users(first: 250) { nodes { id name displayName email avatarUrl initials active isMe } }
+    users(first: 250) { nodes { id name displayName email avatarUrl initials active admin isMe } }
     issueLabels(first: 250) { nodes { id name color isGroup team { id } parent { id } } }
     projects(first: 250) {
       nodes {

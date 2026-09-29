@@ -1,6 +1,7 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import {
   Box,
+  Check,
   ChevronDown,
   CircleDot,
   Inbox,
@@ -29,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { switchWorkspace, useWorkspaces } from '@/lib/account'
 import { signOut } from '@/lib/auth'
 import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
@@ -163,6 +165,7 @@ function IconButton({
 }
 
 function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
+  const { data: workspaces = [] } = useWorkspaces()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
@@ -174,6 +177,16 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
         {email && <DropdownMenuLabel className="truncate text-[12px] font-normal text-ink-3">{email}</DropdownMenuLabel>}
+        {workspaces.map((workspace) => (
+          <DropdownMenuItem key={workspace.id} onSelect={() => !workspace.current && switchWorkspace(workspace.id)}>
+            <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-[9px] font-bold text-on-primary">
+              {workspace.name.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+            {workspace.current && <Check className="text-ink-2" />}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Sun /> Theme

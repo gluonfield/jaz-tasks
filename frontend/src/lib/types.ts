@@ -19,6 +19,7 @@ export type User = {
   avatarUrl: string | null
   initials: string
   active: boolean
+  admin: boolean
   isMe: boolean
 }
 
