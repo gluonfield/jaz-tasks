@@ -52,11 +52,12 @@ func newClient(t *testing.T) *client {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
-	authn, err := authapi.NewHandler(keys, workspaces.NewService(store, workspaces.Config{}), auth.NewOIDC(auth.OIDCConfig{}), false, logger)
+	people := workspaces.NewService(store, workspaces.Config{})
+	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(auth.OIDCConfig{}), false, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, logger)), "", logger))
+	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, people, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, people, logger)), "", logger))
 	t.Cleanup(srv.Close)
 	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}, store: store}
 }

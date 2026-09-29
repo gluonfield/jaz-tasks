@@ -17,6 +17,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -28,8 +29,8 @@ type Handler struct {
 	exec    *executor.Executor
 }
 
-func NewHandler(svc *tracker.Service, logger *log.Logger) *Handler {
-	schema := NewExecutableSchema(Config{Resolvers: Resolver{}})
+func NewHandler(svc *tracker.Service, members *workspaces.Service, logger *log.Logger) *Handler {
+	schema := NewExecutableSchema(Config{Resolvers: Resolver{members: members}})
 	presenter := presentError(logger.WithPrefix("graphql"))
 	srv := handler.New(schema)
 	srv.AddTransport(transport.GET{})
@@ -89,7 +90,7 @@ func presentError(logger *log.Logger) graphql.ErrorPresenterFunc {
 		var notFound tracker.NotFoundError
 		var invalid tracker.InvalidInputError
 		switch {
-		case errors.As(err, &notFound), errors.As(err, &invalid):
+		case errors.As(err, &notFound), errors.As(err, &invalid), errors.Is(err, workspaces.ErrForbidden):
 			presented.Extensions = map[string]any{
 				"type":                   "invalid input",
 				"code":                   "INPUT_ERROR",

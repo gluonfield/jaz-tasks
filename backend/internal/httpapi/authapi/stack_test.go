@@ -42,11 +42,12 @@ func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config, devLog
 	}
 	logger := log.New(io.Discard)
 	oidc.RedirectURL = base + "/auth/callback"
-	authn, err := authapi.NewHandler(keys, workspaces.NewService(store, members), auth.NewOIDC(oidc), authapi.DevLogin(devLogin), logger)
+	people := workspaces.NewService(store, members)
+	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(oidc), authapi.DevLogin(devLogin), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv.Config.Handler = server.New(authn, gql.NewHandler(svc, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, logger)), "", logger)
+	srv.Config.Handler = server.New(authn, gql.NewHandler(svc, people, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, people, logger)), "", logger)
 	srv.Start()
 	t.Cleanup(srv.Close)
 	return stack{url: base, apiKey: result.APIKey}

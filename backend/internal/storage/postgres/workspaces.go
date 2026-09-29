@@ -19,6 +19,10 @@ func (s *Store) CreateWorkspace(ctx context.Context, name, urlKey string) (stora
 	return one(toWorkspace)(s.q.CreateWorkspace(ctx, db.CreateWorkspaceParams{Name: name, URLKey: urlKey}))
 }
 
+func (s *Store) UpdateWorkspace(ctx context.Context, w storage.Workspace) (storage.Workspace, error) {
+	return one(toWorkspace)(s.q.UpdateWorkspace(ctx, db.UpdateWorkspaceParams{ID: w.ID, Name: w.Name}))
+}
+
 func (s *Store) Users(ctx context.Context, workspaceID string) ([]storage.User, error) {
 	return many(toUser)(s.q.ListUsers(ctx, workspaceID))
 }
@@ -39,6 +43,10 @@ func (s *Store) CreateTeam(ctx context.Context, team storage.NewTeam, states []s
 		return err
 	})
 	return one(toTeam)(created, err)
+}
+
+func (s *Store) UpdateTeam(ctx context.Context, t storage.Team) (storage.Team, error) {
+	return one(toTeam)(s.q.UpdateTeam(ctx, db.UpdateTeamParams{WorkspaceID: t.WorkspaceID, ID: t.ID, Name: t.Name}))
 }
 
 func createTeam(ctx context.Context, q *db.Queries, team storage.NewTeam, states []storage.NewWorkflowState) (db.Team, error) {

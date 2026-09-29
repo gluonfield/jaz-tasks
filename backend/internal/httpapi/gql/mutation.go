@@ -112,6 +112,34 @@ func (mutationResolver) TeamCreate(ctx context.Context, input tracker.TeamCreate
 	return &TeamPayload{Team: &team, Success: true}, nil
 }
 
+func (mutationResolver) TeamUpdate(ctx context.Context, id string, input tracker.TeamUpdateInput) (*TeamPayload, error) {
+	team, err := scope(ctx).UpdateTeam(ctx, id, input)
+	if err != nil {
+		return nil, err
+	}
+	return &TeamPayload{Team: &team, Success: true}, nil
+}
+
+func (mutationResolver) OrganizationUpdate(ctx context.Context, input tracker.OrganizationUpdateInput) (*OrganizationPayload, error) {
+	workspace, err := scope(ctx).UpdateWorkspace(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return &OrganizationPayload{Organization: &workspace, Success: true}, nil
+}
+
+func (r mutationResolver) OrganizationInviteCreate(ctx context.Context, input OrganizationInviteCreateInput) (*OrganizationInvitePayload, error) {
+	invite, err := r.members.Invite(ctx, scope(ctx).Actor(), input.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &OrganizationInvitePayload{OrganizationInvite: &invite, Success: true}, nil
+}
+
+func (r mutationResolver) OrganizationInviteDelete(ctx context.Context, id string) (*DeletePayload, error) {
+	return deletePayload(id, r.members.CancelInvite(ctx, scope(ctx).Actor(), id))
+}
+
 func (mutationResolver) WorkflowStateCreate(ctx context.Context, input tracker.WorkflowStateCreateInput) (*WorkflowStatePayload, error) {
 	state, err := scope(ctx).CreateWorkflowState(ctx, input)
 	if err != nil {

@@ -85,6 +85,20 @@ type IssueUpdateInput struct {
 type Mutation struct {
 }
 
+type OrganizationInviteCreateInput struct {
+	Email string `json:"email"`
+}
+
+type OrganizationInvitePayload struct {
+	OrganizationInvite *storage.WorkspaceInvite `json:"organizationInvite"`
+	Success            bool                     `json:"success"`
+}
+
+type OrganizationPayload struct {
+	Organization *storage.Workspace `json:"organization,omitempty"`
+	Success      bool               `json:"success"`
+}
+
 type ProjectPayload struct {
 	Project *storage.Project `json:"project,omitempty"`
 	Success bool             `json:"success"`

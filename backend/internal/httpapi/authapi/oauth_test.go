@@ -324,8 +324,8 @@ func TestSessionChangesNeedJSON(t *testing.T) {
 	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
 	b := browser()
 	s.devSignIn(t, b)
-	for _, path := range []string{"/auth/invites", "/auth/api-keys", "/auth/workspace", "/auth/logout"} {
-		req, _ := http.NewRequest(http.MethodPost, s.url+path, strings.NewReader(`{"email":"x@evil.test","label":"x"}`))
+	for _, path := range []string{"/auth/api-keys", "/auth/workspace", "/auth/logout"} {
+		req, _ := http.NewRequest(http.MethodPost, s.url+path, strings.NewReader(`{"label":"x"}`))
 		req.Header.Set("Content-Type", "text/plain")
 		res, err := b.Do(req)
 		if err != nil {

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 )
@@ -183,9 +184,9 @@ var DefaultStates = []storage.NewWorkflowState{
 
 // CreateTeam creates a team with Linear's default workflow.
 func (s *Scope) CreateTeam(ctx context.Context, in TeamCreateInput) (storage.Team, error) {
-	name := strings.TrimSpace(in.Name)
-	if name == "" {
-		return storage.Team{}, invalid("name is required")
+	name, err := checkName(in.Name)
+	if err != nil {
+		return storage.Team{}, err
 	}
 	key := strings.ToUpper(strings.TrimSpace(deref(in.Key)))
 	if key == "" {
@@ -209,6 +210,62 @@ func (s *Scope) CreateTeam(ctx context.Context, in TeamCreateInput) (storage.Tea
 	s.teams.reset()
 	s.states.reset()
 	return team, nil
+}
+
+type TeamUpdateInput struct {
+	Name *string
+}
+
+// UpdateTeam renames a team. Its key stays fixed: issue identifiers carry it.
+func (s *Scope) UpdateTeam(ctx context.Context, id string, in TeamUpdateInput) (storage.Team, error) {
+	team, err := s.Team(ctx, id)
+	if err != nil || in.Name == nil {
+		return team, err
+	}
+	if team.Name, err = checkName(*in.Name); err != nil {
+		return team, err
+	}
+	updated, err := s.svc.store.UpdateTeam(ctx, team)
+	s.teams.reset()
+	return updated, notFound(err, "Team")
+}
+
+type OrganizationUpdateInput struct {
+	Name *string
+}
+
+// UpdateWorkspace changes the actor's workspace; only admins may.
+func (s *Scope) UpdateWorkspace(ctx context.Context, in OrganizationUpdateInput) (storage.Workspace, error) {
+	viewer, err := s.Viewer(ctx)
+	if err != nil {
+		return storage.Workspace{}, err
+	}
+	if !viewer.Admin {
+		return storage.Workspace{}, invalid("only workspace admins can update the workspace")
+	}
+	workspace, err := s.Workspace(ctx)
+	if err != nil || in.Name == nil {
+		return workspace, err
+	}
+	if workspace.Name, err = checkName(*in.Name); err != nil {
+		return workspace, err
+	}
+	updated, err := s.svc.store.UpdateWorkspace(ctx, workspace)
+	return updated, notFound(err, "Organization")
+}
+
+const maxNameLength = 80
+
+// checkName trims a team or workspace name and bounds its length.
+func checkName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	switch {
+	case name == "":
+		return "", invalid("name is required")
+	case utf8.RuneCountInString(name) > maxNameLength:
+		return "", invalid("name must be at most %d characters", maxNameLength)
+	}
+	return name, nil
 }
 
 type WorkflowStateCreateInput struct {

@@ -164,3 +164,34 @@ func (q *Queries) ListWorkflowStates(ctx context.Context, workspaceID string) ([
 	}
 	return items, nil
 }
+
+const updateTeam = `-- name: UpdateTeam :one
+UPDATE teams SET name = $3, updated_at = now()
+WHERE workspace_id = $1 AND id = $2
+RETURNING id, workspace_id, key, name, description, icon, color, issue_count, created_at, updated_at, archived_at
+`
+
+type UpdateTeamParams struct {
+	WorkspaceID string
+	ID          string
+	Name        string
+}
+
+func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) (Team, error) {
+	row := q.db.QueryRow(ctx, updateTeam, arg.WorkspaceID, arg.ID, arg.Name)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Key,
+		&i.Name,
+		&i.Description,
+		&i.Icon,
+		&i.Color,
+		&i.IssueCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ArchivedAt,
+	)
+	return i, err
+}

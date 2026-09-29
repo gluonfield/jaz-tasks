@@ -26,9 +26,6 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("DELETE /auth/api-keys/{id}", h.deleteKey)
 	h.mux.HandleFunc("GET /auth/workspaces", h.listWorkspaces)
 	h.mux.HandleFunc("POST /auth/workspace", h.switchWorkspace)
-	h.mux.HandleFunc("GET /auth/invites", h.listInvites)
-	h.mux.HandleFunc("POST /auth/invites", h.invite)
-	h.mux.HandleFunc("DELETE /auth/invites/{id}", h.cancelInvite)
 	h.mux.HandleFunc("GET /auth/grants", h.listGrants)
 	h.mux.HandleFunc("DELETE /auth/grants/{id}", h.revokeGrant)
 
@@ -440,62 +437,6 @@ func (h *Handler) switchWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	if err == nil {
 		err = h.svc.SwitchSession(r.Context(), token, user.ID)
-	}
-	h.noContent(w, err)
-}
-
-type inviteView struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"createdAt"`
-}
-
-func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) {
-	actor, _, ok := h.sessionActor(w, r)
-	if !ok {
-		return
-	}
-	invites, err := h.members.Invites(r.Context(), actor)
-	if err != nil {
-		h.fail(w, err)
-		return
-	}
-	out := []inviteView{}
-	for _, i := range invites {
-		out = append(out, inviteView{ID: i.ID, Email: i.Email, CreatedAt: i.CreatedAt})
-	}
-	writeJSON(w, http.StatusOK, out)
-}
-
-func (h *Handler) invite(w http.ResponseWriter, r *http.Request) {
-	actor, _, ok := h.sessionActor(w, r)
-	if !ok {
-		return
-	}
-	var in struct {
-		Email string `json:"email"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&in)
-	invite, err := h.members.Invite(r.Context(), actor, in.Email)
-	switch {
-	case errors.Is(err, workspaces.ErrForbidden):
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
-	case err != nil:
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-	default:
-		writeJSON(w, http.StatusCreated, inviteView{ID: invite.ID, Email: invite.Email, CreatedAt: invite.CreatedAt})
-	}
-}
-
-func (h *Handler) cancelInvite(w http.ResponseWriter, r *http.Request) {
-	actor, _, ok := h.sessionActor(w, r)
-	if !ok {
-		return
-	}
-	err := h.members.CancelInvite(r.Context(), actor, r.PathValue("id"))
-	if errors.Is(err, workspaces.ErrForbidden) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
-		return
 	}
 	h.noContent(w, err)
 }

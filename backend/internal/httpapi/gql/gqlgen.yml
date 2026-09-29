@@ -52,6 +52,10 @@ models:
     model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.PageInfo
   Organization:
     model: github.com/gluonfield/jaz-tasks/backend/internal/storage.Workspace
+  OrganizationInvite:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.WorkspaceInvite
+  OrganizationInviteConnection:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.OrganizationInviteConnection
   User:
     model: github.com/gluonfield/jaz-tasks/backend/internal/storage.User
   Team:
@@ -127,6 +131,10 @@ models:
     model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.CommentCreateInput
   TeamCreateInput:
     model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.TeamCreateInput
+  TeamUpdateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.TeamUpdateInput
+  OrganizationUpdateInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.OrganizationUpdateInput
   WorkflowStateCreateInput:
     model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.WorkflowStateCreateInput
   IssueLabelCreateInput:

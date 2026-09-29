@@ -67,7 +67,7 @@ func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, e
 	owner := member(id)
 	owner.Admin = true
 	return s.store.CreateOwnedWorkspace(ctx,
-		storage.NewWorkspace{Name: name + "'s workspace", URLKey: slug(name) + "-" + suffix()},
+		storage.NewWorkspace{Name: "Personal", URLKey: slug(name) + "-" + suffix()},
 		owner, identity,
 		storage.NewTeam{Key: teamKey(name), Name: name},
 		tracker.DefaultStates,
@@ -148,11 +148,11 @@ func (s *Service) Invite(ctx context.Context, actor auth.Actor, email string) (s
 	}
 	email = strings.ToLower(strings.TrimSpace(email))
 	if local, domain, ok := strings.Cut(email, "@"); !ok || local == "" || !strings.Contains(domain, ".") {
-		return storage.WorkspaceInvite{}, errors.New("enter a valid email address")
+		return storage.WorkspaceInvite{}, tracker.InvalidInputError{Message: "enter a valid email address"}
 	}
 	invite, err := s.store.CreateInvite(ctx, actor.WorkspaceID, email, actor.UserID)
 	if errors.Is(err, storage.ErrConflict) {
-		return invite, errors.New(email + " is already invited")
+		return invite, tracker.InvalidInputError{Message: email + " is already invited"}
 	}
 	return invite, err
 }
@@ -165,7 +165,11 @@ func (s *Service) CancelInvite(ctx context.Context, actor auth.Actor, id string)
 	if err := s.requireAdmin(ctx, actor); err != nil {
 		return err
 	}
-	return s.store.DeleteInvite(ctx, actor.WorkspaceID, id)
+	err := s.store.DeleteInvite(ctx, actor.WorkspaceID, id)
+	if errors.Is(err, storage.ErrNotFound) {
+		return tracker.NotFoundError{Entity: "OrganizationInvite"}
+	}
+	return err
 }
 
 func (s *Service) requireAdmin(ctx context.Context, actor auth.Actor) error {

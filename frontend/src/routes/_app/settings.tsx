@@ -2,21 +2,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
-import { Avatar } from '@/components/icons'
-import {
-  useAPIKeys,
-  useCancelInvite,
-  useCreateAPIKey,
-  useDeleteAPIKey,
-  useGrants,
-  useInvite,
-  useInvites,
-  useRevokeGrant,
-} from '@/lib/account'
+import { Avatar, TeamBadge } from '@/components/icons'
+import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
 import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
 import { formatDate, timeAgo } from '@/lib/issues'
-import { useCatalog } from '@/lib/queries'
+import { useCancelInvite, useCatalog, useInvite, useInvites, useRename } from '@/lib/queries'
 import { type SchemePreference, schemePreference, setSchemePreference, useScheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
@@ -25,9 +16,7 @@ export const Route = createFileRoute('/_app/settings')({ component: Settings })
 function Settings() {
   const { data: catalog } = useCatalog()
   const viewer = catalog?.viewer
-  if (embedded()) {
-    return <p className="p-8 text-[13px] text-ink-3">Manage your account, members and API keys in the Jaz Tasks web app.</p>
-  }
+  const session = !embedded()
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
@@ -35,29 +24,32 @@ function Settings() {
       </header>
       <div className="scrollbar-quiet flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[680px] animate-rise px-8 pb-24 pt-10">
-          <Section title="Account">
-            <Row>
-              <Avatar user={viewer} size={32} />
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-ink">{viewer?.name}</p>
-                <p className="text-[12.5px] text-ink-3">{viewer?.email}</p>
-              </div>
-              <Button onClick={() => signOut()}>Sign out</Button>
-            </Row>
-          </Section>
+          {session && (
+            <Section title="Account">
+              <Row>
+                <Avatar user={viewer} size={32} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-ink">{viewer?.name}</p>
+                  <p className="text-[12.5px] text-ink-3">{viewer?.email}</p>
+                </div>
+                <Button onClick={() => signOut()}>Sign out</Button>
+              </Row>
+            </Section>
+          )}
+          <Workspace />
           <Members />
           <Appearance />
-          <APIKeys />
-          <Applications />
+          {session && <APIKeys />}
+          {session && <Applications />}
         </div>
       </div>
     </div>
   )
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+function Section({ id, title, description, children }: { id?: string; title: string; description?: string; children: ReactNode }) {
   return (
-    <section className="mb-10">
+    <section id={id} className="mb-10">
       <h2 className="text-[14px] font-semibold text-ink">{title}</h2>
       {description && <p className="mt-1 text-[12.5px] text-ink-3">{description}</p>}
       <div className="mt-3 overflow-hidden rounded-[var(--radius-card)] border border-border bg-raised">{children}</div>
@@ -82,6 +74,59 @@ function Button({ children, onClick, primary, disabled }: { children: ReactNode;
     >
       {children}
     </button>
+  )
+}
+
+function Workspace() {
+  const { data: catalog } = useCatalog()
+  return (
+    <>
+      <Section title="Workspace">
+        <Row>
+          <span className="flex-1 text-ink">Name</span>
+          <Name value={catalog?.organization.name ?? ''} disabled={!catalog?.viewer.admin} />
+        </Row>
+      </Section>
+      <Section title="Teams">
+        {catalog?.teams.map((team) => (
+          <Row key={team.id}>
+            <TeamBadge icon={team.icon} color={team.color} />
+            <span className="flex-1 text-ink-3">{team.key}</span>
+            <Name value={team.name} teamId={team.id} />
+          </Row>
+        ))}
+      </Section>
+    </>
+  )
+}
+
+// Name saves a workspace or team name on blur or Enter; Escape reverts it.
+function Name({ value, teamId, disabled }: { value: string; teamId?: string; disabled?: boolean }) {
+  const rename = useRename()
+  return (
+    <input
+      key={value}
+      defaultValue={value}
+      disabled={disabled}
+      aria-label={teamId ? 'Team name' : 'Workspace name'}
+      onBlur={(e) => {
+        const name = e.currentTarget.value.trim()
+        if (name && name !== value) {
+          rename.mutate({ teamId, name }, { onError: (error) => toast.error(error.message) })
+        } else {
+          e.currentTarget.value = value
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.currentTarget.value = value
+        }
+        if (e.key === 'Enter' || e.key === 'Escape') {
+          e.currentTarget.blur()
+        }
+      }}
+      className="h-7 w-60 rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none focus:border-primary disabled:opacity-50"
+    />
   )
 }
 
@@ -214,6 +259,7 @@ function Members() {
   const admin = !!catalog?.viewer.admin
   return (
     <Section
+      id="members"
       title="Members"
       description={`People in ${catalog?.organization.name ?? 'this workspace'}. Invited people join when they next sign in with that email.`}
     >

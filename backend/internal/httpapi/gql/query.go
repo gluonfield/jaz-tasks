@@ -15,6 +15,11 @@ func (queryResolver) Organization(ctx context.Context) (*storage.Workspace, erro
 	return ref(scope(ctx).Workspace(ctx))
 }
 
+func (r queryResolver) OrganizationInvites(ctx context.Context, after *string, first *int32) (*OrganizationInviteConnection, error) {
+	invites, err := r.members.Invites(ctx, scope(ctx).Actor())
+	return paged(invites, err, after, first)
+}
+
 func (queryResolver) User(ctx context.Context, id string) (*storage.User, error) {
 	return ref(scope(ctx).User(ctx, id))
 }

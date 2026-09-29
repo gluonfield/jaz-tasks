@@ -7,6 +7,9 @@ SELECT count(*) FROM workspaces;
 -- name: CreateWorkspace :one
 INSERT INTO workspaces (name, url_key) VALUES ($1, $2) RETURNING *;
 
+-- name: UpdateWorkspace :one
+UPDATE workspaces SET name = $2, updated_at = now() WHERE id = $1 RETURNING *;
+
 -- name: ListUsers :many
 SELECT * FROM users WHERE workspace_id = $1 ORDER BY name;
 

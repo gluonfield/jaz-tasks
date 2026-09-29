@@ -125,6 +125,13 @@ func viewer(t *testing.T, s stack, b *http.Client) me {
 	return m
 }
 
+// invite asks, as the browser's person, for email to join their workspace.
+func invite(t *testing.T, s stack, b *http.Client, email string) string {
+	t.Helper()
+	_, body := session(t, s, b, http.MethodPost, "/graphql", `{"query":"mutation { organizationInviteCreate(input: { email: \"`+email+`\" }) { organizationInvite { email } } }"}`)
+	return body
+}
+
 func session(t *testing.T, s stack, b *http.Client, method, path, body string) (int, string) {
 	t.Helper()
 	req, _ := http.NewRequest(method, s.url+path, strings.NewReader(body))
@@ -216,22 +223,22 @@ func TestInvitesAndSwitching(t *testing.T) {
 	iss.signIn(t, s, owner, "owner@example.com", true).Body.Close()
 	home := viewer(t, s, owner)
 
-	if status, body := session(t, s, owner, http.MethodPost, "/auth/invites", `{"email":"Bob@Example.com"}`); status != http.StatusCreated || !strings.Contains(body, "bob@example.com") {
-		t.Fatalf("invite: %d %s", status, body)
+	if body := invite(t, s, owner, "Bob@Example.com"); !strings.Contains(body, `"email":"bob@example.com"`) {
+		t.Fatalf("invite: %s", body)
 	}
 	bob := browser()
 	iss.signIn(t, s, bob, "bob@example.com", true).Body.Close()
 	if got := viewer(t, s, bob); got.Organization != home.Organization || got.Admin {
 		t.Fatalf("invited person should join as a member: %+v", got)
 	}
-	if status, _ := session(t, s, bob, http.MethodPost, "/auth/invites", `{"email":"x@example.com"}`); status != http.StatusForbidden {
-		t.Fatalf("members cannot invite: %d", status)
+	if body := invite(t, s, bob, "x@example.com"); !strings.Contains(body, workspaces.ErrForbidden.Error()) {
+		t.Fatalf("members cannot invite: %s", body)
 	}
 
 	carol := browser()
 	iss.signIn(t, s, carol, "carol@example.com", true).Body.Close()
 	own := viewer(t, s, carol)
-	session(t, s, owner, http.MethodPost, "/auth/invites", `{"email":"carol@example.com"}`)
+	invite(t, s, owner, "carol@example.com")
 	status, body := session(t, s, carol, http.MethodGet, "/auth/workspaces", "")
 	var list []struct {
 		ID      string `json:"id"`

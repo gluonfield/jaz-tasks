@@ -7,15 +7,18 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
-// Resolver is stateless: every resolver works through the request's tracker
-// scope, which carries the actor and memoizes the workspace catalog.
-type Resolver struct{}
+// Resolver works through the request's tracker scope, which carries the actor
+// and memoizes the workspace catalog; invites go to workspace membership.
+type Resolver struct {
+	members *workspaces.Service
+}
 
 type (
-	queryResolver             struct{}
-	mutationResolver          struct{}
+	queryResolver             struct{ Resolver }
+	mutationResolver          struct{ Resolver }
 	organizationResolver      struct{}
 	userResolver              struct{}
 	teamResolver              struct{}
@@ -29,8 +32,8 @@ type (
 	issueHistoryResolver      struct{}
 )
 
-func (Resolver) Query() QueryResolver                         { return queryResolver{} }
-func (Resolver) Mutation() MutationResolver                   { return mutationResolver{} }
+func (r Resolver) Query() QueryResolver                       { return queryResolver{r} }
+func (r Resolver) Mutation() MutationResolver                 { return mutationResolver{r} }
 func (Resolver) Organization() OrganizationResolver           { return organizationResolver{} }
 func (Resolver) User() UserResolver                           { return userResolver{} }
 func (Resolver) Team() TeamResolver                           { return teamResolver{} }

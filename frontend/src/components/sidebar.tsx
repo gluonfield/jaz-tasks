@@ -14,6 +14,7 @@ import {
   SquarePen,
   Sun,
   Target,
+  UserPlus,
 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import {
@@ -44,7 +45,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-[232px] shrink-0 flex-col gap-px px-2.5 pb-3 pt-2.5 text-[13px]">
       <div className="mb-2 flex items-center gap-1">
-        <WorkspaceMenu name={catalog?.organization.name ?? 'Jaz'} email={catalog?.viewer.email} />
+        <WorkspaceMenu name={catalog?.organization.name ?? 'Jaz'} email={catalog?.viewer.email} admin={catalog?.viewer.admin} />
         <IconButton label="Search" shortcut="⌘K" onClick={() => setUI({ paletteOpen: true })}>
           <Search className="size-4" />
         </IconButton>
@@ -167,11 +168,11 @@ function IconButton({
   )
 }
 
-function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
+function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; admin?: boolean }) {
   const { data: workspaces = [] } = useWorkspaces({ enabled: !embedded() })
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
+      <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
         <WorkspaceBadge name={name} />
         <span className="truncate">{name}</span>
         <ChevronDown className="size-3 shrink-0 text-ink-3" />
@@ -202,25 +203,28 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        {!embedded() && <SessionItems />}
+        <DropdownMenuItem asChild>
+          <Link to="/settings">
+            <Settings /> Settings
+            <DropdownMenuShortcut>G S</DropdownMenuShortcut>
+          </Link>
+        </DropdownMenuItem>
+        {admin && (
+          <DropdownMenuItem asChild>
+            <Link to="/settings" hash="members">
+              <UserPlus /> Invite members
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {!embedded() && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => signOut()}>
+              <LogOut /> Sign out
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-function SessionItems() {
-  return (
-    <>
-      <DropdownMenuItem asChild>
-        <Link to="/settings">
-          <Settings /> Settings
-          <DropdownMenuShortcut>G S</DropdownMenuShortcut>
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem onSelect={() => signOut()}>
-        <LogOut /> Sign out
-      </DropdownMenuItem>
-    </>
   )
 }

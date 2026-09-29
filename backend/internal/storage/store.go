@@ -25,11 +25,13 @@ type TrackerStore interface {
 	CountWorkspaces(ctx context.Context) (int64, error)
 	Workspace(ctx context.Context, id string) (Workspace, error)
 	CreateWorkspace(ctx context.Context, name, urlKey string) (Workspace, error)
+	UpdateWorkspace(ctx context.Context, workspace Workspace) (Workspace, error)
 	Users(ctx context.Context, workspaceID string) ([]User, error)
 	CreateUser(ctx context.Context, user NewUser) (User, error)
 
 	Teams(ctx context.Context, workspaceID string) ([]Team, error)
 	CreateTeam(ctx context.Context, team NewTeam, states []NewWorkflowState) (Team, error)
+	UpdateTeam(ctx context.Context, team Team) (Team, error)
 	WorkflowStates(ctx context.Context, workspaceID string) ([]WorkflowState, error)
 	CreateWorkflowState(ctx context.Context, state NewWorkflowState) (WorkflowState, error)
 

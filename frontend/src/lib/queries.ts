@@ -1,7 +1,7 @@
 import { type QueryClient, queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { gql } from './api'
-import type { Catalog, Comment, HistoryEntry, Issue, IssueDetail, IssuePatch } from './types'
+import type { Catalog, Comment, HistoryEntry, Invite, Issue, IssueDetail, IssuePatch } from './types'
 
 type Ref = { id: string } | null
 type Page<T> = { nodes: T[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } }
@@ -56,6 +56,75 @@ async function fetchCatalog(): Promise<Catalog> {
 
 export function useCatalog() {
   return useQuery({ queryKey: ['catalog'], queryFn: fetchCatalog, staleTime: 30_000 })
+}
+
+const renameWorkspace = /* GraphQL */ `
+  mutation ($input: OrganizationUpdateInput!) { organizationUpdate(input: $input) { success } }
+`
+
+const renameTeam = /* GraphQL */ `
+  mutation ($id: String!, $input: TeamUpdateInput!) { teamUpdate(id: $id, input: $input) { success } }
+`
+
+// useRename renames a team, or the workspace when teamId is unset, optimistically.
+export function useRename() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ teamId, name }: { teamId?: string; name: string }) =>
+      teamId ? gql(renameTeam, { id: teamId, input: { name } }) : gql(renameWorkspace, { input: { name } }),
+    onMutate: async ({ teamId, name }) => {
+      await client.cancelQueries({ queryKey: ['catalog'] })
+      const previous = client.getQueryData<Catalog>(['catalog'])
+      client.setQueryData<Catalog>(['catalog'], (catalog) => {
+        if (!catalog) {
+          return catalog
+        }
+        return teamId
+          ? { ...catalog, teams: catalog.teams.map((t) => (t.id === teamId ? { ...t, name } : t)) }
+          : { ...catalog, organization: { ...catalog.organization, name } }
+      })
+      return { previous }
+    },
+    onError: (_error, _vars, context) => client.setQueryData(['catalog'], context?.previous),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: ['catalog'] })
+      client.invalidateQueries({ queryKey: ['workspaces'] })
+    },
+  })
+}
+
+export function useInvites() {
+  return useQuery({
+    queryKey: ['invites'],
+    queryFn: async () => {
+      const data = await gql<{ organizationInvites: { nodes: Invite[] } }>(
+        `query { organizationInvites(first: 250) { nodes { id email createdAt } } }`,
+      )
+      return data.organizationInvites.nodes
+    },
+  })
+}
+
+export function useInvite() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const data = await gql<{ organizationInviteCreate: { organizationInvite: Invite } }>(
+        `mutation ($input: OrganizationInviteCreateInput!) { organizationInviteCreate(input: $input) { organizationInvite { id email createdAt } } }`,
+        { input: { email } },
+      )
+      return data.organizationInviteCreate.organizationInvite
+    },
+    onSuccess: () => client.invalidateQueries({ queryKey: ['invites'] }),
+  })
+}
+
+export function useCancelInvite() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => gql(`mutation ($id: String!) { organizationInviteDelete(id: $id) { success } }`, { id }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['invites'] }),
+  })
 }
 
 // useCatalogMaps indexes the catalog by id for rendering lookups.

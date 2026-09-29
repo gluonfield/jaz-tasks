@@ -2,6 +2,8 @@ export type StateType = 'triage' | 'backlog' | 'unstarted' | 'started' | 'comple
 
 export type Team = { id: string; key: string; name: string; icon: string | null; color: string | null }
 
+export type Invite = { id: string; email: string; createdAt: string }
+
 export type WorkflowState = {
   id: string
   name: string

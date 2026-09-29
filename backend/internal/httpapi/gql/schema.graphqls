@@ -22,6 +22,7 @@ enum ProjectStatusType {
 type Query {
   viewer: User!
   organization: Organization!
+  organizationInvites(after: String, first: Int): OrganizationInviteConnection!
   user(id: String!): User!
   users(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
   team(id: String!): Team!
@@ -66,7 +67,11 @@ type Mutation {
   commentCreate(input: CommentCreateInput!): CommentPayload!
   commentUpdate(id: String!, input: CommentUpdateInput!): CommentPayload!
   commentDelete(id: String!): DeletePayload!
+  organizationInviteCreate(input: OrganizationInviteCreateInput!): OrganizationInvitePayload!
+  organizationInviteDelete(id: String!): DeletePayload!
+  organizationUpdate(input: OrganizationUpdateInput!): OrganizationPayload!
   teamCreate(input: TeamCreateInput!): TeamPayload!
+  teamUpdate(id: String!, input: TeamUpdateInput!): TeamPayload!
   workflowStateCreate(input: WorkflowStateCreateInput!): WorkflowStatePayload!
   issueLabelCreate(input: IssueLabelCreateInput!): IssueLabelPayload!
   issueLabelUpdate(id: String!, input: IssueLabelUpdateInput!): IssueLabelPayload!
@@ -93,6 +98,17 @@ type Organization {
   urlKey: String!
   userCount: Int!
   users(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
+}
+
+type OrganizationInvite {
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+}
+
+type OrganizationInviteConnection {
+  nodes: [OrganizationInvite!]!
+  pageInfo: PageInfo!
 }
 
 type User {
@@ -418,6 +434,16 @@ type DeletePayload {
   success: Boolean!
 }
 
+type OrganizationInvitePayload {
+  organizationInvite: OrganizationInvite!
+  success: Boolean!
+}
+
+type OrganizationPayload {
+  organization: Organization
+  success: Boolean!
+}
+
 type TeamPayload {
   success: Boolean!
   team: Team
@@ -682,12 +708,24 @@ input CommentUpdateInput {
   body: String
 }
 
+input OrganizationInviteCreateInput {
+  email: String!
+}
+
+input OrganizationUpdateInput {
+  name: String
+}
+
 input TeamCreateInput {
   color: String
   description: String
   icon: String
   key: String
   name: String!
+}
+
+input TeamUpdateInput {
+  name: String
 }
 
 input WorkflowStateCreateInput {

@@ -180,7 +180,11 @@ type MutationResolver interface {
 	CommentCreate(ctx context.Context, input tracker.CommentCreateInput) (*CommentPayload, error)
 	CommentUpdate(ctx context.Context, id string, input CommentUpdateInput) (*CommentPayload, error)
 	CommentDelete(ctx context.Context, id string) (*DeletePayload, error)
+	OrganizationInviteCreate(ctx context.Context, input OrganizationInviteCreateInput) (*OrganizationInvitePayload, error)
+	OrganizationInviteDelete(ctx context.Context, id string) (*DeletePayload, error)
+	OrganizationUpdate(ctx context.Context, input tracker.OrganizationUpdateInput) (*OrganizationPayload, error)
 	TeamCreate(ctx context.Context, input tracker.TeamCreateInput) (*TeamPayload, error)
+	TeamUpdate(ctx context.Context, id string, input tracker.TeamUpdateInput) (*TeamPayload, error)
 	WorkflowStateCreate(ctx context.Context, input tracker.WorkflowStateCreateInput) (*WorkflowStatePayload, error)
 	IssueLabelCreate(ctx context.Context, input tracker.IssueLabelCreateInput) (*IssueLabelPayload, error)
 	IssueLabelUpdate(ctx context.Context, id string, input IssueLabelUpdateInput) (*IssueLabelPayload, error)
@@ -212,6 +216,7 @@ type ProjectResolver interface {
 type QueryResolver interface {
 	Viewer(ctx context.Context) (*storage.User, error)
 	Organization(ctx context.Context) (*storage.Workspace, error)
+	OrganizationInvites(ctx context.Context, after *string, first *int32) (*tracker.Page[storage.WorkspaceInvite], error)
 	User(ctx context.Context, id string) (*storage.User, error)
 	Users(ctx context.Context, after *string, filter *tracker.UserFilter, first *int32, includeDisabled *bool) (*tracker.Page[storage.User], error)
 	Team(ctx context.Context, id string) (*storage.Team, error)
@@ -311,6 +316,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputNullableTeamFilter,
 		ec.unmarshalInputNullableUserFilter,
 		ec.unmarshalInputNumberComparator,
+		ec.unmarshalInputOrganizationInviteCreateInput,
+		ec.unmarshalInputOrganizationUpdateInput,
 		ec.unmarshalInputProjectCreateInput,
 		ec.unmarshalInputProjectFilter,
 		ec.unmarshalInputProjectStatusFilter,
@@ -318,6 +325,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputStringComparator,
 		ec.unmarshalInputTeamCreateInput,
 		ec.unmarshalInputTeamFilter,
+		ec.unmarshalInputTeamUpdateInput,
 		ec.unmarshalInputUserFilter,
 		ec.unmarshalInputWorkflowStateCreateInput,
 		ec.unmarshalInputWorkflowStateFilter,
@@ -893,6 +901,48 @@ func (ec *executionContext) childFields_Organization(ctx context.Context, field 
 		return ec.fieldContext_Organization_users(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Organization", field.Name)
+}
+
+func (ec *executionContext) childFields_OrganizationInvite(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "createdAt":
+		return ec.fieldContext_OrganizationInvite_createdAt(ctx, field)
+	case "email":
+		return ec.fieldContext_OrganizationInvite_email(ctx, field)
+	case "id":
+		return ec.fieldContext_OrganizationInvite_id(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OrganizationInvite", field.Name)
+}
+
+func (ec *executionContext) childFields_OrganizationInviteConnection(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "nodes":
+		return ec.fieldContext_OrganizationInviteConnection_nodes(ctx, field)
+	case "pageInfo":
+		return ec.fieldContext_OrganizationInviteConnection_pageInfo(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OrganizationInviteConnection", field.Name)
+}
+
+func (ec *executionContext) childFields_OrganizationInvitePayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "organizationInvite":
+		return ec.fieldContext_OrganizationInvitePayload_organizationInvite(ctx, field)
+	case "success":
+		return ec.fieldContext_OrganizationInvitePayload_success(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OrganizationInvitePayload", field.Name)
+}
+
+func (ec *executionContext) childFields_OrganizationPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "organization":
+		return ec.fieldContext_OrganizationPayload_organization(ctx, field)
+	case "success":
+		return ec.fieldContext_OrganizationPayload_success(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type OrganizationPayload", field.Name)
 }
 
 func (ec *executionContext) childFields_PageInfo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1863,6 +1913,48 @@ func (ec *executionContext) field_Mutation_issueUpdate_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_organizationInviteCreate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (OrganizationInviteCreateInput, error) {
+			return ec.unmarshalNOrganizationInviteCreateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationInviteCreateInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_organizationInviteDelete_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_organizationUpdate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (tracker.OrganizationUpdateInput, error) {
+			return ec.unmarshalNOrganizationUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐOrganizationUpdateInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_projectCreate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1910,6 +2002,28 @@ func (ec *executionContext) field_Mutation_teamCreate_args(ctx context.Context, 
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_teamUpdate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (tracker.TeamUpdateInput, error) {
+			return ec.unmarshalNTeamUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐTeamUpdateInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
 	return args, nil
 }
 
@@ -2276,6 +2390,28 @@ func (ec *executionContext) field_Query_issues_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["orderBy"] = arg4
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_organizationInvites_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOString2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first",
+		func(ctx context.Context, v any) (*int32, error) {
+			return ec.unmarshalOInt2ᚖint32(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg1
 	return args, nil
 }
 
@@ -8050,6 +8186,138 @@ func (ec *executionContext) fieldContext_Mutation_commentDelete(ctx context.Cont
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_organizationInviteCreate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_organizationInviteCreate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().OrganizationInviteCreate(ctx, fc.Args["input"].(OrganizationInviteCreateInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *OrganizationInvitePayload) graphql.Marshaler {
+			return ec.marshalNOrganizationInvitePayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationInvitePayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_organizationInviteCreate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OrganizationInvitePayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_organizationInviteCreate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_organizationInviteDelete(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_organizationInviteDelete(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().OrganizationInviteDelete(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *DeletePayload) graphql.Marshaler {
+			return ec.marshalNDeletePayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐDeletePayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_organizationInviteDelete(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DeletePayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_organizationInviteDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_organizationUpdate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_organizationUpdate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().OrganizationUpdate(ctx, fc.Args["input"].(tracker.OrganizationUpdateInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *OrganizationPayload) graphql.Marshaler {
+			return ec.marshalNOrganizationPayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_organizationUpdate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OrganizationPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_organizationUpdate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_teamCreate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -8088,6 +8356,50 @@ func (ec *executionContext) fieldContext_Mutation_teamCreate(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_teamCreate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_teamUpdate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_teamUpdate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TeamUpdate(ctx, fc.Args["id"].(string), fc.Args["input"].(tracker.TeamUpdateInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *TeamPayload) graphql.Marshaler {
+			return ec.marshalNTeamPayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐTeamPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_teamUpdate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TeamPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_teamUpdate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -8658,6 +8970,249 @@ func (ec *executionContext) fieldContext_Organization_users(ctx context.Context,
 		return fc, err
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _OrganizationInvite_createdAt(ctx context.Context, field graphql.CollectedField, obj *storage.WorkspaceInvite) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInvite_createdAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNDateTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInvite_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OrganizationInvite", field, false, false, errors.New("field of type DateTime does not have child fields"))
+}
+
+func (ec *executionContext) _OrganizationInvite_email(ctx context.Context, field graphql.CollectedField, obj *storage.WorkspaceInvite) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInvite_email(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Email, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInvite_email(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OrganizationInvite", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _OrganizationInvite_id(ctx context.Context, field graphql.CollectedField, obj *storage.WorkspaceInvite) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInvite_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInvite_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OrganizationInvite", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _OrganizationInviteConnection_nodes(ctx context.Context, field graphql.CollectedField, obj *tracker.Page[storage.WorkspaceInvite]) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInviteConnection_nodes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Nodes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []storage.WorkspaceInvite) graphql.Marshaler {
+			return ec.marshalNOrganizationInvite2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInviteᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInviteConnection_nodes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrganizationInviteConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OrganizationInvite(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrganizationInviteConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *tracker.Page[storage.WorkspaceInvite]) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInviteConnection_pageInfo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v tracker.PageInfo) graphql.Marshaler {
+			return ec.marshalNPageInfo2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐPageInfo(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInviteConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrganizationInviteConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PageInfo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrganizationInvitePayload_organizationInvite(ctx context.Context, field graphql.CollectedField, obj *OrganizationInvitePayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInvitePayload_organizationInvite(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OrganizationInvite, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *storage.WorkspaceInvite) graphql.Marshaler {
+			return ec.marshalNOrganizationInvite2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInvite(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInvitePayload_organizationInvite(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrganizationInvitePayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OrganizationInvite(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrganizationInvitePayload_success(ctx context.Context, field graphql.CollectedField, obj *OrganizationInvitePayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationInvitePayload_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationInvitePayload_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OrganizationInvitePayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _OrganizationPayload_organization(ctx context.Context, field graphql.CollectedField, obj *OrganizationPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationPayload_organization(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Organization, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *storage.Workspace) graphql.Marshaler {
+			return ec.marshalOOrganization2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspace(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationPayload_organization(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OrganizationPayload",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Organization(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OrganizationPayload_success(ctx context.Context, field graphql.CollectedField, obj *OrganizationPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_OrganizationPayload_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_OrganizationPayload_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("OrganizationPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) _PageInfo_endCursor(ctx context.Context, field graphql.CollectedField, obj *tracker.PageInfo) (ret graphql.Marshaler) {
@@ -9566,6 +10121,50 @@ func (ec *executionContext) fieldContext_Query_organization(_ context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Organization(ctx, field)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_organizationInvites(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_organizationInvites(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().OrganizationInvites(ctx, fc.Args["after"].(*string), fc.Args["first"].(*int32))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *tracker.Page[storage.WorkspaceInvite]) graphql.Marshaler {
+			return ec.marshalNOrganizationInviteConnection2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐPage(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_organizationInvites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_OrganizationInviteConnection(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_organizationInvites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -14468,6 +15067,66 @@ func (ec *executionContext) unmarshalInputNumberComparator(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputOrganizationInviteCreateInput(ctx context.Context, obj any) (OrganizationInviteCreateInput, error) {
+	var it OrganizationInviteCreateInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"email"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "email":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Email = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputOrganizationUpdateInput(ctx context.Context, obj any) (tracker.OrganizationUpdateInput, error) {
+	var it tracker.OrganizationUpdateInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputProjectCreateInput(ctx context.Context, obj any) (tracker.ProjectCreateInput, error) {
 	var it tracker.ProjectCreateInput
 	if obj == nil {
@@ -14956,6 +15615,36 @@ func (ec *executionContext) unmarshalInputTeamFilter(ctx context.Context, obj an
 		case "name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			data, err := ec.unmarshalOStringComparator2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐStringComparator(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTeamUpdateInput(ctx context.Context, obj any) (tracker.TeamUpdateInput, error) {
+	var it tracker.TeamUpdateInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -18793,9 +19482,37 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "organizationInviteCreate":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_organizationInviteCreate(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "organizationInviteDelete":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_organizationInviteDelete(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "organizationUpdate":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_organizationUpdate(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "teamCreate":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_teamCreate(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "teamUpdate":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_teamUpdate(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -19059,6 +19776,183 @@ func (ec *executionContext) _Organization(ctx context.Context, sel ast.Selection
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var organizationInviteImplementors = []string{"OrganizationInvite"}
+
+func (ec *executionContext) _OrganizationInvite(ctx context.Context, sel ast.SelectionSet, obj *storage.WorkspaceInvite) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, organizationInviteImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OrganizationInvite")
+		case "createdAt":
+			out.Values[i] = ec._OrganizationInvite_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "email":
+			out.Values[i] = ec._OrganizationInvite_email(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._OrganizationInvite_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var organizationInviteConnectionImplementors = []string{"OrganizationInviteConnection"}
+
+func (ec *executionContext) _OrganizationInviteConnection(ctx context.Context, sel ast.SelectionSet, obj *tracker.Page[storage.WorkspaceInvite]) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, organizationInviteConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OrganizationInviteConnection")
+		case "nodes":
+			out.Values[i] = ec._OrganizationInviteConnection_nodes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pageInfo":
+			out.Values[i] = ec._OrganizationInviteConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var organizationInvitePayloadImplementors = []string{"OrganizationInvitePayload"}
+
+func (ec *executionContext) _OrganizationInvitePayload(ctx context.Context, sel ast.SelectionSet, obj *OrganizationInvitePayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, organizationInvitePayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OrganizationInvitePayload")
+		case "organizationInvite":
+			out.Values[i] = ec._OrganizationInvitePayload_organizationInvite(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "success":
+			out.Values[i] = ec._OrganizationInvitePayload_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var organizationPayloadImplementors = []string{"OrganizationPayload"}
+
+func (ec *executionContext) _OrganizationPayload(ctx context.Context, sel ast.SelectionSet, obj *OrganizationPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, organizationPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OrganizationPayload")
+		case "organization":
+			out.Values[i] = ec._OrganizationPayload_organization(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "success":
+			out.Values[i] = ec._OrganizationPayload_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -19693,6 +20587,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_organization(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "organizationInvites":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_organizationInvites(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -22089,6 +23005,76 @@ func (ec *executionContext) marshalNOrganization2ᚖgithubᚗcomᚋgluonfieldᚋ
 	return ec._Organization(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNOrganizationInvite2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInvite(ctx context.Context, sel ast.SelectionSet, v storage.WorkspaceInvite) graphql.Marshaler {
+	return ec._OrganizationInvite(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNOrganizationInvite2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInviteᚄ(ctx context.Context, sel ast.SelectionSet, v []storage.WorkspaceInvite) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNOrganizationInvite2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInvite(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNOrganizationInvite2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspaceInvite(ctx context.Context, sel ast.SelectionSet, v *storage.WorkspaceInvite) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OrganizationInvite(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNOrganizationInviteConnection2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐPage(ctx context.Context, sel ast.SelectionSet, v *tracker.Page[storage.WorkspaceInvite]) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OrganizationInviteConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNOrganizationInviteCreateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationInviteCreateInput(ctx context.Context, v any) (OrganizationInviteCreateInput, error) {
+	res, err := ec.unmarshalInputOrganizationInviteCreateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNOrganizationInvitePayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationInvitePayload(ctx context.Context, sel ast.SelectionSet, v *OrganizationInvitePayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OrganizationInvitePayload(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNOrganizationPayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐOrganizationPayload(ctx context.Context, sel ast.SelectionSet, v *OrganizationPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OrganizationPayload(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNOrganizationUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐOrganizationUpdateInput(ctx context.Context, v any) (tracker.OrganizationUpdateInput, error) {
+	res, err := ec.unmarshalInputOrganizationUpdateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNPageInfo2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐPageInfo(ctx context.Context, sel ast.SelectionSet, v tracker.PageInfo) graphql.Marshaler {
 	return ec._PageInfo(ctx, sel, &v)
 }
@@ -22297,6 +23283,11 @@ func (ec *executionContext) marshalNTeamPayload2ᚖgithubᚗcomᚋgluonfieldᚋj
 		return graphql.Null
 	}
 	return ec._TeamPayload(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTeamUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐTeamUpdateInput(ctx context.Context, v any) (tracker.TeamUpdateInput, error) {
+	res, err := ec.unmarshalInputTeamUpdateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNUser2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐUser(ctx context.Context, sel ast.SelectionSet, v storage.User) graphql.Marshaler {
@@ -22897,6 +23888,13 @@ func (ec *executionContext) unmarshalONumberComparator2ᚖgithubᚗcomᚋgluonfi
 	}
 	res, err := ec.unmarshalInputNumberComparator(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOOrganization2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspace(ctx context.Context, sel ast.SelectionSet, v *storage.Workspace) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Organization(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOPaginationOrderBy2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐPaginationOrderBy(ctx context.Context, v any) (*PaginationOrderBy, error) {

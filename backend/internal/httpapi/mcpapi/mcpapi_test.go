@@ -49,7 +49,7 @@ func serve(t *testing.T) env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, log.New(io.Discard))))
+	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, workspaces.NewService(store, workspaces.Config{}), log.New(io.Discard))))
 	t.Cleanup(srv.Close)
 	return env{url: srv.URL, key: result.APIKey, store: store, svc: svc, keys: keys}
 }

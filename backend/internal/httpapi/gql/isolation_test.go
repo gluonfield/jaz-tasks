@@ -67,10 +67,13 @@ func readA(t *testing.T, c *client) refsA {
 func TestTenantIsolationGraphQL(t *testing.T) {
 	c := newClient(t)
 	a := readA(t, c)
+	_, out := c.do(`mutation { organizationInviteCreate(input: { email: "pat@a.test" }) { organizationInvite { id } } }`, c.key)
+	invite, _ := get(out.Data, "organizationInviteCreate.organizationInvite.id").(string)
 	keyB, issueB := tenantB(t, c.store)
 	r := strings.NewReplacer(
 		"$ISSUE", a.issue, "$TEAM", a.team, "$STATE", a.state, "$USER", a.user, "$LABEL", a.label,
 		"$PROJECT", a.project, "$SLUG", a.slug, "$CYCLE", a.cycle, "$COMMENT", a.comment, "$MINE", issueB.ID,
+		"$INVITE", invite,
 	)
 	attacks := []string{
 		`{ issue(id: "$ISSUE") { id } }`,
@@ -108,6 +111,8 @@ func TestTenantIsolationGraphQL(t *testing.T) {
 		`mutation { projectCreate(input: { name: "x", teamIds: [], leadId: "$USER" }) { success } }`,
 		`mutation { workflowStateCreate(input: { teamId: "$TEAM", name: "x", type: "started", color: "#fff" }) { success } }`,
 		`mutation { cycleCreate(input: { teamId: "$TEAM", startsAt: "2030-01-01T00:00:00Z", endsAt: "2030-01-14T00:00:00Z" }) { success } }`,
+		`mutation { teamUpdate(id: "$TEAM", input: { name: "owned" }) { success } }`,
+		`mutation { organizationInviteDelete(id: "$INVITE") { success } }`,
 	}
 	for _, doc := range attacks {
 		query := r.Replace(doc)
@@ -119,7 +124,7 @@ func TestTenantIsolationGraphQL(t *testing.T) {
 		}
 	}
 
-	_, out := c.do(`{
+	_, out = c.do(`{
 		issue(id: "ENG-1") { title }
 		issues { nodes { id } }
 		searchIssues(term: "Linear-compatible") { nodes { id } }
@@ -130,27 +135,30 @@ func TestTenantIsolationGraphQL(t *testing.T) {
 		cycles { nodes { id } }
 		workflowStates { nodes { team { key } } }
 		organization { name }
+		organizationInvites { nodes { id } }
 	}`, keyB)
 	for path, want := range map[string]any{
-		"issue.title":            "Bob's private roadmap",
-		"issues.nodes.#":         1.0,
-		"searchIssues.nodes.#":   0.0,
-		"users.nodes.#":          1.0,
-		"users.nodes.0.email":    "bob@b.test",
-		"issueLabels.nodes.#":    0.0,
-		"projects.nodes.#":       0.0,
-		"cycles.nodes.#":         0.0,
-		"workflowStates.nodes.#": 12.0,
-		"organization.name":      "Bob's workspace",
+		"issue.title":                 "Bob's private roadmap",
+		"issues.nodes.#":              1.0,
+		"searchIssues.nodes.#":        0.0,
+		"users.nodes.#":               1.0,
+		"users.nodes.0.email":         "bob@b.test",
+		"issueLabels.nodes.#":         0.0,
+		"projects.nodes.#":            0.0,
+		"cycles.nodes.#":              0.0,
+		"workflowStates.nodes.#":      12.0,
+		"organization.name":           "Personal",
+		"organizationInvites.nodes.#": 0.0,
 	} {
 		if got := get(out.Data, path); got != want {
 			t.Errorf("tenant B sees %s = %#v, want %#v", path, got, want)
 		}
 	}
 
-	_, out = c.do(`{ issue(id: "`+a.issue+`") { title archivedAt labels { nodes { name } } comments { nodes { body } } project { name } } issueLabel(id: "`+a.label+`") { name } }`, c.key)
+	_, out = c.do(`{ issue(id: "`+a.issue+`") { title archivedAt labels { nodes { name } } comments { nodes { body } } project { name } team { name } } issueLabel(id: "`+a.label+`") { name } organizationInvites { nodes { id } } }`, c.key)
 	if len(out.Errors) > 0 || get(out.Data, "issue.title") != "Linear-compatible GraphQL endpoint" || get(out.Data, "issue.archivedAt") != nil ||
-		get(out.Data, "issue.comments.nodes.#") != 2.0 || get(out.Data, "issue.project.name") != "Tasks MVP" || get(out.Data, "issueLabel.name") != "Feature" {
+		get(out.Data, "issue.comments.nodes.#") != 2.0 || get(out.Data, "issue.project.name") != "Tasks MVP" || get(out.Data, "issueLabel.name") != "Feature" ||
+		get(out.Data, "issue.team.name") != "Engineering" || get(out.Data, "organizationInvites.nodes.#") != 1.0 {
 		t.Fatalf("tenant A's data changed: %+v %+v", out.Data, out.Errors)
 	}
 }

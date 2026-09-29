@@ -133,3 +133,25 @@ func (q *Queries) ListUsers(ctx context.Context, workspaceID string) ([]User, er
 	}
 	return items, nil
 }
+
+const updateWorkspace = `-- name: UpdateWorkspace :one
+UPDATE workspaces SET name = $2, updated_at = now() WHERE id = $1 RETURNING id, name, url_key, created_at, updated_at
+`
+
+type UpdateWorkspaceParams struct {
+	ID   string
+	Name string
+}
+
+func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, updateWorkspace, arg.ID, arg.Name)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.URLKey,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
