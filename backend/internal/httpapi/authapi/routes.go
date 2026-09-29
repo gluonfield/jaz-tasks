@@ -24,8 +24,6 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("GET /auth/api-keys", h.listKeys)
 	h.mux.HandleFunc("POST /auth/api-keys", h.createKey)
 	h.mux.HandleFunc("DELETE /auth/api-keys/{id}", h.deleteKey)
-	h.mux.HandleFunc("GET /auth/workspaces", h.listWorkspaces)
-	h.mux.HandleFunc("POST /auth/workspace", h.switchWorkspace)
 	h.mux.HandleFunc("GET /auth/grants", h.listGrants)
 	h.mux.HandleFunc("DELETE /auth/grants/{id}", h.revokeGrant)
 
@@ -396,49 +394,6 @@ func (h *Handler) revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-}
-
-func (h *Handler) listWorkspaces(w http.ResponseWriter, r *http.Request) {
-	actor, _, ok := h.sessionActor(w, r)
-	if !ok {
-		return
-	}
-	memberships, err := h.members.Memberships(r.Context(), actor)
-	if err != nil {
-		h.fail(w, err)
-		return
-	}
-	type workspaceView struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		URLKey  string `json:"urlKey"`
-		Current bool   `json:"current"`
-	}
-	out := []workspaceView{}
-	for _, m := range memberships {
-		out = append(out, workspaceView{ID: m.WorkspaceID, Name: m.Name, URLKey: m.URLKey, Current: m.UserID == actor.UserID})
-	}
-	writeJSON(w, http.StatusOK, out)
-}
-
-func (h *Handler) switchWorkspace(w http.ResponseWriter, r *http.Request) {
-	actor, token, ok := h.sessionActor(w, r)
-	if !ok {
-		return
-	}
-	var in struct {
-		WorkspaceID string `json:"workspaceId"`
-	}
-	_ = json.NewDecoder(r.Body).Decode(&in)
-	user, err := h.members.Switch(r.Context(), actor, in.WorkspaceID)
-	if errors.Is(err, workspaces.ErrNotMember) {
-		writeJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
-		return
-	}
-	if err == nil {
-		err = h.svc.SwitchSession(r.Context(), token, user.ID)
-	}
-	h.noContent(w, err)
 }
 
 // browser authenticates only by session cookie: granting access to an app is

@@ -82,6 +82,13 @@ type IssueUpdateInput struct {
 	Title           graphql.Omittable[*string]    `json:"title,omitempty"`
 }
 
+type Membership struct {
+	Current bool   `json:"current"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	URLKey  string `json:"urlKey"`
+}
+
 type Mutation struct {
 }
 
@@ -128,6 +135,10 @@ type TeamPayload struct {
 type WorkflowStatePayload struct {
 	Success       bool                   `json:"success"`
 	WorkflowState *storage.WorkflowState `json:"workflowState"`
+}
+
+type WorkspaceSwitchPayload struct {
+	Success bool `json:"success"`
 }
 
 type PaginationOrderBy string

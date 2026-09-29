@@ -140,6 +140,18 @@ func (r mutationResolver) OrganizationInviteDelete(ctx context.Context, id strin
 	return deletePayload(id, r.members.CancelInvite(ctx, scope(ctx).Actor(), id))
 }
 
+func (r mutationResolver) WorkspaceSwitch(ctx context.Context, id string) (*WorkspaceSwitchPayload, error) {
+	actor := scope(ctx).Actor()
+	user, err := r.members.Switch(ctx, actor, id)
+	if err == nil {
+		err = r.keys.Switch(ctx, actor, user.ID)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &WorkspaceSwitchPayload{Success: true}, nil
+}
+
 func (mutationResolver) WorkflowStateCreate(ctx context.Context, input tracker.WorkflowStateCreateInput) (*WorkflowStatePayload, error) {
 	state, err := scope(ctx).CreateWorkflowState(ctx, input)
 	if err != nil {

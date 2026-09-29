@@ -2,11 +2,14 @@ package mcpapi_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -15,6 +18,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/postgrestest"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
@@ -49,7 +53,7 @@ func serve(t *testing.T) env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, workspaces.NewService(store, workspaces.Config{}), log.New(io.Discard))))
+	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, workspaces.NewService(store, workspaces.Config{}), keys, log.New(io.Discard))))
 	t.Cleanup(srv.Close)
 	return env{url: srv.URL, key: result.APIKey, store: store, svc: svc, keys: keys}
 }
@@ -299,5 +303,73 @@ func TestMCPApp(t *testing.T) {
 	want := `{"data":{"issueUpdate":{"issue":{"identifier":"ENG-4","priorityLabel":"Low"}}}}`
 	if err != nil || res.IsError || res.Content[0].(*mcp.TextContent).Text != want {
 		t.Fatalf("graphql tool: %+v %v", res, err)
+	}
+}
+
+// oauth completes the OAuth flow an MCP host such as Jaz runs for user and
+// returns the access token its connection sends.
+func (e env) oauth(t *testing.T, user storage.User) string {
+	t.Helper()
+	ctx := context.Background()
+	app, err := e.keys.RegisterClient(ctx, "Jaz", []string{"http://localhost/cb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := strings.Repeat("verifier", 8)
+	sum := sha256.Sum256([]byte(verifier))
+	target, err := e.keys.Approve(ctx, auth.Actor{UserID: user.ID, WorkspaceID: user.WorkspaceID}, auth.AuthorizeRequest{
+		ResponseType: "code", ClientID: app.ID, RedirectURI: "http://localhost/cb",
+		CodeChallenge: base64.RawURLEncoding.EncodeToString(sum[:]), CodeChallengeMethod: "S256",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redirect, _ := url.Parse(target)
+	tokens, err := e.keys.Token(ctx, auth.TokenRequest{
+		GrantType: "authorization_code", ClientID: app.ID, Code: redirect.Query().Get("code"),
+		RedirectURI: "http://localhost/cb", CodeVerifier: verifier,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tokens.AccessToken
+}
+
+// Switching workspace from the app keeps the host's MCP session working, now
+// in the other workspace: the SDK binds a session to whoever opened it.
+func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
+	e := serve(t)
+	pat, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(context.Background(), auth.Identity{
+		Issuer: "https://idp.test", Subject: "pat", Email: "pat@example.com", EmailVerified: true, Name: "Pat",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type result struct {
+		Data struct {
+			Workspaces []struct {
+				ID      string `json:"id"`
+				Current bool   `json:"current"`
+			} `json:"workspaces"`
+		} `json:"data"`
+		Errors []any `json:"errors"`
+	}
+	call[result](t, e.session(t, e.key), "graphql", map[string]any{"query": `mutation { organizationInviteCreate(input: { email: "pat@example.com" }) { success } }`})
+	jaz := e.session(t, e.oauth(t, pat))
+	listed := call[result](t, jaz, "graphql", map[string]any{"query": `{ workspaces { id current } }`})
+	var team string
+	for _, w := range listed.Data.Workspaces {
+		if !w.Current {
+			team = w.ID
+		}
+	}
+	if len(listed.Data.Workspaces) != 2 || team == "" {
+		t.Fatalf("workspaces: %+v", listed)
+	}
+	if switched := call[result](t, jaz, "graphql", map[string]any{"query": `mutation { workspaceSwitch(id: "` + team + `") { success } }`}); len(switched.Errors) > 0 {
+		t.Fatalf("switch: %+v", switched.Errors)
+	}
+	if got := call[issue](t, jaz, "get_issue", map[string]any{"issue": "ENG-1"}); got.Identifier != "ENG-1" {
+		t.Fatalf("after switching, the same session should reach the team workspace: %+v", got)
 	}
 }

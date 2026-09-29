@@ -37,12 +37,9 @@ func (s *Service) Session(ctx context.Context, token string) (Actor, error) {
 	if errors.Is(err, storage.ErrNotFound) {
 		return Actor{}, ErrUnauthenticated
 	}
-	return actorOf(user), err
-}
-
-// SwitchSession points a browser session at another of the person's users.
-func (s *Service) SwitchSession(ctx context.Context, token, userID string) error {
-	return s.store.UpdateSessionUser(ctx, hash(token), userID)
+	actor := actorOf(user)
+	actor.session = string(hash(token))
+	return actor, err
 }
 
 func (s *Service) EndSession(ctx context.Context, token string) error {

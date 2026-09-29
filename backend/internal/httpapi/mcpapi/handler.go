@@ -42,10 +42,12 @@ func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) 
 		if err != nil {
 			return nil, err
 		}
+		// The SDK binds a session to UserID, so it must survive switching
+		// workspace; tools read the actor itself from Extra.
 		return &mcpauth.TokenInfo{
-			UserID:     actor.UserID,
+			UserID:     actor.Principal(),
 			Expiration: time.Now().Add(time.Hour),
-			Extra:      map[string]any{workspaceKey: actor.WorkspaceID},
+			Extra:      map[string]any{actorKey: actor},
 		}, nil
 	}
 	streamable := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return server }, nil)
@@ -53,17 +55,17 @@ func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) 
 	return &Handler{Handler: requireToken(streamable)}
 }
 
-const workspaceKey = "workspace"
+const actorKey = "actor"
 
 type tools struct {
 	svc     *tracker.Service
 	graphql *gql.Handler
 }
 
-// actor rebuilds who the bearer token resolved to for this request.
+// actor is who the bearer token resolved to for this request, credential
+// included, so the app can switch the connection's workspace.
 func (t tools) actor(req *mcp.CallToolRequest) auth.Actor {
-	info := req.Extra.TokenInfo
-	return auth.Actor{UserID: info.UserID, WorkspaceID: info.Extra[workspaceKey].(string)}
+	return req.Extra.TokenInfo.Extra[actorKey].(auth.Actor)
 }
 
 func (t tools) scope(req *mcp.CallToolRequest) *tracker.Scope {

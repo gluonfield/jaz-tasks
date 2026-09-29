@@ -44,7 +44,7 @@
 - Every 401 from a protected resource carries `WWW-Authenticate: Bearer resource_metadata=...`. Keep `/mcp` on the go-sdk bearer middleware.
 - Settings endpoints that mint or revoke credentials require a browser session, never a bearer token.
 - Development login is only for a loopback `PUBLIC_URL` without OIDC; keep it impossible to enable elsewhere. The demo workspace is seeded only in that mode.
-- `internal/workspaces` owns membership: a person (OIDC identity) has one user row per workspace; new people get their own workspace; invites are the only way into another. A session or token acts as exactly one user row, so as exactly one workspace.
+- `internal/workspaces` owns membership: a person (OIDC identity) has one user row per workspace; new people get their own workspace; invites are the only way into another. A session or token acts as exactly one user row, so as exactly one workspace. Switching workspace re-points the session or OAuth grant at the person's user in the other workspace; an API key stays in its own.
 - Tenant isolation is a hard requirement. Every storage query touching workspace data filters by `workspace_id` or reaches it through an already-scoped record. Extend `TestTenantIsolationGraphQL` and `TestTenantIsolationMCP` whenever you add a query, mutation or tool that takes a reference.
 
 ## Postgres and sqlc
@@ -61,7 +61,7 @@
 
 ## Frontend
 
-- The web app reads and writes tracker data only through `/graphql`. The session-only account endpoints under `/auth` (sign-in, workspaces, API keys, authorized apps) are the one exception; they accept only JSON. Invites and renames go through GraphQL so they also work inside Jaz.
+- The web app reads and writes tracker data only through `/graphql`. The session-only account endpoints under `/auth` (sign-in, API keys, authorized apps) are the one exception; they accept only JSON. Invites, renames and workspace switching go through GraphQL so they also work inside Jaz.
 - The MCP App build (`bun run build`) embeds the same routes into `backend/internal/httpapi/mcpapi/app/mcp-app.html`; commit it with the frontend change that produced it. In MCP mode data flows through the `graphql` tool and `localStorage` may throw, so use `lib/storage`.
 - Every color, radius, font and shadow comes from CSS custom properties that use Jaz's token names (`--color-bg`, `--color-ink`, `--radius-control`, ...) so the Jaz host can theme the app. See `frontend/THEMING.md`; never hardcode a color in a component.
 - Shared hooks and lib code must not import component-owned types. Put cross-layer contracts in `lib`.

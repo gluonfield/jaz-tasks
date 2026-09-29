@@ -182,6 +182,7 @@ type MutationResolver interface {
 	CommentDelete(ctx context.Context, id string) (*DeletePayload, error)
 	OrganizationInviteCreate(ctx context.Context, input OrganizationInviteCreateInput) (*OrganizationInvitePayload, error)
 	OrganizationInviteDelete(ctx context.Context, id string) (*DeletePayload, error)
+	WorkspaceSwitch(ctx context.Context, id string) (*WorkspaceSwitchPayload, error)
 	OrganizationUpdate(ctx context.Context, input tracker.OrganizationUpdateInput) (*OrganizationPayload, error)
 	TeamCreate(ctx context.Context, input tracker.TeamCreateInput) (*TeamPayload, error)
 	TeamUpdate(ctx context.Context, id string, input tracker.TeamUpdateInput) (*TeamPayload, error)
@@ -217,6 +218,7 @@ type QueryResolver interface {
 	Viewer(ctx context.Context) (*storage.User, error)
 	Organization(ctx context.Context) (*storage.Workspace, error)
 	OrganizationInvites(ctx context.Context, after *string, first *int32) (*tracker.Page[storage.WorkspaceInvite], error)
+	Workspaces(ctx context.Context) ([]Membership, error)
 	User(ctx context.Context, id string) (*storage.User, error)
 	Users(ctx context.Context, after *string, filter *tracker.UserFilter, first *int32, includeDisabled *bool) (*tracker.Page[storage.User], error)
 	Team(ctx context.Context, id string) (*storage.Team, error)
@@ -879,6 +881,20 @@ func (ec *executionContext) childFields_IssueSearchResult(ctx context.Context, f
 	return nil, fmt.Errorf("no field named %q was found under type IssueSearchResult", field.Name)
 }
 
+func (ec *executionContext) childFields_Membership(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "current":
+		return ec.fieldContext_Membership_current(ctx, field)
+	case "id":
+		return ec.fieldContext_Membership_id(ctx, field)
+	case "name":
+		return ec.fieldContext_Membership_name(ctx, field)
+	case "urlKey":
+		return ec.fieldContext_Membership_urlKey(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Membership", field.Name)
+}
+
 func (ec *executionContext) childFields_Organization(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "createdAt":
@@ -1197,6 +1213,14 @@ func (ec *executionContext) childFields_WorkflowStatePayload(ctx context.Context
 		return ec.fieldContext_WorkflowStatePayload_workflowState(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type WorkflowStatePayload", field.Name)
+}
+
+func (ec *executionContext) childFields_WorkspaceSwitchPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "success":
+		return ec.fieldContext_WorkspaceSwitchPayload_success(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type WorkspaceSwitchPayload", field.Name)
 }
 
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -2038,6 +2062,20 @@ func (ec *executionContext) field_Mutation_workflowStateCreate_args(ctx context.
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_workspaceSwitch_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -7702,6 +7740,98 @@ func (ec *executionContext) fieldContext_IssueSearchResult_url(_ context.Context
 	return graphql.NewScalarFieldContext("IssueSearchResult", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Membership_current(ctx context.Context, field graphql.CollectedField, obj *Membership) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Membership_current(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Current, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Membership_current(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Membership_id(ctx context.Context, field graphql.CollectedField, obj *Membership) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Membership_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Membership_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Membership_name(ctx context.Context, field graphql.CollectedField, obj *Membership) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Membership_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Membership_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Membership_urlKey(ctx context.Context, field graphql.CollectedField, obj *Membership) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Membership_urlKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.URLKey, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Membership_urlKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Mutation_issueCreate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -8268,6 +8398,50 @@ func (ec *executionContext) fieldContext_Mutation_organizationInviteDelete(ctx c
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_organizationInviteDelete_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_workspaceSwitch(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_workspaceSwitch(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().WorkspaceSwitch(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *WorkspaceSwitchPayload) graphql.Marshaler {
+			return ec.marshalNWorkspaceSwitchPayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐWorkspaceSwitchPayload(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_workspaceSwitch(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WorkspaceSwitchPayload(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_workspaceSwitch_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -10165,6 +10339,38 @@ func (ec *executionContext) fieldContext_Query_organizationInvites(ctx context.C
 	if fc.Args, err = ec.field_Query_organizationInvites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_workspaces(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_workspaces(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().Workspaces(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []Membership) graphql.Marshaler {
+			return ec.marshalNMembership2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembershipᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_workspaces(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Membership(ctx, field)
+		},
 	}
 	return fc, nil
 }
@@ -12488,6 +12694,29 @@ func (ec *executionContext) fieldContext_WorkflowStatePayload_workflowState(_ co
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _WorkspaceSwitchPayload_success(ctx context.Context, field graphql.CollectedField, obj *WorkspaceSwitchPayload) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WorkspaceSwitchPayload_success(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Success, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WorkspaceSwitchPayload_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WorkspaceSwitchPayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -19385,6 +19614,59 @@ func (ec *executionContext) _IssueSearchResult(ctx context.Context, sel ast.Sele
 	return out
 }
 
+var membershipImplementors = []string{"Membership"}
+
+func (ec *executionContext) _Membership(ctx context.Context, sel ast.SelectionSet, obj *Membership) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, membershipImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Membership")
+		case "current":
+			out.Values[i] = ec._Membership_current(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "id":
+			out.Values[i] = ec._Membership_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Membership_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "urlKey":
+			out.Values[i] = ec._Membership_urlKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -19492,6 +19774,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "organizationInviteDelete":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_organizationInviteDelete(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "workspaceSwitch":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_workspaceSwitch(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -20609,6 +20898,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_organizationInvites(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "workspaces":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_workspaces(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -22141,6 +22452,44 @@ func (ec *executionContext) _WorkflowStatePayload(ctx context.Context, sel ast.S
 	return out
 }
 
+var workspaceSwitchPayloadImplementors = []string{"WorkspaceSwitchPayload"}
+
+func (ec *executionContext) _WorkspaceSwitchPayload(ctx context.Context, sel ast.SelectionSet, obj *WorkspaceSwitchPayload) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, workspaceSwitchPayloadImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WorkspaceSwitchPayload")
+		case "success":
+			out.Values[i] = ec._WorkspaceSwitchPayload_success(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var __DirectiveImplementors = []string{"__Directive"}
 
 func (ec *executionContext) ___Directive(ctx context.Context, sel ast.SelectionSet, obj *introspection.Directive) graphql.Marshaler {
@@ -22995,6 +23344,26 @@ func (ec *executionContext) unmarshalNIssueUpdateInput2githubᚗcomᚋgluonfield
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNMembership2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembership(ctx context.Context, sel ast.SelectionSet, v Membership) graphql.Marshaler {
+	return ec._Membership(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMembership2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembershipᚄ(ctx context.Context, sel ast.SelectionSet, v []Membership) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNMembership2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembership(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNOrganization2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspace(ctx context.Context, sel ast.SelectionSet, v *storage.Workspace) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -23383,6 +23752,16 @@ func (ec *executionContext) marshalNWorkflowStatePayload2ᚖgithubᚗcomᚋgluon
 		return graphql.Null
 	}
 	return ec._WorkflowStatePayload(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNWorkspaceSwitchPayload2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐWorkspaceSwitchPayload(ctx context.Context, sel ast.SelectionSet, v *WorkspaceSwitchPayload) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._WorkspaceSwitchPayload(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

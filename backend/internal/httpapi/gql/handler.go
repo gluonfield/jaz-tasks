@@ -29,8 +29,8 @@ type Handler struct {
 	exec    *executor.Executor
 }
 
-func NewHandler(svc *tracker.Service, members *workspaces.Service, logger *log.Logger) *Handler {
-	schema := NewExecutableSchema(Config{Resolvers: Resolver{members: members}})
+func NewHandler(svc *tracker.Service, members *workspaces.Service, keys *auth.Service, logger *log.Logger) *Handler {
+	schema := NewExecutableSchema(Config{Resolvers: Resolver{members: members, keys: keys}})
 	presenter := presentError(logger.WithPrefix("graphql"))
 	srv := handler.New(schema)
 	srv.AddTransport(transport.GET{})
@@ -90,7 +90,8 @@ func presentError(logger *log.Logger) graphql.ErrorPresenterFunc {
 		var notFound tracker.NotFoundError
 		var invalid tracker.InvalidInputError
 		switch {
-		case errors.As(err, &notFound), errors.As(err, &invalid), errors.Is(err, workspaces.ErrForbidden):
+		case errors.As(err, &notFound), errors.As(err, &invalid), errors.Is(err, workspaces.ErrForbidden),
+			errors.Is(err, workspaces.ErrNotMember), errors.Is(err, auth.ErrFixedWorkspace):
 			presented.Extensions = map[string]any{
 				"type":                   "invalid input",
 				"code":                   "INPUT_ERROR",

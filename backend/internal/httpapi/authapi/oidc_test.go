@@ -239,17 +239,20 @@ func TestInvitesAndSwitching(t *testing.T) {
 	iss.signIn(t, s, carol, "carol@example.com", true).Body.Close()
 	own := viewer(t, s, carol)
 	invite(t, s, owner, "carol@example.com")
-	status, body := session(t, s, carol, http.MethodGet, "/auth/workspaces", "")
-	var list []struct {
-		ID      string `json:"id"`
-		Current bool   `json:"current"`
+	_, body := session(t, s, carol, http.MethodPost, "/graphql", `{"query":"{ workspaces { id current } }"}`)
+	var list struct {
+		Data struct {
+			Workspaces []struct {
+				ID string `json:"id"`
+			} `json:"workspaces"`
+		} `json:"data"`
 	}
 	_ = json.Unmarshal([]byte(body), &list)
-	if status != http.StatusOK || len(list) != 2 {
-		t.Fatalf("workspaces: %d %s", status, body)
+	if len(list.Data.Workspaces) != 2 {
+		t.Fatalf("workspaces: %s", body)
 	}
-	if status, _ := session(t, s, carol, http.MethodPost, "/auth/workspace", `{"workspaceId":"`+home.Organization+`"}`); status != http.StatusNoContent {
-		t.Fatalf("switch: %d", status)
+	if _, body := session(t, s, carol, http.MethodPost, "/graphql", `{"query":"mutation { workspaceSwitch(id: \"`+home.Organization+`\") { success } }"}`); !strings.Contains(body, `"success":true`) {
+		t.Fatalf("switch: %s", body)
 	}
 	if got := viewer(t, s, carol); got.Organization != home.Organization {
 		t.Fatalf("after switch: %+v", got)
@@ -259,7 +262,7 @@ func TestInvitesAndSwitching(t *testing.T) {
 	if got := viewer(t, s, again); got.Organization != own.Organization {
 		t.Fatalf("an invite must not move where a person lands: %+v", got)
 	}
-	if status, _ := session(t, s, bob, http.MethodPost, "/auth/workspace", `{"workspaceId":"`+own.Organization+`"}`); status != http.StatusForbidden {
-		t.Fatalf("switching into a stranger's workspace: %d", status)
+	if _, body := session(t, s, bob, http.MethodPost, "/graphql", `{"query":"mutation { workspaceSwitch(id: \"`+own.Organization+`\") { success } }"}`); !strings.Contains(body, workspaces.ErrNotMember.Error()) {
+		t.Fatalf("switching into a stranger's workspace: %s", body)
 	}
 }

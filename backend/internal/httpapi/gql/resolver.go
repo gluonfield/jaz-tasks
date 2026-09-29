@@ -5,15 +5,18 @@ import (
 	"strings"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
 	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
 // Resolver works through the request's tracker scope, which carries the actor
-// and memoizes the workspace catalog; invites go to workspace membership.
+// and memoizes the workspace catalog; invites and switching go to workspace
+// membership, and switching re-points the actor's credential.
 type Resolver struct {
 	members *workspaces.Service
+	keys    *auth.Service
 }
 
 type (

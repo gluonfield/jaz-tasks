@@ -95,7 +95,9 @@ type AuthStore interface {
 	// RevokeOAuthToken revokes a token; a refresh token takes every token of
 	// its grant with it (RFC 7009).
 	RevokeOAuthToken(ctx context.Context, tokenHash []byte) error
-	UserByAccessToken(ctx context.Context, tokenHash []byte) (User, error)
+	// UserByAccessToken also returns the grant the token belongs to.
+	UserByAccessToken(ctx context.Context, tokenHash []byte) (User, string, error)
+	UpdateOAuthGrantUser(ctx context.Context, grantID, userID string) error
 	OAuthGrants(ctx context.Context, userID string) ([]OAuthGrantSummary, error)
 	RevokeOAuthGrant(ctx context.Context, userID, grantID string) error
 }

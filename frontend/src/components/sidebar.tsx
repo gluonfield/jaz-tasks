@@ -30,12 +30,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { switchWorkspace, useWorkspaces } from '@/lib/account'
+import { useSwitchWorkspace, useWorkspaces } from '@/lib/account'
 import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
 import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { MyIssuesIcon, TeamBadge, WorkspaceBadge } from './icons'
 import { Kbd } from './kbd'
@@ -169,7 +170,8 @@ function IconButton({
 }
 
 function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; admin?: boolean }) {
-  const { data: workspaces = [] } = useWorkspaces({ enabled: !embedded() })
+  const { data: workspaces = [] } = useWorkspaces()
+  const switchTo = useSwitchWorkspace()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
@@ -180,7 +182,10 @@ function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; a
       <DropdownMenuContent align="start" className="w-60">
         {email && <DropdownMenuLabel className="truncate text-[12px] font-normal text-ink-3">{email}</DropdownMenuLabel>}
         {workspaces.map((workspace) => (
-          <DropdownMenuItem key={workspace.id} onSelect={() => !workspace.current && switchWorkspace(workspace.id)}>
+          <DropdownMenuItem
+            key={workspace.id}
+            onSelect={() => !workspace.current && switchTo.mutate(workspace.id, { onError: (error) => toast.error(error.message) })}
+          >
             <WorkspaceBadge name={workspace.name} className="size-4 rounded-[4px] text-[9px]" />
             <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
             {workspace.current && <Check className="text-ink-2" />}

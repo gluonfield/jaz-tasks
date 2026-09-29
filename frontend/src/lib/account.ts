@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { rest } from './api'
+import { useNavigate } from '@tanstack/react-router'
+import { gql, rest } from './api'
 
 export type APIKey = { id: string; label: string; hint: string; createdAt: string }
 export type Grant = { id: string; clientName: string; createdAt: string; lastUsedAt: string }
@@ -37,13 +38,26 @@ export function useRevokeGrant() {
   })
 }
 
-export function useWorkspaces({ enabled = true } = {}) {
-  return useQuery({ queryKey: ['workspaces'], queryFn: () => rest<Workspace[]>('GET', '/auth/workspaces'), enabled })
+// useWorkspaces lists the viewer's workspaces; asking also joins any they
+// were invited to.
+export function useWorkspaces() {
+  return useQuery({
+    queryKey: ['workspaces'],
+    queryFn: async () => (await gql<{ workspaces: Workspace[] }>('{ workspaces { id name urlKey current } }')).workspaces,
+  })
 }
 
-// switchWorkspace points the session at another workspace and reloads, so no
-// data from the previous workspace survives in memory.
-export async function switchWorkspace(id: string) {
-  await rest('POST', '/auth/workspace', { workspaceId: id })
-  window.location.assign('/')
+// useSwitchWorkspace moves this session, or Jaz's connection when embedded,
+// to another workspace, then drops every cached query and starts from home so
+// nothing from the previous workspace survives.
+export function useSwitchWorkspace() {
+  const client = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: (id: string) => gql('mutation ($id: String!) { workspaceSwitch(id: $id) { success } }', { id }),
+    onSuccess: () => {
+      void client.resetQueries()
+      void navigate({ to: '/' })
+    },
+  })
 }

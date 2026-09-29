@@ -16,10 +16,16 @@ import (
 
 var ErrUnauthenticated = errors.New("authentication required: sign in, or send an OAuth access token or API key in the Authorization header")
 
+var ErrFixedWorkspace = errors.New("an API key belongs to one workspace; create one in the workspace you want to use")
+
 // Actor is the authenticated user and the workspace every request is scoped to.
 type Actor struct {
 	UserID      string
 	WorkspaceID string
+	// session or grant is the credential behind the request, which switching
+	// workspace re-points; an API key sets neither and keeps its workspace.
+	session string
+	grant   string
 }
 
 func actorOf(user storage.User) Actor {
@@ -56,10 +62,11 @@ func (s *Service) Authenticate(ctx context.Context, header string) (Actor, error
 		token = strings.TrimSpace(value)
 	}
 	var user storage.User
+	var grant string
 	var err error
 	switch {
 	case strings.HasPrefix(token, accessTokenPrefix):
-		user, err = s.store.UserByAccessToken(ctx, hash(token))
+		user, grant, err = s.store.UserByAccessToken(ctx, hash(token))
 	case token != "":
 		user, err = s.store.UserByAPIKey(ctx, hash(token))
 	default:
@@ -68,7 +75,30 @@ func (s *Service) Authenticate(ctx context.Context, header string) (Actor, error
 	if errors.Is(err, storage.ErrNotFound) {
 		return Actor{}, ErrUnauthenticated
 	}
-	return actorOf(user), err
+	actor := actorOf(user)
+	actor.grant = grant
+	return actor, err
+}
+
+// Principal names who holds the credential and stays the same when it switches
+// workspace: the OAuth grant, or the user for an API key.
+func (a Actor) Principal() string {
+	if a.grant != "" {
+		return "grant:" + a.grant
+	}
+	return a.UserID
+}
+
+// Switch points the session or OAuth grant behind actor at another of the
+// person's users, so its later requests act in that user's workspace.
+func (s *Service) Switch(ctx context.Context, actor Actor, userID string) error {
+	switch {
+	case actor.grant != "":
+		return s.store.UpdateOAuthGrantUser(ctx, actor.grant, userID)
+	case actor.session != "":
+		return s.store.UpdateSessionUser(ctx, []byte(actor.session), userID)
+	}
+	return ErrFixedWorkspace
 }
 
 func secret(prefix string) string {

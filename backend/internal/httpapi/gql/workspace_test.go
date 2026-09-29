@@ -2,10 +2,15 @@ package gql_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 )
 
 // memberKey is an API key for jonas, a seeded member who is not an admin.
@@ -94,4 +99,79 @@ func TestOrganizationInvites(t *testing.T) {
 		t.Fatalf("after delete: %+v", out.Data)
 	}
 	rejected(t, c, map[string]string{remove: c.key})
+}
+
+// signUp signs a new person in, giving them a workspace of their own.
+func signUp(t *testing.T, c *client, name string) storage.User {
+	t.Helper()
+	user, err := workspaces.NewService(c.store, workspaces.Config{}).SignIn(context.Background(), auth.Identity{
+		Issuer: "test", Subject: name, Email: name + "@example.com", EmailVerified: true, Name: name,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return user
+}
+
+// connect runs the OAuth flow an MCP host such as Jaz completes, returning
+// the Authorization header its connection sends.
+func connect(t *testing.T, c *client, user storage.User) string {
+	t.Helper()
+	ctx := context.Background()
+	keys := auth.NewService(c.store, auth.Config{PublicURL: "http://tasks.test"})
+	app, err := keys.RegisterClient(ctx, "Jaz", []string{"http://localhost/cb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := strings.Repeat("verifier", 8)
+	sum := sha256.Sum256([]byte(verifier))
+	target, err := keys.Approve(ctx, auth.Actor{UserID: user.ID, WorkspaceID: user.WorkspaceID}, auth.AuthorizeRequest{
+		ResponseType: "code", ClientID: app.ID, RedirectURI: "http://localhost/cb",
+		CodeChallenge: base64.RawURLEncoding.EncodeToString(sum[:]), CodeChallengeMethod: "S256",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redirect, _ := url.Parse(target)
+	tokens, err := keys.Token(ctx, auth.TokenRequest{
+		GrantType: "authorization_code", ClientID: app.ID, Code: redirect.Query().Get("code"),
+		RedirectURI: "http://localhost/cb", CodeVerifier: verifier,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return "Bearer " + tokens.AccessToken
+}
+
+// A person invited into another workspace sees it through their existing
+// connection and can move that connection there, as Jaz's Tasks tab does.
+func TestSwitchWorkspaceMovesTheConnection(t *testing.T) {
+	c := newClient(t)
+	_, out := c.do(`{ organization { id } }`, c.key)
+	team, _ := get(out.Data, "organization.id").(string)
+	pat := signUp(t, c, "pat")
+	stranger := signUp(t, c, "sam")
+	jaz := connect(t, c, pat)
+	c.do(`mutation { organizationInviteCreate(input: { email: "pat@example.com" }) { success } }`, c.key)
+
+	_, out = c.do(`{ workspaces { id current } }`, jaz)
+	current := map[any]any{}
+	for _, w := range get(out.Data, "workspaces").([]any) {
+		current[w.(map[string]any)["id"]] = w.(map[string]any)["current"]
+	}
+	if len(current) != 2 || current[pat.WorkspaceID] != true || current[team] != false {
+		t.Fatalf("workspaces should include the one pat was invited to: %+v %+v", out.Data, out.Errors)
+	}
+	if _, out = c.do(`mutation { workspaceSwitch(id: "`+team+`") { success } }`, jaz); get(out.Data, "workspaceSwitch.success") != true {
+		t.Fatalf("switch: %+v", out.Errors)
+	}
+	_, out = c.do(`{ organization { id } viewer { email } }`, jaz)
+	if get(out.Data, "organization.id") != team || get(out.Data, "viewer.email") != "pat@example.com" {
+		t.Fatalf("the connection should now act in the team workspace: %+v %+v", out.Data, out.Errors)
+	}
+
+	rejected(t, c, map[string]string{
+		`mutation { workspaceSwitch(id: "` + stranger.WorkspaceID + `") { success } }`: jaz,
+		`mutation { workspaceSwitch(id: "` + team + `") { success } }`:                 c.key,
+	})
 }

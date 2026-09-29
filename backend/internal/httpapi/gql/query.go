@@ -20,6 +20,19 @@ func (r queryResolver) OrganizationInvites(ctx context.Context, after *string, f
 	return paged(invites, err, after, first)
 }
 
+func (r queryResolver) Workspaces(ctx context.Context) ([]Membership, error) {
+	actor := scope(ctx).Actor()
+	memberships, err := r.members.Memberships(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Membership, len(memberships))
+	for i, m := range memberships {
+		out[i] = Membership{ID: m.WorkspaceID, Name: m.Name, URLKey: m.URLKey, Current: m.UserID == actor.UserID}
+	}
+	return out, nil
+}
+
 func (queryResolver) User(ctx context.Context, id string) (*storage.User, error) {
 	return ref(scope(ctx).User(ctx, id))
 }

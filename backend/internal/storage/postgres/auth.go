@@ -132,8 +132,13 @@ func (s *Store) RevokeOAuthToken(ctx context.Context, tokenHash []byte) error {
 	return mapError(s.auth.RevokeTokenFamily(ctx, tokenHash))
 }
 
-func (s *Store) UserByAccessToken(ctx context.Context, tokenHash []byte) (storage.User, error) {
-	return one(toAuthUser)(s.auth.UserByAccessToken(ctx, tokenHash))
+func (s *Store) UserByAccessToken(ctx context.Context, tokenHash []byte) (storage.User, string, error) {
+	row, err := s.auth.UserByAccessToken(ctx, tokenHash)
+	return storage.User(row.User), row.GrantID, mapError(err)
+}
+
+func (s *Store) UpdateOAuthGrantUser(ctx context.Context, grantID, userID string) error {
+	return affected(s.auth.UpdateOAuthGrantUser(ctx, authdb.UpdateOAuthGrantUserParams{ID: grantID, UserID: userID}))
 }
 
 func (s *Store) OAuthGrants(ctx context.Context, userID string) ([]storage.OAuthGrantSummary, error) {

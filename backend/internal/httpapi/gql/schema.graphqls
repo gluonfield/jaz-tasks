@@ -23,6 +23,8 @@ type Query {
   viewer: User!
   organization: Organization!
   organizationInvites(after: String, first: Int): OrganizationInviteConnection!
+  """Workspaces the viewer belongs to, joining any they were invited to. Not in Linear's API."""
+  workspaces: [Membership!]!
   user(id: String!): User!
   users(after: String, filter: UserFilter, first: Int, includeDisabled: Boolean): UserConnection!
   team(id: String!): Team!
@@ -69,6 +71,8 @@ type Mutation {
   commentDelete(id: String!): DeletePayload!
   organizationInviteCreate(input: OrganizationInviteCreateInput!): OrganizationInvitePayload!
   organizationInviteDelete(id: String!): DeletePayload!
+  """Moves this session or OAuth connection to another of the viewer's workspaces. Not in Linear's API."""
+  workspaceSwitch(id: String!): WorkspaceSwitchPayload!
   organizationUpdate(input: OrganizationUpdateInput!): OrganizationPayload!
   teamCreate(input: TeamCreateInput!): TeamPayload!
   teamUpdate(id: String!, input: TeamUpdateInput!): TeamPayload!
@@ -785,4 +789,15 @@ input CycleCreateInput {
   name: String
   startsAt: DateTime!
   teamId: String!
+}
+
+type Membership {
+  current: Boolean!
+  id: ID!
+  name: String!
+  urlKey: String!
+}
+
+type WorkspaceSwitchPayload {
+  success: Boolean!
 }
