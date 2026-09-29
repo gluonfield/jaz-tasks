@@ -5,18 +5,14 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
-	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
-	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
@@ -30,11 +26,9 @@ type Config struct {
 	DatabaseURL string
 	PublicURL   string
 	WebDir      string
-	SeedAPIKey  string
 	OIDC        auth.OIDCConfig
 	Auth        auth.Config
 	Workspaces  workspaces.Config
-	DevLogin    authapi.DevLogin
 }
 
 // ParseConfig reads flags, each defaulting to an environment variable, and
@@ -50,7 +44,6 @@ func ParseConfig(args []string) (Config, error) {
 		return cfg, err
 	}
 	cfg.PublicURL = strings.TrimRight(strings.TrimSpace(cfg.PublicURL), "/")
-	cfg.SeedAPIKey = strings.TrimSpace(os.Getenv("SEED_API_KEY"))
 	cfg.OIDC = auth.OIDCConfig{
 		Issuer:       strings.TrimSpace(os.Getenv("OIDC_ISSUER")),
 		ClientID:     strings.TrimSpace(os.Getenv("OIDC_CLIENT_ID")),
@@ -62,20 +55,7 @@ func ParseConfig(args []string) (Config, error) {
 		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
 		AllowedEmails:       list(os.Getenv("ALLOWED_EMAILS")),
 	}
-	// Development login only ever applies without OIDC, and never off localhost.
-	if os.Getenv("DEV_LOGIN") == "1" && cfg.OIDC.Issuer == "" {
-		public, err := url.Parse(cfg.PublicURL)
-		if err != nil || !loopback(public.Hostname()) {
-			return cfg, fmt.Errorf("DEV_LOGIN=1 needs a localhost PUBLIC_URL, got %q; configure OIDC and unset DEV_LOGIN", cfg.PublicURL)
-		}
-		cfg.DevLogin = true
-	}
 	return cfg, nil
-}
-
-func loopback(host string) bool {
-	ip := net.ParseIP(host)
-	return host == "localhost" || ip != nil && ip.IsLoopback()
 }
 
 func list(raw string) []string {
@@ -97,7 +77,7 @@ func env(key, fallback string) string {
 
 func Options(cfg Config) fx.Option {
 	return fx.Options(
-		fx.Supply(cfg, cfg.Auth, cfg.Workspaces, cfg.OIDC, cfg.DevLogin, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
+		fx.Supply(cfg, cfg.Auth, cfg.Workspaces, cfg.OIDC, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
 		fx.Provide(
 			NewLogger,
 			fx.Annotate(OpenStore, fx.As(fx.Self()), fx.As(new(storage.TrackerStore)), fx.As(new(storage.AuthStore)), fx.As(new(storage.WorkspaceStore))),
@@ -107,7 +87,7 @@ func Options(cfg Config) fx.Option {
 			tracker.NewService,
 		),
 		HTTPModule(),
-		fx.Invoke(Seed, StartHTTP),
+		fx.Invoke(StartHTTP),
 	)
 }
 
@@ -128,24 +108,6 @@ func OpenStore(lc fx.Lifecycle, cfg Config) (*postgres.Store, error) {
 	}
 	lc.Append(fx.StopHook(store.Close))
 	return store, nil
-}
-
-// Seed creates the demo workspace on an empty database for development
-// login; real sign-ins always get workspaces of their own.
-func Seed(store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, cfg Config, logger *log.Logger) error {
-	if !cfg.DevLogin {
-		return nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	_, seeded, err := seed.Run(ctx, store, keys, svc, cfg.SeedAPIKey)
-	if err != nil {
-		return fmt.Errorf("seed: %w", err)
-	}
-	if seeded {
-		logger.Info("seeded the demo workspace; sign in with development login, or mint an API key with `server apikey mira@jaz.local`")
-	}
-	return nil
 }
 
 func StartHTTP(lc fx.Lifecycle, handler http.Handler, cfg Config, logger *log.Logger) {

@@ -21,9 +21,9 @@ import (
 // The official MCP client discovers the authorization server from a 401,
 // registers itself, runs PKCE through the consent screen and calls a tool.
 func TestMCPClientAuthorizes(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{})
 	b := browser()
-	s.devSignIn(t, b)
+	s.ownerSession(t, b)
 	const redirect = "http://127.0.0.1:9999/callback"
 	handler, err := mcpauth.NewAuthorizationCodeHandler(&mcpauth.AuthorizationCodeHandlerConfig{
 		DynamicClientRegistrationConfig: &mcpauth.DynamicClientRegistrationConfig{
@@ -85,7 +85,7 @@ func graphqlStatus(t *testing.T, base, authorization string) (int, http.Header) 
 }
 
 func TestTokenLifecycle(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{})
 
 	status, header := graphqlStatus(t, s.url, "")
 	if status != http.StatusUnauthorized || header.Get("WWW-Authenticate") != `Bearer resource_metadata="`+s.url+`/.well-known/oauth-protected-resource/graphql"` {
@@ -119,7 +119,7 @@ func TestTokenLifecycle(t *testing.T) {
 	}
 
 	b := browser()
-	s.devSignIn(t, b)
+	s.ownerSession(t, b)
 	verifier := "a-very-long-and-random-code-verifier-for-this-test-0123456789"
 	sum := sha256.Sum256([]byte(verifier))
 	authorize := s.url + "/oauth/authorize?" + url.Values{
@@ -199,7 +199,7 @@ func TestTokenLifecycle(t *testing.T) {
 }
 
 func TestAuthorizeRejectsUnsafeRequests(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{})
 	b := browser()
 	cases := map[string]struct {
 		query  url.Values
@@ -255,7 +255,8 @@ func getJSON(t *testing.T, endpoint string, v any) {
 
 // Sign-in redirects stay on this site whatever return_to says.
 func TestReturnToStaysOnSite(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	iss := newIssuer(t)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{})
 	for raw, want := range map[string]string{
 		"/team/ENG/all?x=1": "/team/ENG/all?x=1",
 		"/\t/evil.test":     "/",
@@ -265,10 +266,7 @@ func TestReturnToStaysOnSite(t *testing.T) {
 		"evil.test":         "/",
 	} {
 		raw = strings.ReplaceAll(raw, "\\t", "\t")
-		res, err := browser().PostForm(s.url+"/auth/dev-login", url.Values{"return_to": {raw}})
-		if err != nil {
-			t.Fatal(err)
-		}
+		res := iss.signInTo(t, s, browser(), "ada@example.com", raw)
 		res.Body.Close()
 		if got := res.Header.Get("Location"); got != want {
 			t.Errorf("return_to %q redirected to %q", raw, got)
@@ -279,7 +277,7 @@ func TestReturnToStaysOnSite(t *testing.T) {
 // Granting access is a person's decision: consent needs the browser session,
 // never a bearer token or API key.
 func TestConsentNeedsBrowserSession(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{})
 	res, _ := http.Post(s.url+"/oauth/register", "application/json", strings.NewReader(`{"redirect_uris":["http://127.0.0.1:9/cb"]}`))
 	var client struct {
 		ClientID string `json:"client_id"`
@@ -311,7 +309,7 @@ func TestConsentNeedsBrowserSession(t *testing.T) {
 	}
 	query.Set("resource", "http://evil.test/mcp")
 	b := browser()
-	s.devSignIn(t, b)
+	s.ownerSession(t, b)
 	res, _ = b.Get(s.url + "/oauth/authorize?" + query.Encode())
 	res.Body.Close()
 	if location, _ := url.Parse(res.Header.Get("Location")); location.Query().Get("error") != "invalid_target" {
@@ -321,9 +319,9 @@ func TestConsentNeedsBrowserSession(t *testing.T) {
 
 // Cookie-authenticated changes accept only JSON, which no cross-site form can send.
 func TestSessionChangesNeedJSON(t *testing.T) {
-	s := start(t, auth.OIDCConfig{}, workspaces.Config{}, true)
+	s := start(t, auth.OIDCConfig{}, workspaces.Config{})
 	b := browser()
-	s.devSignIn(t, b)
+	s.ownerSession(t, b)
 	for _, path := range []string{"/auth/api-keys", "/auth/logout"} {
 		req, _ := http.NewRequest(http.MethodPost, s.url+path, strings.NewReader(`{"label":"x"}`))
 		req.Header.Set("Content-Type", "text/plain")

@@ -20,11 +20,6 @@ type Identity struct {
 	Picture       string
 }
 
-// DevUser is the seeded owner that development login signs in as.
-func (s *Service) DevUser(ctx context.Context) (storage.User, error) {
-	return s.store.DevUser(ctx)
-}
-
 // CreateSession starts a browser session and returns its cookie value.
 func (s *Service) CreateSession(ctx context.Context, userID string) (string, time.Time, error) {
 	token := secret("")

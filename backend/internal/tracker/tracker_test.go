@@ -17,7 +17,7 @@ func seeded(t *testing.T) (*tracker.Scope, context.Context) {
 	ctx := context.Background()
 	store := postgrestest.New(t)
 	svc := tracker.NewService(store, "http://tasks.test")
-	result, ok, err := seed.Run(ctx, store, auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"}), svc, "")
+	result, ok, err := seed.Run(ctx, store, auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"}), svc)
 	if err != nil || !ok {
 		t.Fatalf("seed: ok=%v err=%v", ok, err)
 	}

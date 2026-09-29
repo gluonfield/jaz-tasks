@@ -63,7 +63,18 @@ func newIssuer(t *testing.T) *issuer {
 // as the given person, returning the callback response.
 func (iss *issuer) signIn(t *testing.T, s stack, b *http.Client, email string, verified bool) *http.Response {
 	t.Helper()
-	res, err := b.Get(s.url + "/auth/login?return_to=/team/ENG/all")
+	return iss.sign(t, s, b, email, verified, "/team/ENG/all")
+}
+
+// signInTo signs a verified person in, asking to return to returnTo.
+func (iss *issuer) signInTo(t *testing.T, s stack, b *http.Client, email, returnTo string) *http.Response {
+	t.Helper()
+	return iss.sign(t, s, b, email, true, returnTo)
+}
+
+func (iss *issuer) sign(t *testing.T, s stack, b *http.Client, email string, verified bool, returnTo string) *http.Response {
+	t.Helper()
+	res, err := b.Get(s.url + "/auth/login?" + url.Values{"return_to": {returnTo}}.Encode())
 	if err != nil || res.StatusCode != http.StatusFound {
 		t.Fatalf("login: %v %v", res.StatusCode, err)
 	}
@@ -149,7 +160,7 @@ func session(t *testing.T, s stack, b *http.Client, method, path, body string) (
 // demo workspace is never where a real sign-in lands.
 func TestOIDCSignUpGivesEachPersonAWorkspace(t *testing.T) {
 	iss := newIssuer(t)
-	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1", ClientSecret: "secret"}, workspaces.Config{}, false)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1", ClientSecret: "secret"}, workspaces.Config{})
 
 	ada := browser()
 	res := iss.signIn(t, s, ada, "ada@example.com", true)
@@ -196,14 +207,11 @@ func TestOIDCSignUpGivesEachPersonAWorkspace(t *testing.T) {
 	if got := viewer(t, s, ada); got.Email != "" {
 		t.Fatalf("session survived logout: %+v", got)
 	}
-	if res, _ := http.PostForm(s.url+"/auth/dev-login", nil); res.StatusCode != http.StatusNotFound {
-		t.Fatalf("dev login must be off with OIDC: %d", res.StatusCode)
-	}
 }
 
 func TestOIDCSignInAllowlist(t *testing.T) {
 	iss := newIssuer(t)
-	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{AllowedEmailDomains: []string{"ml.ink"}, AllowedEmails: []string{"guest@example.com"}}, false)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{AllowedEmailDomains: []string{"ml.ink"}, AllowedEmails: []string{"guest@example.com"}})
 	for email, allowed := range map[string]bool{"ana@ml.ink": true, "guest@example.com": true, "other@example.com": false} {
 		b := browser()
 		res := iss.signIn(t, s, b, email, true)
@@ -218,7 +226,7 @@ func TestOIDCSignInAllowlist(t *testing.T) {
 // in the inviting workspace, signed-in people see it in their switcher.
 func TestInvitesAndSwitching(t *testing.T) {
 	iss := newIssuer(t)
-	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{}, false)
+	s := start(t, auth.OIDCConfig{Issuer: iss.URL, ClientID: "client-1"}, workspaces.Config{})
 	owner := browser()
 	iss.signIn(t, s, owner, "owner@example.com", true).Body.Close()
 	home := viewer(t, s, owner)

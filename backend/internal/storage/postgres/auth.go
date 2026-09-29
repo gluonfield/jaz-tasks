@@ -49,10 +49,6 @@ func (s *Store) UserByID(ctx context.Context, id string) (storage.User, error) {
 	return one(toAuthUser)(s.auth.GetUser(ctx, id))
 }
 
-func (s *Store) DevUser(ctx context.Context) (storage.User, error) {
-	return one(toAuthUser)(s.auth.DevUser(ctx))
-}
-
 func (s *Store) CreateSession(ctx context.Context, tokenHash []byte, userID string, expiresAt time.Time) error {
 	return mapError(s.auth.CreateSession(ctx, authdb.CreateSessionParams{TokenHash: tokenHash, UserID: userID, ExpiresAt: expiresAt}))
 }

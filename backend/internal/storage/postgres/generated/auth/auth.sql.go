@@ -162,32 +162,6 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash []byte) error {
 	return err
 }
 
-const devUser = `-- name: DevUser :one
-SELECT users.id, users.workspace_id, users.name, users.display_name, users.email, users.avatar_url, users.admin, users.active, users.created_at, users.updated_at FROM users
-JOIN workspaces ON workspaces.id = users.workspace_id
-WHERE users.admin AND users.active
-ORDER BY workspaces.created_at, users.created_at
-LIMIT 1
-`
-
-func (q *Queries) DevUser(ctx context.Context) (User, error) {
-	row := q.db.QueryRow(ctx, devUser)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.Name,
-		&i.DisplayName,
-		&i.Email,
-		&i.AvatarURL,
-		&i.Admin,
-		&i.Active,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getUser = `-- name: GetUser :one
 SELECT id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at FROM users WHERE id = $1
 `

@@ -26,31 +26,33 @@ import (
 type stack struct {
 	url    string
 	apiKey string
+	keys   *auth.Service
+	owner  string
 }
 
 // start runs the whole HTTP stack on a loopback URL that doubles as PUBLIC_URL.
-func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config, devLogin bool) stack {
+func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config) stack {
 	t.Helper()
 	srv := httptest.NewUnstartedServer(nil)
 	base := "http://" + srv.Listener.Addr().String()
 	store := postgrestest.New(t)
 	keys := auth.NewService(store, auth.Config{PublicURL: base})
 	svc := tracker.NewService(store, tracker.PublicURL(base))
-	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
+	result, _, err := seed.Run(context.Background(), store, keys, svc)
 	if err != nil {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
 	oidc.RedirectURL = base + "/auth/callback"
 	people := workspaces.NewService(store, members)
-	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(oidc), authapi.DevLogin(devLogin), logger)
+	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(oidc), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv.Config.Handler = server.New(authn, gql.NewHandler(svc, people, keys, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, people, keys, logger)), "", logger)
 	srv.Start()
 	t.Cleanup(srv.Close)
-	return stack{url: base, apiKey: result.APIKey}
+	return stack{url: base, apiKey: result.APIKey, keys: keys, owner: result.Actor.UserID}
 }
 
 // browser keeps cookies and hands redirects back instead of following them.
@@ -59,13 +61,15 @@ func browser() *http.Client {
 	return &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 
-func (s stack) devSignIn(t *testing.T, b *http.Client) {
+// ownerSession signs the browser in as the seeded workspace's owner.
+func (s stack) ownerSession(t *testing.T, b *http.Client) {
 	t.Helper()
-	res, err := b.PostForm(s.url+"/auth/dev-login", url.Values{"return_to": {"/"}})
-	if err != nil || res.StatusCode != http.StatusSeeOther {
-		t.Fatalf("dev login: %v %v", res.StatusCode, err)
+	token, _, err := s.keys.CreateSession(context.Background(), s.owner)
+	if err != nil {
+		t.Fatal(err)
 	}
-	res.Body.Close()
+	base, _ := url.Parse(s.url)
+	b.Jar.SetCookies(base, []*http.Cookie{{Name: "jt_session", Value: token, Path: "/"}})
 }
 
 var hiddenInput = regexp.MustCompile(`<input type="hidden" name="([^"]+)" value="([^"]*)">`)

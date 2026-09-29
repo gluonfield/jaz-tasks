@@ -73,8 +73,6 @@ type AuthStore interface {
 	UserByID(ctx context.Context, id string) (User, error)
 	Workspace(ctx context.Context, id string) (Workspace, error)
 
-	DevUser(ctx context.Context) (User, error)
-
 	CreateSession(ctx context.Context, tokenHash []byte, userID string, expiresAt time.Time) error
 	UpdateSessionUser(ctx context.Context, tokenHash []byte, userID string) error
 	UserBySession(ctx context.Context, tokenHash []byte) (User, error)

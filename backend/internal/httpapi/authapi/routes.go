@@ -19,7 +19,6 @@ func (h *Handler) routes() {
 	h.mux.HandleFunc("GET /auth/config", h.config)
 	h.mux.HandleFunc("GET /auth/login", h.login)
 	h.mux.HandleFunc("GET /auth/callback", h.callback)
-	h.mux.HandleFunc("POST /auth/dev-login", h.devSignIn)
 	h.mux.HandleFunc("POST /auth/logout", h.logout)
 	h.mux.HandleFunc("GET /auth/api-keys", h.listKeys)
 	h.mux.HandleFunc("POST /auth/api-keys", h.createKey)
@@ -44,7 +43,7 @@ func (h *Handler) routes() {
 }
 
 func (h *Handler) config(w http.ResponseWriter, _ *http.Request) {
-	out := map[string]any{"devLogin": h.devLogin}
+	out := map[string]any{}
 	if h.oidc.Enabled() {
 		out["provider"] = h.oidc.Name()
 	}
@@ -111,21 +110,6 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 	}
 	if h.startSession(w, r, user) {
 		http.Redirect(w, r, state.ReturnTo, http.StatusFound)
-	}
-}
-
-func (h *Handler) devSignIn(w http.ResponseWriter, r *http.Request) {
-	if !h.devLogin {
-		http.NotFound(w, r)
-		return
-	}
-	user, err := h.svc.DevUser(r.Context())
-	if err != nil {
-		h.fail(w, err)
-		return
-	}
-	if h.startSession(w, r, user) {
-		http.Redirect(w, r, returnTo(r.FormValue("return_to")), http.StatusSeeOther)
 	}
 }
 

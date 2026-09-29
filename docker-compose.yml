@@ -25,8 +25,6 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
       ALLOWED_EMAIL_DOMAINS: ${ALLOWED_EMAIL_DOMAINS:-}
       ALLOWED_EMAILS: ${ALLOWED_EMAILS:-}
-      DEV_LOGIN: ${DEV_LOGIN:-1}
-      SEED_API_KEY: ${SEED_API_KEY:-}
     ports:
       - "7400:7400"
     depends_on:

@@ -21,29 +21,21 @@ import (
 
 const sessionCookie = "jt_session"
 
-// DevLogin enables one-click sign-in as the seeded owner; app.ParseConfig
-// only allows it on a loopback PUBLIC_URL without OIDC.
-type DevLogin bool
-
 type Handler struct {
-	svc      *auth.Service
-	members  *workspaces.Service
-	oidc     *auth.OIDC
-	devLogin bool
-	public   *url.URL
-	logger   *log.Logger
-	mux      *http.ServeMux
+	svc     *auth.Service
+	members *workspaces.Service
+	oidc    *auth.OIDC
+	public  *url.URL
+	logger  *log.Logger
+	mux     *http.ServeMux
 }
 
-func NewHandler(svc *auth.Service, members *workspaces.Service, oidc *auth.OIDC, devLogin DevLogin, logger *log.Logger) (*Handler, error) {
+func NewHandler(svc *auth.Service, members *workspaces.Service, oidc *auth.OIDC, logger *log.Logger) (*Handler, error) {
 	public, err := url.Parse(svc.Issuer())
 	if err != nil {
 		return nil, err
 	}
-	if devLogin {
-		logger.Warn("DEV_LOGIN is on: anyone who can reach this server signs in as the seeded owner. Never enable it in production.")
-	}
-	h := &Handler{svc: svc, members: members, oidc: oidc, devLogin: bool(devLogin), public: public, logger: logger.WithPrefix("auth"), mux: http.NewServeMux()}
+	h := &Handler{svc: svc, members: members, oidc: oidc, public: public, logger: logger.WithPrefix("auth"), mux: http.NewServeMux()}
 	h.routes()
 	return h, nil
 }

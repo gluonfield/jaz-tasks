@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { KeyRound } from 'lucide-react'
 
-type AuthConfig = { provider?: string; devLogin: boolean }
+type AuthConfig = { provider?: string }
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search): { return_to?: string; error?: string } => ({
@@ -36,19 +36,7 @@ function Login() {
             Continue with {config.provider}
           </a>
         )}
-        {config?.devLogin && (
-          <form method="post" action="/auth/dev-login" className="mt-2">
-            <input type="hidden" name="return_to" value={returnTo} />
-            <button
-              type="submit"
-              className="flex h-10 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-primary text-[13.5px] font-medium text-on-primary shadow-xs outline-none transition-colors hover:bg-primary-strong focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Continue as the demo owner
-            </button>
-            <p className="mt-3 text-[12px] text-ink-3">Development login is on. Configure OIDC before deploying.</p>
-          </form>
-        )}
-        {config && !config.provider && !config.devLogin && (
+        {config && !config.provider && (
           <p className="text-[12.5px] text-ink-3">Sign-in is not configured. Set OIDC_ISSUER, OIDC_CLIENT_ID and OIDC_CLIENT_SECRET on the server.</p>
         )}
       </div>

@@ -1,4 +1,4 @@
-// Package seed creates the demo workspace a fresh deployment starts with.
+// Package seed creates the demo workspace tests run against.
 package seed
 
 import (
@@ -18,8 +18,7 @@ type Result struct {
 }
 
 // Run seeds an empty database and reports ok=false when data already exists.
-// An empty apiKey generates one.
-func Run(ctx context.Context, store storage.TrackerStore, keys *auth.Service, svc *tracker.Service, apiKey string) (Result, bool, error) {
+func Run(ctx context.Context, store storage.TrackerStore, keys *auth.Service, svc *tracker.Service) (Result, bool, error) {
 	count, err := store.CountWorkspaces(ctx)
 	if err != nil || count > 0 {
 		return Result{}, false, err
@@ -43,7 +42,8 @@ func Run(ctx context.Context, store storage.TrackerStore, keys *auth.Service, sv
 		users[u.handle] = created
 	}
 	actor := auth.Actor{UserID: users["mira"].ID, WorkspaceID: workspace.ID}
-	if apiKey, _, err = keys.CreateKey(ctx, actor.UserID, "Seeded development key", apiKey); err != nil {
+	apiKey, _, err := keys.CreateKey(ctx, actor.UserID, "Seeded development key", "")
+	if err != nil {
 		return Result{}, false, err
 	}
 	if err := populate(ctx, svc, workspace.ID, users, time.Now()); err != nil {

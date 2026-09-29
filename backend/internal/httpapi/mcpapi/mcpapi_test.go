@@ -49,7 +49,7 @@ func serve(t *testing.T) env {
 	store := postgrestest.New(t)
 	keys := auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"})
 	svc := tracker.NewService(store, "http://tasks.test")
-	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
+	result, _, err := seed.Run(context.Background(), store, keys, svc)
 	if err != nil {
 		t.Fatal(err)
 	}

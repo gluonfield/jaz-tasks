@@ -15,13 +15,6 @@ DELETE FROM api_keys WHERE user_id = $1 AND id = $2;
 -- name: UsersByEmail :many
 SELECT * FROM users WHERE lower(email) = lower($1) AND active;
 
--- name: DevUser :one
-SELECT users.* FROM users
-JOIN workspaces ON workspaces.id = users.workspace_id
-WHERE users.admin AND users.active
-ORDER BY workspaces.created_at, users.created_at
-LIMIT 1;
-
 -- name: CreateAuthUser :one
 INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin)
 VALUES ($1, $2, $3, $4, $5, $6)

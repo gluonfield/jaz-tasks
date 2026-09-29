@@ -47,13 +47,13 @@ func newClient(t *testing.T) *client {
 	store := postgrestest.New(t)
 	keys := auth.NewService(store, auth.Config{PublicURL: "http://tasks.test"})
 	svc := tracker.NewService(store, "http://tasks.test")
-	result, _, err := seed.Run(context.Background(), store, keys, svc, "")
+	result, _, err := seed.Run(context.Background(), store, keys, svc)
 	if err != nil {
 		t.Fatal(err)
 	}
 	logger := log.New(io.Discard)
 	people := workspaces.NewService(store, workspaces.Config{})
-	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(auth.OIDCConfig{}), false, logger)
+	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(auth.OIDCConfig{}), logger)
 	if err != nil {
 		t.Fatal(err)
 	}

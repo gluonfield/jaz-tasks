@@ -8,14 +8,14 @@ A self-hosted, Linear-like issue tracker. One Go server exposes the task API for
 docker compose up
 ```
 
-This starts Postgres (host port 55432) and the server on http://localhost:7400, which serves both the API and the web app. On first start the server seeds a demo workspace ("Jaz", teams ENG and DES, labels, projects, cycles, issues). Open http://localhost:7400 and choose **Continue as the demo owner**: without an OIDC provider configured, compose enables `DEV_LOGIN`, a one-click sign-in that only works on a localhost `PUBLIC_URL`.
+This starts Postgres (host port 55432) and the server on http://localhost:7400, which serves both the API and the web app. Sign-in needs an OpenID Connect provider: copy `.env.example` to `.env` and set the `OIDC_*` values (Google setup below) first. The first person to sign in gets a workspace of their own.
 
 ## Authentication
 
 - **People** sign in with OpenID Connect (Google first, but any provider: Microsoft, Okta, Keycloak, Cognito). The server keeps a session in Postgres behind an HttpOnly, SameSite=Lax cookie. Anyone with a verified email may sign up unless an allowlist is set; each new person gets a workspace of their own with a first team and Linear's default workflow, and joins other workspaces only when an admin invites their email (Settings > Members). People in several workspaces switch between them from the workspace menu.
 - **Tenant isolation**: every query, resolver, MCP tool and token is scoped to one workspace; tests attack another tenant by UUID and by colliding identifiers such as ENG-1 through GraphQL and MCP.
 - **Agents, MCP clients and Jaz** use OAuth 2.1: Jaz Tasks is its own authorization server with protected-resource metadata (RFC 9728, advertised in `WWW-Authenticate` on every 401 from `/graphql` and `/mcp`), authorization-server metadata (RFC 8414), dynamic client registration (RFC 7591), authorization code with PKCE S256, refresh token rotation with reuse detection, and revocation (RFC 7009). Tokens are opaque and stored hashed. The same access token works for `/graphql` and `/mcp`.
-- **Scripts** can use personal API keys, created and revoked in Settings, sent like Linear's in a raw `Authorization` header. The seed also creates one for the demo owner and logs it (`SEED_API_KEY` pins it); `docker compose exec server /app/server apikey <email>` mints another.
+- **Scripts** can use personal API keys, created and revoked in Settings, sent like Linear's in a raw `Authorization` header. `docker compose exec server /app/server apikey <email>` mints one from the command line.
 
 Configuration (see `.env.example`):
 
@@ -24,8 +24,7 @@ Configuration (see `.env.example`):
 | `PUBLIC_URL` | Base URL of the deployment; source of the OIDC redirect URI (`PUBLIC_URL/auth/callback`), OAuth issuer, metadata URLs and cookie domain |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | OpenID Connect provider; keys come from its discovery document |
 | `ALLOWED_EMAIL_DOMAINS`, `ALLOWED_EMAILS` | Optional restriction on who may sign in; empty admits every verified email. `email_verified` is always required |
-| `DEV_LOGIN` | `1` seeds a demo workspace and enables one-click sign-in as its owner when OIDC is unset; refused unless `PUBLIC_URL` is localhost |
-| `DATABASE_URL`, `ADDR`, `WEB_DIR`, `SEED_API_KEY`, `LOG_LEVEL` | Server basics |
+| `DATABASE_URL`, `ADDR`, `WEB_DIR`, `LOG_LEVEL` | Server basics |
 
 **Google:** in Google Cloud Console, APIs & Services > Credentials, create an OAuth client ID of type *Web application* and add `<PUBLIC_URL>/auth/callback` as an authorized redirect URI. Then set:
 
@@ -35,7 +34,6 @@ OIDC_ISSUER=https://accounts.google.com
 OIDC_CLIENT_ID=1234-abc.apps.googleusercontent.com
 OIDC_CLIENT_SECRET=GOCSPX-...
 ALLOWED_EMAIL_DOMAINS=example.com
-DEV_LOGIN=0
 ```
 
 **AWS Cognito:** create an app client with a secret, enable the authorization code grant with the `openid`, `email` and `profile` scopes, and add `<PUBLIC_URL>/auth/callback` as a callback URL:
