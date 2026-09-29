@@ -3,12 +3,16 @@ package mcpapi_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/log"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/seed"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
@@ -45,7 +49,7 @@ func serve(t *testing.T) env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys))
+	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, log.New(io.Discard))))
 	t.Cleanup(srv.Close)
 	return env{url: srv.URL, key: result.APIKey, store: store, svc: svc, keys: keys}
 }
@@ -106,7 +110,7 @@ type issue struct {
 func TestAgentWorkflow(t *testing.T) {
 	session, _ := connect(t)
 	tools, err := session.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) != 8 {
+	if err != nil || len(tools.Tools) != 10 {
 		t.Fatalf("tools = %d, err %v", len(tools.Tools), err)
 	}
 
@@ -216,6 +220,13 @@ func TestTenantIsolationMCP(t *testing.T) {
 	if !res.IsError {
 		t.Errorf("assigned tenant A's user")
 	}
+	leaked := call[struct {
+		Data   map[string]any `json:"data"`
+		Errors []any          `json:"errors"`
+	}](t, b, "graphql", map[string]any{"query": `mutation { issueUpdate(id: "` + issueA.ID + `", input: { title: "owned" }) { success } }`})
+	if len(leaked.Errors) == 0 {
+		t.Errorf("graphql tool reached tenant A: %+v", leaked.Data)
+	}
 	listed := call[struct {
 		Issues []issue `json:"issues"`
 	}](t, b, "list_issues", nil)
@@ -230,5 +241,61 @@ func TestTenantIsolationMCP(t *testing.T) {
 	}
 	if got := call[issue](t, a, "get_issue", map[string]any{"issue": "ENG-1"}); got.Title != "Linear-compatible GraphQL endpoint" || len(got.Comments) != 2 {
 		t.Fatalf("tenant A changed: %+v", got)
+	}
+}
+
+// The MCP App resource and its tools: show_tasks opens the UI, and the app
+// talks GraphQL through a tool only the app may call.
+func TestMCPApp(t *testing.T) {
+	e := serve(t)
+	s := e.session(t, e.key)
+	ctx := context.Background()
+	resources, err := s.ListResources(ctx, nil)
+	if err != nil || len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://jaz-tasks/app" || resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
+		t.Fatalf("resources: %+v %v", resources, err)
+	}
+	read, err := s.ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/app"})
+	if err != nil || len(read.Contents) != 1 || read.Contents[0].MIMEType != "text/html;profile=mcp-app" {
+		t.Fatalf("read: %v", err)
+	}
+	html := read.Contents[0].Text
+	if !strings.Contains(html, `<div id="root"`) || !strings.Contains(html, "<style") || !strings.Contains(html, "data:font/woff2") {
+		t.Fatalf("app HTML is not the self-contained build (%d bytes)", len(html))
+	}
+	for _, external := range []string{`src="http`, `href="http`, `url(/`, `url(http`, "import.meta.url"} {
+		if strings.Contains(html, external) {
+			t.Fatalf("app HTML references an external asset: %s", external)
+		}
+	}
+	initialize := s.InitializeResult()
+	if initialize.ServerInfo.Name != "jaz-tasks" || initialize.ServerInfo.Title != "Jaz Tasks" || len(initialize.ServerInfo.Icons) != 1 ||
+		!strings.HasPrefix(initialize.ServerInfo.Icons[0].Source, "data:image/svg+xml;base64,") {
+		t.Fatalf("server info: %+v", initialize.ServerInfo)
+	}
+	tools, _ := s.ListTools(ctx, nil)
+	meta := map[string]mcp.Meta{}
+	for _, tool := range tools.Tools {
+		meta[tool.Name] = tool.Meta
+	}
+	if ui, _ := meta["show_tasks"]["ui"].(map[string]any); ui["resourceUri"] != "ui://jaz-tasks/app" {
+		t.Fatalf("show_tasks meta: %+v", meta["show_tasks"])
+	}
+	if ui, _ := meta["graphql"]["ui"].(map[string]any); fmt.Sprint(ui["visibility"]) != "[app]" {
+		t.Fatalf("graphql meta: %+v", meta["graphql"])
+	}
+	shown := call[struct {
+		URL string `json:"url"`
+	}](t, s, "show_tasks", map[string]any{"view": "eng-4"})
+	if shown.URL != "http://tasks.test/issue/ENG-4" {
+		t.Fatalf("show_tasks: %+v", shown)
+	}
+	res, err := s.CallTool(ctx, &mcp.CallToolParams{Name: "graphql", Arguments: map[string]any{
+		"query":         `query Other { viewer { id } } mutation Bump($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { issue { identifier priorityLabel } } }`,
+		"operationName": "Bump",
+		"variables":     map[string]any{"id": "ENG-4", "input": map[string]any{"priority": 4}},
+	}})
+	want := `{"data":{"issueUpdate":{"issue":{"identifier":"ENG-4","priorityLabel":"Low"}}}}`
+	if err != nil || res.IsError || res.Content[0].(*mcp.TextContent).Text != want {
+		t.Fatalf("graphql tool: %+v %v", res, err)
 	}
 }

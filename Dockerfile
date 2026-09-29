@@ -10,6 +10,7 @@ WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
+COPY --from=web /backend/internal/httpapi/mcpapi/app/mcp-app.html internal/httpapi/mcpapi/app/mcp-app.html
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
 
 FROM gcr.io/distroless/static-debian12:nonroot

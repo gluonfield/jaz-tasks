@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { readItem, writeItem } from './storage'
 import type { IssuePatch } from './types'
 
 // Shell-wide UI state shared by shortcuts, the palette and the views.
@@ -43,11 +44,11 @@ export function openCreateIssue(defaults: UIState['createDefaults'] = {}) {
 
 // usePersistent keeps a small per-view preference (layout, ordering) in localStorage.
 export function readPreference<T extends string>(key: string, fallback: T): T {
-  return (localStorage.getItem(`jaz-tasks:${key}`) as T | null) ?? fallback
+  return (readItem(`jaz-tasks:${key}`) as T | null) ?? fallback
 }
 
 export function writePreference(key: string, value: string) {
-  localStorage.setItem(`jaz-tasks:${key}`, value)
+  writeItem(`jaz-tasks:${key}`, value)
   listeners.forEach((listener) => listener())
 }
 

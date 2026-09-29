@@ -38,8 +38,8 @@ export function useRevokeGrant() {
   })
 }
 
-export function useWorkspaces() {
-  return useQuery({ queryKey: ['workspaces'], queryFn: () => rest<Workspace[]>('GET', '/auth/workspaces') })
+export function useWorkspaces({ enabled = true } = {}) {
+  return useQuery({ queryKey: ['workspaces'], queryFn: () => rest<Workspace[]>('GET', '/auth/workspaces'), enabled })
 }
 
 // switchWorkspace points the session at another workspace and reloads, so no

@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from 'react'
+import { readItem, writeItem } from './storage'
+import { embedded } from './api'
 import { setHostToken } from './auth'
 
 export type Scheme = 'light' | 'dark'
@@ -15,7 +17,7 @@ let hostScheme: Scheme | null = null
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
 
 export function schemePreference(): SchemePreference {
-  return (localStorage.getItem(preferenceKey) as SchemePreference | null) ?? 'system'
+  return (readItem(preferenceKey) as SchemePreference | null) ?? 'system'
 }
 
 function resolvedScheme(): Scheme {
@@ -29,7 +31,7 @@ function render() {
 }
 
 export function setSchemePreference(preference: SchemePreference) {
-  localStorage.setItem(preferenceKey, preference)
+  writeItem(preferenceKey, preference)
   hostScheme = null
   render()
 }
@@ -95,7 +97,7 @@ export function installHostBridge() {
       setHostToken(event.data.token)
     }
   })
-  if (window.parent !== window) {
+  if (window.parent !== window && !embedded()) {
     window.parent.postMessage({ type: 'jaz:ready' }, '*')
   }
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
+	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -23,9 +24,16 @@ type Handler struct {
 	http.Handler
 }
 
-func NewHandler(svc *tracker.Service, keys *auth.Service) *Handler {
-	server := mcp.NewServer(&mcp.Implementation{Name: "jaz-tasks", Title: "Jaz Tasks", Version: "0.1.0"}, &mcp.ServerOptions{Instructions: instructions})
-	register(server, tools{svc: svc})
+func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) *Handler {
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "jaz-tasks",
+		Title:   "Jaz Tasks",
+		Version: "0.1.0",
+		Icons:   []mcp.Icon{{Source: icon, MIMEType: "image/svg+xml", Sizes: []string{"any"}}},
+	}, &mcp.ServerOptions{Instructions: instructions})
+	t := tools{svc: svc, graphql: graphql}
+	register(server, t)
+	registerApp(server, t)
 	verify := func(ctx context.Context, token string, _ *http.Request) (*mcpauth.TokenInfo, error) {
 		actor, err := keys.Authenticate(ctx, token)
 		if errors.Is(err, auth.ErrUnauthenticated) {
@@ -48,11 +56,16 @@ func NewHandler(svc *tracker.Service, keys *auth.Service) *Handler {
 const workspaceKey = "workspace"
 
 type tools struct {
-	svc *tracker.Service
+	svc     *tracker.Service
+	graphql *gql.Handler
 }
 
-// scope rebuilds the actor the bearer token resolved to for this request.
-func (t tools) scope(req *mcp.CallToolRequest) *tracker.Scope {
+// actor rebuilds who the bearer token resolved to for this request.
+func (t tools) actor(req *mcp.CallToolRequest) auth.Actor {
 	info := req.Extra.TokenInfo
-	return t.svc.Scope(auth.Actor{UserID: info.UserID, WorkspaceID: info.Extra[workspaceKey].(string)})
+	return auth.Actor{UserID: info.UserID, WorkspaceID: info.Extra[workspaceKey].(string)}
+}
+
+func (t tools) scope(req *mcp.CallToolRequest) *tracker.Scope {
+	return t.svc.Scope(t.actor(req))
 }

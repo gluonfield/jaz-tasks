@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { switchWorkspace, useWorkspaces } from '@/lib/account'
+import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
 import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
@@ -165,7 +166,7 @@ function IconButton({
 }
 
 function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
-  const { data: workspaces = [] } = useWorkspaces()
+  const { data: workspaces = [] } = useWorkspaces({ enabled: !embedded() })
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
@@ -203,17 +204,25 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuItem asChild>
-          <Link to="/settings">
-            <Settings /> Settings
-            <DropdownMenuShortcut>G S</DropdownMenuShortcut>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => signOut()}>
-          <LogOut /> Sign out
-        </DropdownMenuItem>
+        {!embedded() && <SessionItems />}
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+function SessionItems() {
+  return (
+    <>
+      <DropdownMenuItem asChild>
+        <Link to="/settings">
+          <Settings /> Settings
+          <DropdownMenuShortcut>G S</DropdownMenuShortcut>
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => signOut()}>
+        <LogOut /> Sign out
+      </DropdownMenuItem>
+    </>
   )
 }

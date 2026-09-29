@@ -13,6 +13,7 @@ import {
   useInvites,
   useRevokeGrant,
 } from '@/lib/account'
+import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
 import { formatDate, timeAgo } from '@/lib/issues'
 import { useCatalog } from '@/lib/queries'
@@ -24,6 +25,9 @@ export const Route = createFileRoute('/_app/settings')({ component: Settings })
 function Settings() {
   const { data: catalog } = useCatalog()
   const viewer = catalog?.viewer
+  if (embedded()) {
+    return <p className="p-8 text-[13px] text-ink-3">Manage your account, members and API keys in the Jaz Tasks web app.</p>
+  }
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">

@@ -1,11 +1,14 @@
 package gql
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/99designs/gqlgen/graphql/executor"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
@@ -21,16 +24,51 @@ import (
 type Handler struct {
 	tracker *tracker.Service
 	server  *handler.Server
+	exec    *executor.Executor
 }
 
 func NewHandler(svc *tracker.Service, logger *log.Logger) *Handler {
-	srv := handler.New(NewExecutableSchema(Config{Resolvers: Resolver{}}))
+	schema := NewExecutableSchema(Config{Resolvers: Resolver{}})
+	presenter := presentError(logger.WithPrefix("graphql"))
+	srv := handler.New(schema)
 	srv.AddTransport(transport.GET{})
 	srv.AddTransport(transport.POST{})
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](256))
 	srv.Use(extension.Introspection{})
-	srv.SetErrorPresenter(presentError(logger.WithPrefix("graphql")))
-	return &Handler{tracker: svc, server: srv}
+	srv.SetErrorPresenter(presenter)
+	exec := executor.New(schema)
+	exec.SetErrorPresenter(presenter)
+	return &Handler{tracker: svc, server: srv, exec: exec}
+}
+
+// Request is one GraphQL operation as a client posts it; Variables stay raw
+// so numbers decode exactly, as gqlgen's HTTP transport decodes them.
+type Request struct {
+	Query         string
+	OperationName string
+	Variables     json.RawMessage
+}
+
+// Execute runs an operation without HTTP, for callers such as the MCP App
+// bridge that already authenticated the actor.
+func (h *Handler) Execute(ctx context.Context, actor auth.Actor, req Request) *graphql.Response {
+	ctx = graphql.StartOperationTrace(withScope(ctx, h.tracker.Scope(actor)))
+	params := &graphql.RawParams{Query: req.Query, OperationName: req.OperationName}
+	if len(req.Variables) > 0 {
+		decoder := json.NewDecoder(bytes.NewReader(req.Variables))
+		decoder.UseNumber()
+		if err := decoder.Decode(&params.Variables); err != nil {
+			return &graphql.Response{Errors: gqlerror.List{gqlerror.Errorf("variables must be a JSON object: %v", err)}}
+		}
+	}
+	now := graphql.Now()
+	params.ReadTime = graphql.TraceTiming{Start: now, End: now}
+	op, errs := h.exec.CreateOperationContext(ctx, params)
+	if errs != nil {
+		return h.exec.DispatchError(graphql.WithOperationContext(ctx, op), errs)
+	}
+	respond, ctx := h.exec.DispatchOperation(ctx, op)
+	return respond(ctx)
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

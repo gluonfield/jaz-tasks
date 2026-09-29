@@ -26,9 +26,35 @@ Every color, radius, font and shadow in the web app comes from CSS custom proper
 
 Workflow state, label and project colors are workspace data and are drawn as stored.
 
-## Overriding from a host
+Each token falls back to the matching [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) standard variable before its default, for example `--color-bg: var(--color-background-primary, #fdfdfd)`, so any host that speaks the MCP Apps style contract themes the app without knowing these names:
 
-A host can use any of these; later ones win.
+| Token | Standard variable |
+| --- | --- |
+| `--color-bg` | `--color-background-primary` |
+| `--color-panel` | `--color-background-secondary` |
+| `--color-surface` | `--color-background-tertiary` |
+| `--color-ink`, `--color-ink-2`, `--color-ink-3` | `--color-text-primary`, `--color-text-secondary`, `--color-text-tertiary` |
+| `--color-border` | `--color-border-primary` |
+| `--color-primary` | `--color-ring-primary` |
+| `--color-danger`, `--color-ok`, `--color-running` | `--color-text-danger`, `--color-text-success`, `--color-text-warning` |
+| `--radius-control`, `--radius-card` | `--border-radius-md`, `--border-radius-lg` |
+| `--shadow-raised` | `--shadow-lg` |
+| `--font-sans`, `--font-mono` | same names |
+
+The list hover and active washes derive from `--color-ink`.
+
+## As an MCP App (Jaz, Claude, ChatGPT)
+
+The server's MCP endpoint serves the app as the `ui://jaz-tasks/app` resource (`text/html;profile=mcp-app`), one self-contained HTML document built by `bun run build` and embedded in the Go binary. It connects with the official `@modelcontextprotocol/ext-apps` SDK, loads data through the app-only `graphql` tool, and needs no login: the host's OAuth token carries the user.
+
+The host themes it through the initialize and host-context-changed messages:
+
+- `hostContext.theme` (`light` or `dark`) toggles the scheme.
+- `hostContext.styles.variables` sets standard variables on `:root`, which feed the tokens as above. Send only standard keys: the SDK rejects the whole context if it contains any other name. Jaz maps its own tokens onto them as in the table.
+
+## Overriding from a web host
+
+A page embedding the web app can use any of these; later ones win.
 
 1. **Stylesheet.** Set variables on `:root` (and `:root.dark`) in a stylesheet injected into the page.
 
@@ -40,7 +66,7 @@ A host can use any of these; later ones win.
    iframe.src = `https://tasks.example.com/?theme=${theme}`
    ```
 
-3. **`postMessage`.** When embedded, the app posts `{ type: 'jaz:ready' }` to its parent once it can receive a theme. Reply, and repeat whenever the host theme changes:
+3. **`postMessage`.** When framed, the app posts `{ type: 'jaz:ready' }` to its parent once it can receive a theme. Reply, and repeat whenever the host theme changes:
 
    ```js
    window.addEventListener('message', (event) => {

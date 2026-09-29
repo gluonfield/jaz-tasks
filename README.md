@@ -71,10 +71,14 @@ Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: t
 | `get_issue` | description, sub-issues and comments |
 | `create_issue`, `update_issue` | every property, including moving teams and clearing fields |
 | `add_comment` | markdown comment as the key's user |
+| `show_tasks` | open the MCP App at a team, issue or section |
+| `graphql` | the GraphQL API, for the MCP App only (`_meta.ui.visibility: ["app"]`) |
 
 ```sh
 claude mcp add --transport http jaz-tasks http://localhost:7400/mcp
 ```
+
+The endpoint is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps): the resource `ui://jaz-tasks/app` is the whole web app as one self-contained HTML document (built by `bun run build` in `frontend`, embedded in the binary), which hosts such as Jaz render in a sandboxed frame. It loads data through the app-only `graphql` tool and takes its theme from the host; `show_tasks` opens it at a team, issue or section. See [frontend/THEMING.md](frontend/THEMING.md).
 
 ## Web app
 
