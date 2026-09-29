@@ -28,9 +28,12 @@
   --color-ink-3: var(--color-text-tertiary, #8f9199);
 
   --color-primary: var(--color-ring-primary, #5e6ad2);
-  --color-primary-strong: #4f5bc4;
-  --color-primary-soft: #eceefb;
-  --color-on-primary: #ffffff;
+  /* Derived from whatever accent the host sends: text on it turns near-black
+     where that reads better than white (OKLab lightness 0.58, where the two
+     contrast equally), and hover and tint lean toward the ink and the page. */
+  --color-primary-strong: color-mix(in oklab, var(--color-primary) 85%, var(--color-ink));
+  --color-primary-soft: color-mix(in oklab, var(--color-primary) 16%, var(--color-bg));
+  --color-on-primary: oklch(from var(--color-primary) clamp(0.2, (0.58 - l) * 1000, 1) 0 h);
   --color-selection: color-mix(in oklab, var(--color-primary) 22%, transparent);
   --color-accent: #f2994a;
   --color-accent-soft: #fdf0e4;
@@ -89,9 +92,6 @@
   --color-ink-3: var(--color-text-tertiary, #6e717a);
 
   --color-primary: var(--color-ring-primary, #7480ea);
-  --color-primary-strong: #8d97f0;
-  --color-primary-soft: #252843;
-  --color-on-primary: #ffffff;
   --color-selection: color-mix(in oklab, var(--color-primary) 35%, transparent);
   --color-accent: #f2994a;
   --color-accent-soft: #3a2a1b;
