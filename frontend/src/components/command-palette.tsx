@@ -184,6 +184,9 @@ function Palette() {
               <Item icon={<UserRoundCheck />} shortcut="G M" onSelect={() => go('/my-issues')}>
                 Go to My issues
               </Item>
+              <Item icon={<CircleDot />} onSelect={() => go('/issues')}>
+                Go to All issues
+              </Item>
               <Item icon={<Box />} shortcut="G P" onSelect={() => go('/projects')}>
                 Go to Projects
               </Item>

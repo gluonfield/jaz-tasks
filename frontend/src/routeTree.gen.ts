@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppInboxRouteImport } from './routes/_app/inbox'
+import { Route as AppIssuesRouteImport } from './routes/_app/issues'
 import { Route as AppMyIssuesRouteImport } from './routes/_app/my-issues'
 import { Route as AppProjectsRouteImport } from './routes/_app/projects'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -39,6 +40,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppInboxRoute = AppInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIssuesRoute = AppIssuesRouteImport.update({
+  id: '/issues',
+  path: '/issues',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyIssuesRoute = AppMyIssuesRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/inbox': typeof AppInboxRoute
+  '/issues': typeof AppIssuesRoute
   '/my-issues': typeof AppMyIssuesRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/inbox': typeof AppInboxRoute
+  '/issues': typeof AppIssuesRoute
   '/my-issues': typeof AppMyIssuesRoute
   '/projects': typeof AppProjectsRoute
   '/settings': typeof AppSettingsRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/inbox': typeof AppInboxRoute
+  '/_app/issues': typeof AppIssuesRoute
   '/_app/my-issues': typeof AppMyIssuesRoute
   '/_app/projects': typeof AppProjectsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/inbox'
+    | '/issues'
     | '/my-issues'
     | '/projects'
     | '/settings'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/inbox'
+    | '/issues'
     | '/my-issues'
     | '/projects'
     | '/settings'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/inbox'
+    | '/_app/issues'
     | '/_app/my-issues'
     | '/_app/projects'
     | '/_app/settings'
@@ -199,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof AppInboxRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/issues': {
+      id: '/_app/issues'
+      path: '/issues'
+      fullPath: '/issues'
+      preLoaderRoute: typeof AppIssuesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-issues': {
@@ -262,6 +281,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppInboxRoute: typeof AppInboxRoute
+  AppIssuesRoute: typeof AppIssuesRoute
   AppMyIssuesRoute: typeof AppMyIssuesRoute
   AppProjectsRoute: typeof AppProjectsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -275,6 +295,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppInboxRoute: AppInboxRoute,
+  AppIssuesRoute: AppIssuesRoute,
   AppMyIssuesRoute: AppMyIssuesRoute,
   AppProjectsRoute: AppProjectsRoute,
   AppSettingsRoute: AppSettingsRoute,

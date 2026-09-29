@@ -153,6 +153,20 @@ export function TeamBadge({ icon, color, className }: { icon: string | null; col
   )
 }
 
+// WorkspaceBadge is the workspace's initial on the accent colour.
+export function WorkspaceBadge({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'flex size-[18px] shrink-0 items-center justify-center rounded-[5px] bg-primary text-[10px] font-bold text-on-primary',
+        className,
+      )}
+    >
+      {name.slice(0, 1).toUpperCase()}
+    </span>
+  )
+}
+
 export function LabelDot({ color, className }: { color: string; className?: string }) {
   return <span className={cn('inline-block size-2 shrink-0 rounded-full', className)} style={{ background: color }} />
 }

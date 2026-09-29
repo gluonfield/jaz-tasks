@@ -36,7 +36,7 @@ import { useCatalog } from '@/lib/queries'
 import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
-import { MyIssuesIcon, TeamBadge } from './icons'
+import { MyIssuesIcon, TeamBadge, WorkspaceBadge } from './icons'
 import { Kbd } from './kbd'
 
 export function Sidebar() {
@@ -59,6 +59,9 @@ export function Sidebar() {
         My issues
       </NavItem>
       <Section title="Workspace">
+        <NavItem to="/issues" icon={<CircleDot />}>
+          All issues
+        </NavItem>
         <NavItem to="/projects" icon={<Box />}>
           Projects
         </NavItem>
@@ -169,9 +172,7 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
-        <span className="flex size-[18px] shrink-0 items-center justify-center rounded-[5px] bg-primary text-[10px] font-bold text-on-primary">
-          {name.slice(0, 1).toUpperCase()}
-        </span>
+        <WorkspaceBadge name={name} />
         <span className="truncate">{name}</span>
         <ChevronDown className="size-3 shrink-0 text-ink-3" />
       </DropdownMenuTrigger>
@@ -179,9 +180,7 @@ function WorkspaceMenu({ name, email }: { name: string; email?: string }) {
         {email && <DropdownMenuLabel className="truncate text-[12px] font-normal text-ink-3">{email}</DropdownMenuLabel>}
         {workspaces.map((workspace) => (
           <DropdownMenuItem key={workspace.id} onSelect={() => !workspace.current && switchWorkspace(workspace.id)}>
-            <span className="flex size-4 items-center justify-center rounded-[4px] bg-primary text-[9px] font-bold text-on-primary">
-              {workspace.name.slice(0, 1).toUpperCase()}
-            </span>
+            <WorkspaceBadge name={workspace.name} className="size-4 rounded-[4px] text-[9px]" />
             <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
             {workspace.current && <Check className="text-ink-2" />}
           </DropdownMenuItem>
