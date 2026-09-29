@@ -173,9 +173,9 @@ type TeamCreateInput struct {
 
 var defaultStates = []storage.NewWorkflowState{
 	{Name: "Backlog", Type: "backlog", Color: "#bec2c8", Position: 0},
-	{Name: "Todo", Type: "unstarted", Color: "#e2e2e2", Position: 1},
+	{Name: "Todo", Type: "unstarted", Color: "#a9adb5", Position: 1},
 	{Name: "In Progress", Type: "started", Color: "#f2c94c", Position: 2},
-	{Name: "In Review", Type: "started", Color: "#0f783c", Position: 3},
+	{Name: "In Review", Type: "started", Color: "#4cb782", Position: 3},
 	{Name: "Done", Type: "completed", Color: "#5e6ad2", Position: 4},
 	{Name: "Canceled", Type: "canceled", Color: "#95a2b3", Position: 5},
 }

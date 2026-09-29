@@ -25,3 +25,18 @@ func UnmarshalTimelessDate(v any) (time.Time, error) {
 	}
 	return time.Parse(timelessLayout, s)
 }
+
+// MarshalDateTime writes UTC with millisecond precision, as Linear does.
+func MarshalDateTime(t time.Time) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		_, _ = io.WriteString(w, strconv.Quote(t.UTC().Format("2006-01-02T15:04:05.000Z")))
+	})
+}
+
+func UnmarshalDateTime(v any) (time.Time, error) {
+	s, ok := v.(string)
+	if !ok {
+		return time.Time{}, fmt.Errorf("DateTime must be an ISO 8601 string")
+	}
+	return time.Parse(time.RFC3339Nano, s)
+}

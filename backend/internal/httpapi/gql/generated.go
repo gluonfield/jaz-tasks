@@ -21749,13 +21749,13 @@ func (ec *executionContext) marshalNCyclePayload2ᚖgithubᚗcomᚋgluonfieldᚋ
 }
 
 func (ec *executionContext) unmarshalNDateTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
+	res, err := UnmarshalDateTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNDateTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	_ = sel
-	res := graphql.MarshalTime(v)
+	res := MarshalDateTime(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -21765,7 +21765,7 @@ func (ec *executionContext) marshalNDateTime2timeᚐTime(ctx context.Context, se
 }
 
 func (ec *executionContext) unmarshalNDateTime2ᚖtimeᚐTime(ctx context.Context, v any) (*time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
+	res, err := UnmarshalDateTime(v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -21777,7 +21777,7 @@ func (ec *executionContext) marshalNDateTime2ᚖtimeᚐTime(ctx context.Context,
 		return graphql.Null
 	}
 	_ = sel
-	res := graphql.MarshalTime(*v)
+	res := MarshalDateTime(*v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
@@ -22606,7 +22606,7 @@ func (ec *executionContext) unmarshalODateTime2ᚖtimeᚐTime(ctx context.Contex
 	if v == nil {
 		return nil, nil
 	}
-	res, err := graphql.UnmarshalTime(v)
+	res, err := UnmarshalDateTime(v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -22616,7 +22616,7 @@ func (ec *executionContext) marshalODateTime2ᚖtimeᚐTime(ctx context.Context,
 	}
 	_ = sel
 	_ = ctx
-	res := graphql.MarshalTime(*v)
+	res := MarshalDateTime(*v)
 	return res
 }
 

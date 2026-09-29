@@ -43,7 +43,7 @@ models:
       - github.com/99designs/gqlgen/graphql.Float
       - github.com/99designs/gqlgen/graphql.Int32
   DateTime:
-    model: github.com/99designs/gqlgen/graphql.Time
+    model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.DateTime
   TimelessDate:
     model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.TimelessDate
   ProjectStatusType:

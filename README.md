@@ -8,7 +8,7 @@ A self-hosted, Linear-like issue tracker. One Go server exposes the task API for
 docker compose up
 ```
 
-This starts Postgres (host port 55432) and the server on http://localhost:7400. On first start the server seeds a demo workspace ("Jaz", teams ENG and DES, labels, projects, cycles, issues) and logs an API key:
+This starts Postgres (host port 55432) and the server on http://localhost:7400, which serves both the API and the web app. On first start the server seeds a demo workspace ("Jaz", teams ENG and DES, labels, projects, cycles, issues) and logs an API key:
 
 ```
 INFO seeded demo workspace api_key=jt_api_...
@@ -19,6 +19,8 @@ Set `SEED_API_KEY` in `.env` (see `.env.example`) to pin the key before the firs
 ```sh
 docker compose exec server /app/server apikey mira@jaz.local
 ```
+
+Open http://localhost:7400 and paste the key to sign in.
 
 ## API
 
@@ -33,9 +35,17 @@ curl -s localhost:7400/graphql -H "Authorization: $KEY" -H 'Content-Type: applic
 
 Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: the exact documents [linear-cli](https://github.com/gluonfield/linear-cli) sends, run against the server in `go test`.
 
+## Web app
+
+A Linear-style UI built with TanStack Start (SPA mode), TanStack Query, Tailwind v4 and shadcn/ui. It talks to the server only through `/graphql`: list and board views grouped by status, issue pages with activity and comments, inline property pickers, a create dialog (`C`), a command palette (`⌘K`), optimistic updates, and light and dark themes.
+
+Keyboard: `C` create, `⌘K` or `/` command palette, `J`/`K` move, `Enter` open, `S` status, `P` priority, `A` assignee, `L` labels, `E` estimate, `Shift+D` due date, `⌘B` list/board, `G` then `I`/`M`/`P`/`V` to go to Inbox, My issues, Projects, Views, `Esc` back.
+
+The app can be embedded and themed by a host such as Jaz: see [frontend/THEMING.md](frontend/THEMING.md).
+
 ## Develop
 
-Requirements: Go 1.26, Docker, [sqlc](https://sqlc.dev).
+Requirements: Go 1.26, Docker, [sqlc](https://sqlc.dev), [Bun](https://bun.sh).
 
 ```sh
 docker compose up -d postgres
@@ -44,6 +54,13 @@ go run ./cmd/server            # API on :7400, seeds on first run
 go test ./...                  # needs the compose Postgres (or TEST_DATABASE_URL)
 sqlc generate                  # after editing queries or migrations
 (cd internal/httpapi/gql && go tool gqlgen generate)   # after editing the schema
+```
+
+```sh
+cd frontend
+bun install
+bun run dev                    # http://localhost:7401, proxies /graphql to :7400
+bun run check                  # typecheck, lint, build
 ```
 
 Server flags (each defaults to an env var): `--addr` (`ADDR`, `:7400`), `--database-url` (`DATABASE_URL`), `--public-url` (`PUBLIC_URL`), `--web-dir` (`WEB_DIR`).
@@ -60,4 +77,8 @@ backend/
   internal/auth         API keys
   internal/seed         demo workspace
   internal/storage      storage contracts; postgres/ holds migrations, sqlc queries and generated code
+frontend/
+  src/routes            TanStack file routes
+  src/components        views, pickers, dialogs; ui/ holds shadcn primitives
+  src/lib               GraphQL client, queries, theme bridge, shared types
 ```
