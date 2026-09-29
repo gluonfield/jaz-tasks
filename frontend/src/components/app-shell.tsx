@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-full min-h-0">
       <Sidebar />
-      <main className="my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-bg shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+      <main className="my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] bg-bg">
         {children}
       </main>
       <CreateIssueDialog />

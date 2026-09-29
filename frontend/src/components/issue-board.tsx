@@ -190,7 +190,7 @@ function Column({ id, children }: { id: string; children: React.ReactNode }) {
   return (
     <div
       ref={setNodeRef}
-      className="flex w-[330px] shrink-0 flex-col rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--color-surface)_55%,var(--color-bg))]"
+      className="flex w-[330px] shrink-0 flex-col rounded-[var(--radius-card)] bg-column"
     >
       {children}
     </div>
@@ -229,8 +229,8 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
         onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
         onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
         className={cn(
-          'relative cursor-default rounded-[8px] border border-border bg-raised px-3 pb-2.5 pt-2 text-[13px] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow] duration-100 hover:border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
-          focused && 'border-[color-mix(in_oklab,var(--color-ink)_16%,transparent)]',
+          'relative cursor-default rounded-[8px] bg-tile px-3 pb-2.5 pt-2 text-[13px] shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors duration-100 hover:bg-tile-hover',
+          focused && 'bg-tile-hover',
         )}
       >
         {!lifted && <ShortcutPicker issue={issue} visible={['assignee', 'priority']} />}

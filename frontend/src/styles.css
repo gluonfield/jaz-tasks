@@ -17,7 +17,13 @@
  */
 @theme static {
   --color-bg: var(--color-background-primary, #fdfdfd);
-  --color-panel: var(--color-background-secondary, #f5f5f6);
+  /* Surfaces separate by fill, as in Linear, not by outlines: the chrome sits
+     a fixed step below the content whatever background a host sends, and
+     board cards sit a step above their column. */
+  --color-panel: color-mix(in oklab, black 3.5%, var(--color-bg));
+  --color-column: color-mix(in oklab, var(--color-ink) 3%, var(--color-bg));
+  --color-tile: var(--color-bg);
+  --color-tile-hover: color-mix(in oklab, var(--color-ink) 3.5%, var(--color-tile));
   --color-surface: var(--color-background-tertiary, #f2f2f3);
   --color-surface-2: #e9e9eb;
   --color-list-hover: color-mix(in oklab, var(--color-ink) 4%, transparent);
@@ -81,7 +87,9 @@
 :root:where(.dark) {
   color-scheme: dark;
   --color-bg: var(--color-background-primary, #151618);
-  --color-panel: var(--color-background-secondary, #0f1012);
+  --color-panel: color-mix(in oklab, black 30%, var(--color-bg));
+  --color-column: color-mix(in oklab, black 6%, var(--color-bg));
+  --color-tile: color-mix(in oklab, var(--color-ink) 5%, var(--color-bg));
   --color-surface: var(--color-background-tertiary, #1c1d20);
   --color-surface-2: #25272b;
   --color-list-hover: color-mix(in oklab, var(--color-ink) 5%, transparent);

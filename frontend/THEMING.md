@@ -7,7 +7,8 @@ Every color, radius, font and shadow in the web app comes from CSS custom proper
 | Token | Meaning |
 | --- | --- |
 | `--color-bg` | Main content: lists, boards, the issue page |
-| `--color-panel` | Window chrome: the sidebar and the page behind the content card |
+| `--color-panel` | Window chrome: the sidebar and the page behind the content card; a fixed step darker than `--color-bg` |
+| `--color-column`, `--color-tile`, `--color-tile-hover` | Board columns and list group headers; board cards a step above their column |
 | `--color-surface` | Raised fills: group headers, board columns, code |
 | `--color-surface-2` | Deeper fills |
 | `--color-raised` | Menus, dialogs and cards; derived: `--color-bg` in light, `--color-surface` in dark |
@@ -31,7 +32,6 @@ Each token falls back to the matching [MCP Apps](https://github.com/modelcontext
 | Token | Standard variable |
 | --- | --- |
 | `--color-bg` | `--color-background-primary` |
-| `--color-panel` | `--color-background-secondary` |
 | `--color-surface` | `--color-background-tertiary` |
 | `--color-ink`, `--color-ink-2`, `--color-ink-3` | `--color-text-primary`, `--color-text-secondary`, `--color-text-tertiary` |
 | `--color-border` | `--color-border-primary` |

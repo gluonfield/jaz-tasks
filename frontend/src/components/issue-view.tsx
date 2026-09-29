@@ -139,7 +139,7 @@ function IssueList({ groups, createDefaults }: { groups: IssueGroup[]; createDef
     <div className="scrollbar-quiet h-full overflow-y-auto pb-24" role="grid">
       {groups.map((group) => (
         <section key={group.key}>
-          <div className="sticky top-0 z-10 flex h-9 items-center gap-2 border-b border-border/60 bg-[color-mix(in_oklab,var(--color-surface)_55%,var(--color-bg))] pl-3 pr-3">
+          <div className="sticky top-0 z-10 flex h-9 items-center gap-2 bg-column pl-3 pr-3">
             <button
               onClick={() => {
                 const next = new Set(collapsed)

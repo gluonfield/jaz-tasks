@@ -25,7 +25,7 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
         onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
         onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
         className={cn(
-          'group relative flex h-9 cursor-default items-center gap-2 border-b border-border/60 pl-[18px] pr-4 text-[13px] transition-colors duration-75',
+          'group relative flex h-9 cursor-default items-center gap-2 pl-[18px] pr-4 text-[13px] transition-colors duration-75',
           focused && 'bg-list-hover',
         )}
       >
