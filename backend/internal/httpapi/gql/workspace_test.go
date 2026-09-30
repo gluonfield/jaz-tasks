@@ -175,3 +175,26 @@ func TestSwitchWorkspaceMovesTheConnection(t *testing.T) {
 		`mutation { workspaceSwitch(id: "` + team + `") { success } }`:                 c.key,
 	})
 }
+
+// A person in two workspaces mints a command-line key by naming one.
+func TestCreateKeyForEmailNamesTheWorkspace(t *testing.T) {
+	c := newClient(t)
+	keys := auth.NewService(c.store, auth.Config{PublicURL: "http://tasks.test"})
+	signUp(t, c, "pat")
+	c.do(`mutation { organizationInviteCreate(input: { email: "pat@example.com" }) { success } }`, c.key)
+	_, out := c.do(`{ organization { name } }`, c.key)
+	team, _ := get(out.Data, "organization.name").(string)
+	jaz := connect(t, c, signUp(t, c, "pat"))
+	c.do(`{ workspaces { id } }`, jaz)
+
+	if _, err := keys.CreateKeyForEmail(context.Background(), "pat@example.com", ""); err == nil {
+		t.Fatal("a person in two workspaces needs the workspace named")
+	}
+	key, err := keys.CreateKeyForEmail(context.Background(), "pat@example.com", strings.ToUpper(team))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, out := c.do(`{ organization { name } viewer { email } }`, key); get(out.Data, "organization.name") != team || get(out.Data, "viewer.email") != "pat@example.com" {
+		t.Fatalf("key for the named workspace acts in: %+v %+v", out.Data, out.Errors)
+	}
+}

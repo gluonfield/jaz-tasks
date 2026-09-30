@@ -35,6 +35,8 @@ func usage() {
 
 commands:
   serve           run the API and web server (default)
-  apikey EMAIL    mint an API key for an existing user
+  apikey EMAIL [WORKSPACE]
+                  mint an API key for an existing user, in WORKSPACE (name or ID)
+                  when they belong to several
 `)
 }

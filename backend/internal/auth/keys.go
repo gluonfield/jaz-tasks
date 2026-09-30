@@ -29,15 +29,29 @@ func (s *Service) DeleteKey(ctx context.Context, actor Actor, id string) error {
 	return s.store.DeleteAPIKey(ctx, actor.UserID, id)
 }
 
-// CreateKeyForEmail mints a key for the one active user with that email.
-func (s *Service) CreateKeyForEmail(ctx context.Context, email string) (string, error) {
+// CreateKeyForEmail mints a key for the active user with that email. A person
+// in several workspaces needs the workspace, by name or ID.
+func (s *Service) CreateKeyForEmail(ctx context.Context, email, workspace string) (string, error) {
 	users, err := s.store.UsersByEmail(ctx, email)
 	if err != nil {
 		return "", err
 	}
-	if len(users) != 1 {
-		return "", fmt.Errorf("%d active users have email %q", len(users), email)
+	var match []storage.User
+	for _, user := range users {
+		if workspace != "" && user.WorkspaceID != workspace {
+			ws, err := s.store.Workspace(ctx, user.WorkspaceID)
+			if err != nil {
+				return "", err
+			}
+			if !strings.EqualFold(ws.Name, workspace) {
+				continue
+			}
+		}
+		match = append(match, user)
 	}
-	key, _, err := s.CreateKey(ctx, users[0].ID, "Minted from the command line", "")
+	if len(match) != 1 {
+		return "", fmt.Errorf("%d active users have email %q in the workspaces asked for; name one workspace", len(match), email)
+	}
+	key, _, err := s.CreateKey(ctx, match[0].ID, "Minted from the command line", "")
 	return key, err
 }

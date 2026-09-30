@@ -131,11 +131,11 @@ func StartHTTP(lc fx.Lifecycle, handler http.Handler, cfg Config, logger *log.Lo
 }
 
 // MintAPIKey opens the database directly to issue a key outside the server.
-func MintAPIKey(ctx context.Context, cfg Config, email string) (string, error) {
+func MintAPIKey(ctx context.Context, cfg Config, email, workspace string) (string, error) {
 	store, err := postgres.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return "", err
 	}
 	defer store.Close()
-	return auth.NewService(store, cfg.Auth).CreateKeyForEmail(ctx, email)
+	return auth.NewService(store, cfg.Auth).CreateKeyForEmail(ctx, email, workspace)
 }
