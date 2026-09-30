@@ -55,12 +55,10 @@ export function IssueView({
   teamStates,
   createDefaults,
   empty,
-  summary,
 }: {
   viewKey: string
   title: ReactNode
   tabs?: ReactNode
-  summary?: ReactNode
   issues: Issue[]
   loading: boolean
   teamStates?: WorkflowState[]
@@ -85,25 +83,20 @@ export function IssueView({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border px-4">
-        <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink">{title}</div>
-        {tabs && <div className="flex items-center gap-1">{tabs}</div>}
-        <div className="ml-auto flex items-center gap-1.5">
-          <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
-            <DisplaySelect label="Ordering" value={ordering} options={orderings} onChange={setOrdering} />
-            <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
-              Show completed issues
-              <input
-                type="checkbox"
-                checked={showCompleted === 'yes'}
-                onChange={(e) => setShowCompleted(e.target.checked ? 'yes' : 'no')}
-                className="accent-[var(--color-primary)]"
-              />
-            </label>
-          </DisplayMenu>
-        </div>
-      </header>
-      {summary}
+      <ViewHeader title={title} tabs={tabs}>
+        <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
+          <DisplaySelect label="Ordering" value={ordering} options={orderings} onChange={setOrdering} />
+          <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
+            Show completed issues
+            <input
+              type="checkbox"
+              checked={showCompleted === 'yes'}
+              onChange={(e) => setShowCompleted(e.target.checked ? 'yes' : 'no')}
+              className="accent-[var(--color-primary)]"
+            />
+          </label>
+        </DisplayMenu>
+      </ViewHeader>
       <div className="min-h-0 flex-1">
         {loading ? null : !visible.length ? (
           (empty ?? <EmptyState title="No issues" body="Issues that match this view will show up here." createDefaults={createDefaults} />)
@@ -114,6 +107,16 @@ export function IssueView({
         )}
       </div>
     </div>
+  )
+}
+
+export function ViewHeader({ title, tabs, children }: { title: ReactNode; tabs?: ReactNode; children?: ReactNode }) {
+  return (
+    <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border px-4">
+      <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink">{title}</div>
+      {tabs && <div className="flex items-center gap-1">{tabs}</div>}
+      <div className="ml-auto flex items-center gap-1.5">{children}</div>
+    </header>
   )
 }
 

@@ -394,9 +394,11 @@ export function useCreateLabel() {
 export type ProjectDraft = {
   name: string
   description?: string
+  content?: string
   statusId: string
   leadId?: string | null
   teamIds: string[]
+  startDate?: string | null
   targetDate?: string | null
   color: string
   icon: string
@@ -416,9 +418,17 @@ export function useCreateProject() {
   })
 }
 
-export type ProjectPatch = { startDate?: string; targetDate?: string }
+export type ProjectPatch = Partial<Omit<ProjectDraft, 'color' | 'icon' | 'content'>> & { content?: string | null }
 
-// useUpdateProject changes a project's dates, optimistically.
+// useProjectContent loads a project's brief, which the catalog leaves out.
+export function useProjectContent(id: string) {
+  return useQuery({
+    queryKey: ['project', id],
+    queryFn: async () => (await gql<{ project: { content: string | null } }>(`query ($id: String!) { project(id: $id) { content } }`, { id })).project.content,
+  })
+}
+
+// useUpdateProject changes a project, optimistically.
 export function useUpdateProject() {
   const client = useQueryClient()
   return useMutation({
@@ -427,12 +437,20 @@ export function useUpdateProject() {
     onMutate: async ({ id, patch }) => {
       await client.cancelQueries({ queryKey: ['catalog'] })
       const previous = client.getQueryData<Catalog>(['catalog'])
-      client.setQueryData<Catalog>(['catalog'], (catalog) =>
-        catalog && { ...catalog, projects: catalog.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) },
-      )
+      const { statusId, content, ...fields } = patch
+      client.setQueryData<Catalog>(['catalog'], (catalog) => {
+        const status = catalog?.organization.projectStatuses.find((s) => s.id === statusId)
+        return catalog && { ...catalog, projects: catalog.projects.map((p) => (p.id === id ? { ...p, ...fields, ...(status && { status }) } : p)) }
+      })
+      if (content !== undefined) {
+        client.setQueryData(['project', id], content)
+      }
       return { previous }
     },
-    onError: (_error, _vars, context) => client.setQueryData(['catalog'], context?.previous),
+    onError: (_error, { id }, context) => {
+      client.setQueryData(['catalog'], context?.previous)
+      client.invalidateQueries({ queryKey: ['project', id] })
+    },
     onSettled: () => client.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }

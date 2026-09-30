@@ -1,15 +1,12 @@
 import { useNavigate } from '@tanstack/react-router'
-import { CalendarDays, Plus, Users, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { entityColors, formatDay } from '@/lib/issues'
+import { entityColors } from '@/lib/issues'
 import { type ProjectDraft, useCatalog, useCreateProject } from '@/lib/queries'
-import { Avatar, TeamBadge } from './icons'
 import { Kbd } from './kbd'
-import { Picker } from './picker'
-import { ProjectStatusIcon } from './project-status'
-import { PropertyButton } from './properties'
+import { ProjectProperties } from './project-properties'
 
 export function CreateProjectButton() {
   const [open, setOpen] = useState(false)
@@ -24,7 +21,7 @@ export function CreateProjectButton() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           showCloseButton={false}
-          className="top-[14%] w-[640px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] sm:max-w-[640px]"
+          className="top-[10%] w-[760px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] sm:max-w-[760px]"
         >
           {open && <ProjectForm close={() => setOpen(false)} />}
         </DialogContent>
@@ -33,13 +30,10 @@ export function CreateProjectButton() {
   )
 }
 
-type Open = 'status' | 'lead' | 'teams' | null
-
 function ProjectForm({ close }: { close: () => void }) {
   const navigate = useNavigate()
   const { data: catalog } = useCatalog()
   const create = useCreateProject()
-  const [open, setOpen] = useState<Open>(null)
   const [draft, setDraft] = useState<ProjectDraft>(() => ({
     name: '',
     statusId: 'planned',
@@ -49,17 +43,13 @@ function ProjectForm({ close }: { close: () => void }) {
     icon: 'Layers',
   }))
   const set = (patch: Partial<ProjectDraft>) => setDraft((d) => ({ ...d, ...patch }))
-  const statuses = catalog?.organization.projectStatuses ?? []
-  const status = statuses.find((s) => s.id === draft.statusId)
-  const lead = catalog?.users.find((u) => u.id === draft.leadId)
-  const toggle = (name: Exclude<Open, null>) => (next: boolean) => setOpen(next ? name : null)
 
   const submit = async () => {
     if (!draft.name.trim() || !draft.teamIds.length) {
       return
     }
     try {
-      const slugId = await create.mutateAsync({ ...draft, name: draft.name.trim() })
+      const slugId = await create.mutateAsync({ ...draft, name: draft.name.trim(), content: draft.content?.trim() ? draft.content : undefined })
       toast(`${draft.name.trim()} created`)
       close()
       navigate({ to: '/project/$slugId', params: { slugId } })
@@ -102,50 +92,16 @@ function ProjectForm({ close }: { close: () => void }) {
           className="field-sizing-content mt-2 min-h-12 w-full resize-none bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3"
         />
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3.5 pt-1">
-        <Picker
-          open={open === 'status'}
-          onOpenChange={toggle('status')}
-          placeholder="Change status..."
-          options={statuses.map((s) => ({ value: s.id, label: s.name, icon: <ProjectStatusIcon type={s.type} color={s.color} /> }))}
-          selected={[draft.statusId]}
-          onSelect={(statusId) => set({ statusId })}
-          trigger={<PropertyButton variant="chip" icon={status && <ProjectStatusIcon type={status.type} color={status.color} />} label={status?.name} />}
-        />
-        <Picker
-          open={open === 'lead'}
-          onOpenChange={toggle('lead')}
-          placeholder="Set lead..."
-          options={[
-            { value: '', label: 'No lead', icon: <Avatar user={null} size={16} /> },
-            ...(catalog?.users ?? []).map((u) => ({ value: u.id, label: u.name, icon: <Avatar user={u} size={16} /> })),
-          ]}
-          selected={[draft.leadId ?? '']}
-          onSelect={(leadId) => set({ leadId: leadId || null })}
-          trigger={<PropertyButton variant="chip" icon={<Avatar user={lead} size={16} />} label={lead?.name ?? 'Lead'} />}
-        />
-        <Picker
-          open={open === 'teams'}
-          onOpenChange={toggle('teams')}
-          multiple
-          placeholder="Add teams..."
-          options={(catalog?.teams ?? []).map((t) => ({ value: t.id, label: t.name, icon: <TeamBadge icon={t.icon} color={t.color} className="size-4" /> }))}
-          selected={draft.teamIds}
-          onSelect={(id) => set({ teamIds: draft.teamIds.includes(id) ? draft.teamIds.filter((t) => t !== id) : [...draft.teamIds, id] })}
-          trigger={
-            <PropertyButton
-              variant="chip"
-              icon={<Users className="size-3.5 text-ink-3" />}
-              label={draft.teamIds.map((id) => catalog?.teams.find((t) => t.id === id)?.key).join(', ') || 'Teams'}
-            />
-          }
-        />
-        <label className="relative inline-flex h-6 items-center gap-1.5 rounded-[var(--radius-control)] border border-border px-2 text-[12px] text-ink-2 hover:bg-list-hover">
-          <CalendarDays className="size-3.5 text-ink-3" />
-          {draft.targetDate ? formatDay(draft.targetDate) : 'Target date'}
-          <input type="date" value={draft.targetDate ?? ''} onChange={(e) => set({ targetDate: e.target.value || null })} className="absolute inset-0 opacity-0" />
-        </label>
+      <div className="px-4 pb-3.5 pt-1">
+        <ProjectProperties value={draft} onChange={set} />
       </div>
+      <div className="mx-4 border-t border-border" />
+      <textarea
+        value={draft.content ?? ''}
+        onChange={(e) => set({ content: e.target.value })}
+        placeholder="Write a description, a project brief, or collect ideas..."
+        className="field-sizing-content block max-h-[45vh] min-h-40 w-full resize-none overflow-y-auto bg-transparent px-4 py-3.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3"
+      />
       <div className="flex items-center justify-end border-t border-border px-4 py-2.5">
         <button
           type="submit"

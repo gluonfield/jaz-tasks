@@ -34,14 +34,31 @@ export function today() {
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY
 }
 
+// weekday counts from Monday, 0, to Sunday, 6.
+export function weekday(day: number) {
+  return (new Date(day * DAY).getUTCDay() + 6) % 7
+}
+
+export function monthStart(day: number) {
+  return floor('month', day)
+}
+
+export function shiftMonth(month: number, step: 1 | -1) {
+  return step > 0 ? next('month', month) : floor('month', month - 1)
+}
+
+export function monthLabel(day: number) {
+  return longMonth.format(new Date(day * DAY))
+}
+
 function floor(unit: Unit, day: number) {
-  const date = new Date(day * DAY)
   if (unit === 'day') {
     return day
   }
   if (unit === 'week') {
-    return day - ((date.getUTCDay() + 6) % 7)
+    return day - weekday(day)
   }
+  const date = new Date(day * DAY)
   const month = date.getUTCMonth()
   return Date.UTC(date.getUTCFullYear(), month - (month % monthsIn[unit]), 1) / DAY
 }

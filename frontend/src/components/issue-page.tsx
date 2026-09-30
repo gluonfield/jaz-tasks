@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { Activity } from './activity'
 import { Avatar, LabelDot, TeamBadge } from './icons'
 import { isTyping } from './issue-view'
-import { Markdown } from './markdown'
+import { EditableMarkdown } from './editable'
 import {
   AssigneePicker,
   CyclePicker,
@@ -177,36 +177,13 @@ function Title({ issue }: { issue: Issue }) {
 
 function Description({ issue }: { issue: IssueDetail }) {
   const patch = useIssuePatch(issue)
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(issue.description ?? '')
-  const save = () => {
-    setEditing(false)
-    if (text !== (issue.description ?? '')) {
-      patch({ description: text.trim() ? text : null })
-    }
-  }
-  if (editing) {
-    return (
-      <textarea
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
-            e.preventDefault()
-            e.currentTarget.blur()
-          }
-        }}
-        placeholder="Add description..."
-        className="field-sizing-content mt-4 min-h-24 w-full resize-none bg-transparent text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3"
-      />
-    )
-  }
   return (
-    <div onClick={() => setEditing(true)} className="mt-4 min-h-8 cursor-text">
-      {issue.description ? <Markdown>{issue.description}</Markdown> : <p className="text-[14px] text-ink-3">Add description...</p>}
-    </div>
+    <EditableMarkdown
+      value={issue.description}
+      placeholder="Add description..."
+      onSave={(description) => patch({ description })}
+      className="mt-4"
+    />
   )
 }
 
