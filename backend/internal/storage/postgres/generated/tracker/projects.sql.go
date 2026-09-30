@@ -55,9 +55,9 @@ func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) (Cycle
 }
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at
+INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date, content)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at, content
 `
 
 type CreateProjectParams struct {
@@ -72,6 +72,7 @@ type CreateProjectParams struct {
 	Priority    int32
 	StartDate   *time.Time
 	TargetDate  *time.Time
+	Content     *string
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -87,6 +88,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.Priority,
 		arg.StartDate,
 		arg.TargetDate,
+		arg.Content,
 	)
 	var i Project
 	err := row.Scan(
@@ -107,6 +109,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ArchivedAt,
+		&i.Content,
 	)
 	return i, err
 }
@@ -149,7 +152,7 @@ func (q *Queries) ListCycles(ctx context.Context, workspaceID string) ([]Cycle, 
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at FROM projects WHERE workspace_id = $1 ORDER BY sort_order, name
+SELECT id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at, content FROM projects WHERE workspace_id = $1 ORDER BY sort_order, name
 `
 
 func (q *Queries) ListProjects(ctx context.Context, workspaceID string) ([]Project, error) {
@@ -179,6 +182,7 @@ func (q *Queries) ListProjects(ctx context.Context, workspaceID string) ([]Proje
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ArchivedAt,
+			&i.Content,
 		); err != nil {
 			return nil, err
 		}
@@ -193,9 +197,9 @@ func (q *Queries) ListProjects(ctx context.Context, workspaceID string) ([]Proje
 const updateProject = `-- name: UpdateProject :one
 UPDATE projects
 SET name = $3, description = $4, icon = $5, color = $6, status = $7, lead_id = $8, team_ids = $9,
-  priority = $10, start_date = $11, target_date = $12, archived_at = $13, updated_at = now()
+  priority = $10, start_date = $11, target_date = $12, archived_at = $13, content = $14, updated_at = now()
 WHERE workspace_id = $1 AND id = $2
-RETURNING id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at
+RETURNING id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at, content
 `
 
 type UpdateProjectParams struct {
@@ -212,6 +216,7 @@ type UpdateProjectParams struct {
 	StartDate   *time.Time
 	TargetDate  *time.Time
 	ArchivedAt  *time.Time
+	Content     *string
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
@@ -229,6 +234,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		arg.StartDate,
 		arg.TargetDate,
 		arg.ArchivedAt,
+		arg.Content,
 	)
 	var i Project
 	err := row.Scan(
@@ -249,6 +255,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ArchivedAt,
+		&i.Content,
 	)
 	return i, err
 }

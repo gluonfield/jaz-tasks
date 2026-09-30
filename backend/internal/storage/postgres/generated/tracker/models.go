@@ -125,6 +125,7 @@ type Project struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
+	Content     *string
 }
 
 type Team struct {

@@ -84,6 +84,7 @@ type NewProject struct {
 	Priority    int32
 	StartDate   *time.Time
 	TargetDate  *time.Time
+	Content     *string
 }
 
 type NewCycle struct {

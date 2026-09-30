@@ -205,6 +205,7 @@ func (mutationResolver) ProjectUpdate(ctx context.Context, id string, in Project
 		Priority:    in.Priority.Value(),
 		StartDate:   omittable(in.StartDate),
 		TargetDate:  omittable(in.TargetDate),
+		Content:     omittable(in.Content),
 	})
 	if err != nil {
 		return nil, err

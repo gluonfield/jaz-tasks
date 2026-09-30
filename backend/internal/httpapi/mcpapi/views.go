@@ -3,6 +3,7 @@ package mcpapi
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
@@ -83,9 +84,7 @@ func present(ctx context.Context, s *tracker.Scope, issue storage.Issue) (issueV
 			view.Labels = append(view.Labels, label.Name)
 		}
 	}
-	if issue.DueDate != nil {
-		view.DueDate = issue.DueDate.Format(dateLayout)
-	}
+	view.DueDate = day(issue.DueDate)
 	return view, nil
 }
 
@@ -158,6 +157,13 @@ func presentComment(ctx context.Context, s *tracker.Scope, c storage.Comment) co
 		}
 	}
 	return view
+}
+
+func day(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format(dateLayout)
 }
 
 const (

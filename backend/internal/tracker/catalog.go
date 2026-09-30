@@ -415,6 +415,7 @@ type ProjectCreateInput struct {
 	Priority    *int32
 	StartDate   *time.Time
 	TargetDate  *time.Time
+	Content     *string
 }
 
 func (s *Scope) CreateProject(ctx context.Context, in ProjectCreateInput) (storage.Project, error) {
@@ -429,6 +430,7 @@ func (s *Scope) CreateProject(ctx context.Context, in ProjectCreateInput) (stora
 		Priority:    deref(in.Priority),
 		StartDate:   in.StartDate,
 		TargetDate:  in.TargetDate,
+		Content:     in.Content,
 	}
 	if project.Status == "" {
 		project.Status = "planned"
@@ -451,6 +453,7 @@ func (s *Scope) CreateProject(ctx context.Context, in ProjectCreateInput) (stora
 		Priority:    project.Priority,
 		StartDate:   project.StartDate,
 		TargetDate:  project.TargetDate,
+		Content:     project.Content,
 	})
 	s.projects.reset()
 	return created, err
@@ -467,6 +470,7 @@ type ProjectUpdateInput struct {
 	Priority    *int32
 	StartDate   Optional[time.Time]
 	TargetDate  Optional[time.Time]
+	Content     Optional[string]
 }
 
 func (s *Scope) UpdateProject(ctx context.Context, id string, in ProjectUpdateInput) (storage.Project, error) {
@@ -496,6 +500,7 @@ func (s *Scope) UpdateProject(ctx context.Context, id string, in ProjectUpdateIn
 	in.LeadID.apply(&project.LeadID)
 	in.StartDate.apply(&project.StartDate)
 	in.TargetDate.apply(&project.TargetDate)
+	in.Content.apply(&project.Content)
 	if err := s.checkProject(ctx, &project); err != nil {
 		return project, err
 	}

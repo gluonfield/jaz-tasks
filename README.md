@@ -67,6 +67,8 @@ Compatibility is pinned by `backend/internal/httpapi/gql/testdata/linear-cli`: t
 | --- | --- |
 | `list_teams` | teams with keys, workflow states and usable labels |
 | `list_users`, `list_projects` | people and projects to refer to |
+| `get_project` | a project with its content: the markdown brief beside its one-line description |
+| `create_project`, `update_project` | status, lead, teams, start and target dates, description and content |
 | `list_issues` | filter by team, state or state type, assignee, project, label, priority, full-text query |
 | `get_issue` | description, sub-issues and comments |
 | `create_issue`, `update_issue` | every property, including moving teams and clearing fields |

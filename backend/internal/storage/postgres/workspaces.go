@@ -123,6 +123,7 @@ func (s *Store) UpdateProject(ctx context.Context, p storage.Project) (storage.P
 		StartDate:   p.StartDate,
 		TargetDate:  p.TargetDate,
 		ArchivedAt:  p.ArchivedAt,
+		Content:     p.Content,
 	}))
 }
 

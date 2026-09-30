@@ -18,7 +18,13 @@ func register(server *mcp.Server, t tools) {
 	mcp.AddTool(server, &mcp.Tool{Name: "list_users", Title: "List users", Annotations: readOnly,
 		Description: "List workspace members who can be assigned issues."}, t.listUsers)
 	mcp.AddTool(server, &mcp.Tool{Name: "list_projects", Title: "List projects", Annotations: readOnly,
-		Description: "List projects with status, lead, teams, target date and progress."}, t.listProjects)
+		Description: "List projects with their one-line description, status, lead, teams, start and target dates and progress."}, t.listProjects)
+	mcp.AddTool(server, &mcp.Tool{Name: "get_project", Title: "Get project", Annotations: readOnly,
+		Description: "Get one project with its content: the markdown brief with its goals, scope and plan. list_issues with project lists its issues."}, t.getProject)
+	mcp.AddTool(server, &mcp.Tool{Name: "create_project", Title: "Create project",
+		Description: "Create a project for one or more teams, with a one-line description and the full brief as markdown content."}, t.createProject)
+	mcp.AddTool(server, &mcp.Tool{Name: "update_project", Title: "Update project",
+		Description: `Update a project. Omitted fields stay unchanged; content replaces the whole brief. Pass "none" to clear lead, start date or target date, and an empty string to clear description or content.`}, t.updateProject)
 	mcp.AddTool(server, &mcp.Tool{Name: "list_issues", Title: "List issues", Annotations: readOnly,
 		Description: "List issues, newest first, filtered by team, state, assignee, project, label, priority or a full-text query."}, t.listIssues)
 	mcp.AddTool(server, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
@@ -99,51 +105,6 @@ func (t tools) listUsers(ctx context.Context, req *mcp.CallToolRequest, _ empty)
 		out.Users = append(out.Users, userView{Name: u.Name, DisplayName: u.DisplayName, Email: u.Email, IsMe: u.ID == s.Actor().UserID})
 	}
 	return nil, out, err
-}
-
-type projectView struct {
-	Name       string   `json:"name"`
-	SlugID     string   `json:"slugId"`
-	Status     string   `json:"status"`
-	Lead       string   `json:"lead,omitempty"`
-	Teams      []string `json:"teams"`
-	TargetDate string   `json:"targetDate,omitempty"`
-	Progress   float64  `json:"progress"`
-	URL        string   `json:"url"`
-}
-
-type projectsOutput struct {
-	Projects []projectView `json:"projects"`
-}
-
-func (t tools) listProjects(ctx context.Context, req *mcp.CallToolRequest, _ empty) (*mcp.CallToolResult, projectsOutput, error) {
-	s := t.scope(req)
-	projects, err := s.FindProjects(ctx, nil, false)
-	if err != nil {
-		return nil, projectsOutput{}, err
-	}
-	out := projectsOutput{Projects: []projectView{}}
-	for _, p := range projects {
-		view := projectView{Name: p.Name, SlugID: p.SlugID, Status: tracker.ProjectStatusOf(p).Name, Teams: []string{}, URL: s.URL("/project/" + p.SlugID)}
-		if p.LeadID != nil {
-			if lead, err := s.User(ctx, *p.LeadID); err == nil {
-				view.Lead = lead.Name
-			}
-		}
-		for _, id := range p.TeamIDs {
-			if team, err := s.Team(ctx, id); err == nil {
-				view.Teams = append(view.Teams, team.Key)
-			}
-		}
-		if p.TargetDate != nil {
-			view.TargetDate = p.TargetDate.Format(dateLayout)
-		}
-		if view.Progress, err = s.ProjectProgress(ctx, p.ID); err != nil {
-			return nil, projectsOutput{}, err
-		}
-		out.Projects = append(out.Projects, view)
-	}
-	return nil, out, nil
 }
 
 type listIssuesInput struct {

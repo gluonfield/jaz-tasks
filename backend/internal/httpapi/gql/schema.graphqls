@@ -214,6 +214,7 @@ type ProjectStatus {
 type Project {
   archivedAt: DateTime
   color: String!
+  content: String
   createdAt: DateTime!
   description: String!
   icon: String
@@ -759,6 +760,7 @@ input IssueLabelUpdateInput {
 
 input ProjectCreateInput {
   color: String
+  content: String
   description: String
   icon: String
   leadId: String
@@ -772,6 +774,7 @@ input ProjectCreateInput {
 
 input ProjectUpdateInput {
   color: String
+  content: String
   description: String
   icon: String
   leadId: String

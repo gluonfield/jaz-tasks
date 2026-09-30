@@ -36,6 +36,22 @@ func resolveProject(ctx context.Context, s *tracker.Scope, ref string) (storage.
 	return pick(projects, err, "project", ref, func(p storage.Project) []string { return []string{p.ID, p.SlugID, p.Name} })
 }
 
+func resolveTeams(ctx context.Context, s *tracker.Scope, refs []string) ([]string, error) {
+	ids := []string{}
+	for _, ref := range refs {
+		team, err := resolveTeam(ctx, s, ref)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, team.ID)
+	}
+	return ids, nil
+}
+
+func resolveProjectStatus(ref string) (tracker.ProjectStatus, error) {
+	return pick(tracker.ProjectStatuses, nil, "project status", ref, func(st tracker.ProjectStatus) []string { return []string{st.ID, st.Name} })
+}
+
 func resolveState(ctx context.Context, s *tracker.Scope, teamID, ref string) (storage.WorkflowState, error) {
 	states, err := s.TeamStates(ctx, teamID)
 	return pick(states, err, "state", ref, func(st storage.WorkflowState) []string { return []string{st.ID, st.Name} })

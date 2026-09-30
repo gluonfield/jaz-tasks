@@ -114,7 +114,7 @@ type issue struct {
 func TestAgentWorkflow(t *testing.T) {
 	session, _ := connect(t)
 	tools, err := session.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) != 10 {
+	if err != nil || len(tools.Tools) != 13 {
 		t.Fatalf("tools = %d, err %v", len(tools.Tools), err)
 	}
 
@@ -195,6 +195,7 @@ func TestTenantIsolationMCP(t *testing.T) {
 	issueA := call[struct {
 		ID string `json:"id"`
 	}](t, a, "get_issue", map[string]any{"issue": "ENG-1"})
+	projectA := call[project](t, a, "get_project", map[string]any{"project": "Tasks MVP"})
 
 	user, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, auth.Identity{
 		Issuer: "https://idp.test", Subject: "bob", Email: "bob@b.test", EmailVerified: true, Name: "Bob Stone",
@@ -210,10 +211,13 @@ func TestTenantIsolationMCP(t *testing.T) {
 	call[issue](t, b, "create_issue", map[string]any{"team": "BOB", "title": "Bob's own"})
 
 	for name, args := range map[string]map[string]any{
-		"get_issue":    {"issue": issueA.ID},
-		"update_issue": {"issue": issueA.ID, "title": "owned"},
-		"add_comment":  {"issue": issueA.ID, "body": "hi"},
-		"create_issue": {"team": "ENG", "title": "x"},
+		"get_issue":      {"issue": issueA.ID},
+		"update_issue":   {"issue": issueA.ID, "title": "owned"},
+		"add_comment":    {"issue": issueA.ID, "body": "hi"},
+		"create_issue":   {"team": "ENG", "title": "x"},
+		"get_project":    {"project": projectA.ID},
+		"update_project": {"project": projectA.ID, "content": "owned"},
+		"create_project": {"name": "x", "teams": []string{"ENG"}},
 	} {
 		res, err := b.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
 		if err != nil || !res.IsError {
@@ -245,6 +249,70 @@ func TestTenantIsolationMCP(t *testing.T) {
 	}
 	if got := call[issue](t, a, "get_issue", map[string]any{"issue": "ENG-1"}); got.Title != "Linear-compatible GraphQL endpoint" || len(got.Comments) != 2 {
 		t.Fatalf("tenant A changed: %+v", got)
+	}
+	if got := call[project](t, a, "get_project", map[string]any{"project": projectA.ID}); got.Content != projectA.Content {
+		t.Fatalf("tenant A's project changed: %+v", got)
+	}
+}
+
+type project struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Content     string   `json:"content"`
+	Status      string   `json:"status"`
+	Lead        string   `json:"lead"`
+	Teams       []string `json:"teams"`
+	StartDate   string   `json:"startDate"`
+	TargetDate  string   `json:"targetDate"`
+	Priority    string   `json:"priority"`
+}
+
+// An agent writes a project's brief and dates, reads them back and revises them.
+func TestProjectBrief(t *testing.T) {
+	session, _ := connect(t)
+	brief := "## Goal\nAgents plan work here.\n\n- Scope: MCP tools\n- Out: mobile"
+	created := call[project](t, session, "create_project", map[string]any{
+		"name": "Agent planning", "teams": []string{"eng"}, "description": "Plans agents can read", "content": brief,
+		"status": "in progress", "lead": "me", "priority": 2, "startDate": "2026-10-05", "targetDate": "2026-11-20",
+	})
+	if created.Content != brief || created.Status != "In Progress" || created.Lead != "Mira Chen" || created.Priority != "High" ||
+		created.StartDate != "2026-10-05" || created.TargetDate != "2026-11-20" || len(created.Teams) != 1 || created.Teams[0] != "ENG" {
+		t.Fatalf("created = %+v", created)
+	}
+
+	got := call[project](t, session, "get_project", map[string]any{"project": "agent planning"})
+	if got.ID != created.ID || got.Content != brief || got.Description != "Plans agents can read" {
+		t.Fatalf("got = %+v", got)
+	}
+
+	updated := call[project](t, session, "update_project", map[string]any{
+		"project": created.ID, "content": "## Goal\nShipped.", "startDate": "none", "targetDate": "2026-12-01", "lead": "none",
+	})
+	if updated.Content != "## Goal\nShipped." || updated.StartDate != "" || updated.TargetDate != "2026-12-01" || updated.Lead != "" ||
+		updated.Description != "Plans agents can read" {
+		t.Fatalf("updated = %+v", updated)
+	}
+
+	cleared := call[project](t, session, "update_project", map[string]any{"project": created.ID, "content": "", "description": ""})
+	if cleared.Content != "" || cleared.Description != "" || cleared.TargetDate != "2026-12-01" {
+		t.Fatalf("cleared = %+v", cleared)
+	}
+
+	listed := call[struct {
+		Projects []project `json:"projects"`
+	}](t, session, "list_projects", nil)
+	var found bool
+	for _, p := range listed.Projects {
+		found = found || (p.Name == "Agent planning" && p.TargetDate == "2026-12-01" && p.Content == "")
+	}
+	if !found {
+		t.Fatalf("list_projects = %+v", listed.Projects)
+	}
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "update_project", Arguments: map[string]any{"project": created.ID, "status": "Shipping"}})
+	if err != nil || !res.IsError || !strings.Contains(res.Content[0].(*mcp.TextContent).Text, `no project status named "Shipping"`) {
+		t.Fatalf("bad status: %+v, %v", res, err)
 	}
 }
 

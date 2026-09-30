@@ -257,3 +257,30 @@ func TestNestedIssueConnections(t *testing.T) {
 		}
 	}
 }
+
+// content is Linear's project brief: markdown beside the one-line description,
+// set on create, replaced on update, kept when omitted and cleared by null.
+func TestProjectContent(t *testing.T) {
+	c := newClient(t)
+	_, out := c.do(`{ teams(filter: { key: { eq: "ENG" } }) { nodes { id } } }`, c.key)
+	team, _ := get(out.Data, "teams.nodes.0.id").(string)
+	_, out = c.do(`mutation { projectCreate(input: { name: "Brief", teamIds: ["`+team+`"], description: "One line", content: "## Goal\nShip it", startDate: "2026-10-05" }) {
+		project { id content description startDate targetDate } } }`, c.key)
+	id, _ := get(out.Data, "projectCreate.project.id").(string)
+	if len(out.Errors) > 0 || get(out.Data, "projectCreate.project.content") != "## Goal\nShip it" || get(out.Data, "projectCreate.project.startDate") != "2026-10-05" {
+		t.Fatalf("create: %+v %+v", out.Data, out.Errors)
+	}
+	for _, step := range []struct {
+		input   string
+		content any
+	}{
+		{`{ content: "Revised" }`, "Revised"},
+		{`{ targetDate: "2026-11-20" }`, "Revised"},
+		{`{ content: null }`, nil},
+	} {
+		_, out = c.do(`mutation { projectUpdate(id: "`+id+`", input: `+step.input+`) { project { content description } } }`, c.key)
+		if len(out.Errors) > 0 || get(out.Data, "projectUpdate.project.content") != step.content || get(out.Data, "projectUpdate.project.description") != "One line" {
+			t.Fatalf("update %s: %+v %+v", step.input, out.Data, out.Errors)
+		}
+	}
+}

@@ -2,14 +2,14 @@
 SELECT * FROM projects WHERE workspace_id = $1 ORDER BY sort_order, name;
 
 -- name: CreateProject :one
-INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date, content)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
 
 -- name: UpdateProject :one
 UPDATE projects
 SET name = $3, description = $4, icon = $5, color = $6, status = $7, lead_id = $8, team_ids = $9,
-  priority = $10, start_date = $11, target_date = $12, archived_at = $13, updated_at = now()
+  priority = $10, start_date = $11, target_date = $12, archived_at = $13, content = $14, updated_at = now()
 WHERE workspace_id = $1 AND id = $2
 RETURNING *;
 

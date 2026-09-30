@@ -981,6 +981,8 @@ func (ec *executionContext) childFields_Project(ctx context.Context, field graph
 		return ec.fieldContext_Project_archivedAt(ctx, field)
 	case "color":
 		return ec.fieldContext_Project_color(ctx, field)
+	case "content":
+		return ec.fieldContext_Project_content(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_Project_createdAt(ctx, field)
 	case "description":
@@ -9527,6 +9529,29 @@ func (ec *executionContext) fieldContext_Project_color(_ context.Context, field 
 	return graphql.NewScalarFieldContext("Project", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Project_content(ctx context.Context, field graphql.CollectedField, obj *storage.Project) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Project_content(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Content, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Project_content(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Project", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Project_createdAt(ctx context.Context, field graphql.CollectedField, obj *storage.Project) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -15367,7 +15392,7 @@ func (ec *executionContext) unmarshalInputProjectCreateInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"color", "description", "icon", "leadId", "name", "priority", "startDate", "statusId", "targetDate", "teamIds"}
+	fieldsInOrder := [...]string{"color", "content", "description", "icon", "leadId", "name", "priority", "startDate", "statusId", "targetDate", "teamIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -15381,6 +15406,13 @@ func (ec *executionContext) unmarshalInputProjectCreateInput(ctx context.Context
 				return it, err
 			}
 			it.Color = data
+		case "content":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("content"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Content = data
 		case "description":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -15562,7 +15594,7 @@ func (ec *executionContext) unmarshalInputProjectUpdateInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"color", "description", "icon", "leadId", "name", "priority", "startDate", "statusId", "targetDate", "teamIds"}
+	fieldsInOrder := [...]string{"color", "content", "description", "icon", "leadId", "name", "priority", "startDate", "statusId", "targetDate", "teamIds"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -15576,6 +15608,13 @@ func (ec *executionContext) unmarshalInputProjectUpdateInput(ctx context.Context
 				return it, err
 			}
 			it.Color = graphql.OmittableOf(data)
+		case "content":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("content"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Content = graphql.OmittableOf(data)
 		case "description":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -20336,6 +20375,11 @@ func (ec *executionContext) _Project(ctx context.Context, sel ast.SelectionSet, 
 		case "color":
 			out.Values[i] = ec._Project_color(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "content":
+			out.Values[i] = ec._Project_content(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "createdAt":

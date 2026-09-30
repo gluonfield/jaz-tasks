@@ -113,6 +113,7 @@ type ProjectPayload struct {
 
 type ProjectUpdateInput struct {
 	Color       graphql.Omittable[*string]    `json:"color,omitempty"`
+	Content     graphql.Omittable[*string]    `json:"content,omitempty"`
 	Description graphql.Omittable[*string]    `json:"description,omitempty"`
 	Icon        graphql.Omittable[*string]    `json:"icon,omitempty"`
 	LeadID      graphql.Omittable[*string]    `json:"leadId,omitempty"`
