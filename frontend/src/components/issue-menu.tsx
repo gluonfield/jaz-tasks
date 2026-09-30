@@ -2,7 +2,6 @@ import { CircleDot, Copy, CornerDownRight, CornerLeftUp, GitFork, Hexagon, Link2
 import type { ReactNode } from 'react'
 import {
   ContextMenu,
-  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuRadioGroup,
@@ -19,7 +18,7 @@ import type { Issue } from '@/lib/types'
 import { openCreateRelated, setUI } from '@/lib/ui'
 import { Avatar, EntityIcon, PriorityIcon } from './icons'
 import type { PickerOption } from './picker'
-import { priorityOptions, useAssigneeOptions, useLabelOptions, useProjectOptions, useStateIcon, useStatusOptions } from './properties'
+import { priorityOptions, useAssigneeOptions, useProjectOptions, useStateIcon, useStatusOptions } from './properties'
 
 // Right-clicking an issue offers Linear's quick edits without opening it.
 export function IssueContextMenu({ issue, children }: { issue: Issue; children: ReactNode }) {
@@ -30,14 +29,11 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
   const project = issue.projectId ? projects.get(issue.projectId) : null
   const statusOptions = useStatusOptions(issue.teamId)
   const assigneeOptions = useAssigneeOptions()
-  const labelOptions = useLabelOptions(issue.teamId)
   const projectOptions = useProjectOptions(issue.teamId)
-  const toggleLabel = (id: string) =>
-    patch({ labelIds: issue.labelIds.includes(id) ? issue.labelIds.filter((l) => l !== id) : [...issue.labelIds, id] })
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      {/* Focus returning to the row as the menu closes would dismiss the picker "Set parent issue…" opens. */}
+      {/* Focus returning to the row as the menu closes would dismiss the pickers the Labels and parent items open. */}
       <ContextMenuContent className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
         <Choice
           label="Status"
@@ -60,25 +56,11 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
           value={issue.assigneeId ?? ''}
           onChange={(assigneeId) => patch({ assigneeId: assigneeId || null })}
         />
-        <ContextMenuSub>
-          <ContextMenuSubTrigger className="gap-2">
-            <Tag className="size-3.5 text-ink-3" />
-            Labels
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-52">
-            {labelOptions.map((option) => (
-              <ContextMenuCheckboxItem
-                key={option.value}
-                checked={issue.labelIds.includes(option.value)}
-                onCheckedChange={() => toggleLabel(option.value)}
-                onSelect={(event) => event.preventDefault()}
-              >
-                {option.icon}
-                <span className="truncate">{option.label}</span>
-              </ContextMenuCheckboxItem>
-            ))}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
+        <ContextMenuItem className="gap-2" onSelect={() => setUI({ picker: { kind: 'labels', issueId: issue.id } })}>
+          <Tag className="size-3.5 text-ink-3" />
+          Labels…
+          <ContextMenuShortcut>L</ContextMenuShortcut>
+        </ContextMenuItem>
         <Choice
           label="Project"
           icon={project ? <EntityIcon icon={project.icon} color={project.color} /> : <Hexagon className="size-3.5 text-ink-3" />}
