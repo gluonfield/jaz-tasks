@@ -68,7 +68,7 @@ function Button({ children, onClick, primary, disabled }: { children: ReactNode;
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'h-7 shrink-0 rounded-[var(--radius-control)] border px-2.5 text-[12.5px] font-medium outline-none transition-colors disabled:opacity-50',
+        'h-7 shrink-0 rounded-full border px-3 text-[12.5px] font-medium outline-none transition-colors disabled:opacity-50',
         primary ? 'border-primary bg-primary text-on-primary hover:bg-primary-strong' : 'border-border text-ink hover:bg-list-hover',
       )}
     >

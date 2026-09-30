@@ -106,7 +106,7 @@ function ProjectForm({ close }: { close: () => void }) {
         <button
           type="submit"
           disabled={!draft.name.trim() || !draft.teamIds.length || create.isPending}
-          className="flex h-8 items-center gap-2 rounded-[var(--radius-control)] bg-primary px-3 text-[13px] font-medium text-on-primary shadow-xs outline-none transition-[background-color,opacity] hover:bg-primary-strong disabled:opacity-50"
+          className="flex h-8 items-center gap-2 rounded-full bg-primary px-3.5 text-[13px] font-medium text-on-primary shadow-xs outline-none transition-[background-color,opacity] hover:bg-primary-strong disabled:opacity-50"
         >
           Create project
           <span className="flex items-center gap-0.5 opacity-70">
