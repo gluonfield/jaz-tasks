@@ -38,10 +38,11 @@ func NewService(store storage.WorkspaceStore, cfg Config) *Service {
 	return &Service{store: store, cfg: cfg}
 }
 
-// SignIn returns the user a person acts as. Pending invites are accepted and
-// appear in the workspace switcher; people keep landing in their first
-// workspace, a newcomer lands in the inviting one, and someone with no
-// invite gets a workspace of their own, like Linear's onboarding.
+// SignIn returns the user a person acts as. Accounts provisioned for their
+// email become theirs and pending invites are accepted, all appearing in the
+// workspace switcher; people keep landing in their first workspace, a
+// newcomer lands in a provisioned account or else the inviting workspace,
+// and anyone else gets a workspace of their own.
 func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, error) {
 	if !id.EmailVerified || id.Email == "" {
 		return storage.User{}, ErrEmailUnverified
@@ -54,17 +55,47 @@ func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, e
 	if err != nil {
 		return storage.User{}, err
 	}
+	claimed, err := s.store.ShareIdentity(ctx, emailIdentity(id.Email), identity)
+	if err != nil {
+		return storage.User{}, err
+	}
 	joined, err := s.acceptInvites(ctx, identity, member(id))
 	switch {
 	case err != nil:
 		return storage.User{}, err
 	case len(users) > 0:
 		return users[0], nil
+	case len(claimed) > 0:
+		return claimed[0], nil
 	case joined != nil:
 		return *joined, nil
 	}
-	name := firstName(id.Name, id.Email)
-	owner := member(id)
+	return s.createOwned(ctx, member(id), firstName(id.Name, id.Email), identity)
+}
+
+// Provision returns the account a deployment declares for the email: its
+// first user, or a new one with a workspace of its own that whoever signs in
+// with that verified email takes over.
+func (s *Service) Provision(ctx context.Context, email string) (storage.User, error) {
+	users, err := s.store.UsersByEmail(ctx, email)
+	if err != nil {
+		return storage.User{}, err
+	}
+	if len(users) > 0 {
+		return users[0], nil
+	}
+	return s.createOwned(ctx, member(auth.Identity{Email: email}), firstName("", email), emailIdentity(email))
+}
+
+// emailIdentity stands for anyone who proves they hold the address, which is
+// how a provisioned account awaits its person.
+func emailIdentity(email string) storage.Identity {
+	return storage.Identity{Issuer: "email", Subject: strings.ToLower(email)}
+}
+
+// createOwned starts a person in a workspace of their own, like Linear's
+// onboarding: a Personal workspace and a first team named after them.
+func (s *Service) createOwned(ctx context.Context, owner storage.NewUser, name string, identity storage.Identity) (storage.User, error) {
 	owner.Admin = true
 	return s.store.CreateOwnedWorkspace(ctx,
 		storage.NewWorkspace{Name: "Personal", URLKey: slug(name) + "-" + suffix()},

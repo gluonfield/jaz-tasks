@@ -6,6 +6,18 @@ WHERE api_keys.key_hash = $1 AND users.active;
 -- name: CreateAPIKey :one
 INSERT INTO api_keys (user_id, label, hint, key_hash) VALUES ($1, $2, $3, $4) RETURNING *;
 
+-- name: ReplaceAPIKey :one
+-- ReplaceAPIKey makes the key the user's one key with this label, keeping it
+-- when already registered to them and deleting the label's other keys.
+WITH replaced AS (
+  DELETE FROM api_keys WHERE user_id = sqlc.arg(user_id) AND label = sqlc.arg(label) AND key_hash <> sqlc.arg(key_hash)
+)
+INSERT INTO api_keys (user_id, label, hint, key_hash)
+VALUES (sqlc.arg(user_id), sqlc.arg(label), sqlc.arg(hint), sqlc.arg(key_hash))
+ON CONFLICT (key_hash) DO UPDATE SET label = EXCLUDED.label
+WHERE api_keys.user_id = EXCLUDED.user_id
+RETURNING *;
+
 -- name: ListAPIKeys :many
 SELECT * FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC;
 
@@ -13,7 +25,19 @@ SELECT * FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC;
 DELETE FROM api_keys WHERE user_id = $1 AND id = $2;
 
 -- name: UsersByEmail :many
-SELECT * FROM users WHERE lower(email) = lower($1) AND active;
+SELECT * FROM users WHERE lower(email) = lower($1) AND active ORDER BY created_at;
+
+-- name: ShareIdentity :many
+-- ShareIdentity links the identity to every user another identity signs in
+-- as, returning the active ones it newly reaches.
+WITH linked AS (
+  INSERT INTO identities (issuer, subject, user_id)
+  SELECT sqlc.arg(issuer), sqlc.arg(subject), identities.user_id FROM identities
+  WHERE identities.issuer = sqlc.arg(from_issuer) AND identities.subject = sqlc.arg(from_subject)
+  ON CONFLICT DO NOTHING
+  RETURNING user_id
+)
+SELECT users.* FROM users JOIN linked ON linked.user_id = users.id WHERE users.active ORDER BY users.created_at;
 
 -- name: CreateAuthUser :one
 INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin)

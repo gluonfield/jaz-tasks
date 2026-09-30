@@ -24,6 +24,12 @@ func (s *Store) UsersByIdentity(ctx context.Context, issuer, subject string) ([]
 	return many(toAuthUser)(s.auth.UsersByIdentity(ctx, authdb.UsersByIdentityParams{Issuer: issuer, Subject: subject}))
 }
 
+func (s *Store) ShareIdentity(ctx context.Context, from, identity storage.Identity) ([]storage.User, error) {
+	return many(toAuthUser)(s.auth.ShareIdentity(ctx, authdb.ShareIdentityParams{
+		Issuer: identity.Issuer, Subject: identity.Subject, FromIssuer: from.Issuer, FromSubject: from.Subject,
+	}))
+}
+
 func (s *Store) UserIdentity(ctx context.Context, userID string) (storage.Identity, error) {
 	return one(toIdentity)(s.auth.UserIdentity(ctx, userID))
 }

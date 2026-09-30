@@ -198,3 +198,61 @@ func TestCreateKeyForEmailNamesTheWorkspace(t *testing.T) {
 		t.Fatalf("key for the named workspace acts in: %+v %+v", out.Data, out.Errors)
 	}
 }
+
+// A deployment's OWNER_EMAIL account and OWNER_API_KEY: provisioned once,
+// usable at once, rotated by replacing the key, and claimed by the person's
+// first sign-in with that email.
+func TestProvisionedOwner(t *testing.T) {
+	c := newClient(t)
+	ctx := context.Background()
+	people := workspaces.NewService(c.store, workspaces.Config{})
+	keys := auth.NewService(c.store, auth.Config{PublicURL: "http://tasks.test"})
+	viewer := func(key string) any {
+		_, out := c.do(`{ viewer { email } }`, key)
+		return get(out.Data, "viewer.email")
+	}
+
+	owner, err := people.Provision(ctx, "owner@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again, err := people.Provision(ctx, "owner@example.com"); err != nil || again.ID != owner.ID {
+		t.Fatalf("provisioning again = %+v, %v; want the same account", again, err)
+	}
+	first := strings.Repeat("a1", 32)
+	for range 2 {
+		if err := keys.ProvisionKey(ctx, owner.ID, first); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if viewer(first) != "owner@example.com" || viewer("Bearer "+first) != "owner@example.com" {
+		t.Fatal("the provisioned key does not act as the owner")
+	}
+	second := strings.Repeat("b2", 32)
+	if err := keys.ProvisionKey(ctx, owner.ID, second); err != nil {
+		t.Fatal(err)
+	}
+	if viewer(first) != nil || viewer(second) != "owner@example.com" {
+		t.Fatal("replacing OWNER_API_KEY should retire the previous key")
+	}
+	if list, _ := c.store.APIKeys(ctx, owner.ID); len(list) != 1 {
+		t.Fatalf("owner keys = %+v, want only the current one", list)
+	}
+	if err := keys.ProvisionKey(ctx, owner.ID, "short"); err == nil {
+		t.Fatal("a short OWNER_API_KEY should be refused")
+	}
+	other, err := people.Provision(ctx, "other@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := keys.ProvisionKey(ctx, other.ID, second); err == nil {
+		t.Fatal("another account's key should be refused")
+	}
+
+	for range 2 {
+		user, err := people.SignIn(ctx, auth.Identity{Issuer: "google", Subject: "owner-sub", Email: "OWNER@example.com", EmailVerified: true, Name: "Owner"})
+		if err != nil || user.ID != owner.ID {
+			t.Fatalf("signing in with the owner's email = %+v, %v; want the provisioned account", user, err)
+		}
+	}
+}

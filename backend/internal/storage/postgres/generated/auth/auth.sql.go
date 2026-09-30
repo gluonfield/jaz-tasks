@@ -335,6 +335,101 @@ func (q *Queries) Memberships(ctx context.Context, userID string) ([]Memberships
 	return items, nil
 }
 
+const replaceAPIKey = `-- name: ReplaceAPIKey :one
+WITH replaced AS (
+  DELETE FROM api_keys WHERE user_id = $1 AND label = $2 AND key_hash <> $4
+)
+INSERT INTO api_keys (user_id, label, hint, key_hash)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (key_hash) DO UPDATE SET label = EXCLUDED.label
+WHERE api_keys.user_id = EXCLUDED.user_id
+RETURNING id, user_id, label, key_hash, created_at, hint
+`
+
+type ReplaceAPIKeyParams struct {
+	UserID  string
+	Label   string
+	Hint    string
+	KeyHash []byte
+}
+
+// ReplaceAPIKey makes the key the user's one key with this label, keeping it
+// when already registered to them and deleting the label's other keys.
+func (q *Queries) ReplaceAPIKey(ctx context.Context, arg ReplaceAPIKeyParams) (APIKey, error) {
+	row := q.db.QueryRow(ctx, replaceAPIKey,
+		arg.UserID,
+		arg.Label,
+		arg.Hint,
+		arg.KeyHash,
+	)
+	var i APIKey
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Label,
+		&i.KeyHash,
+		&i.CreatedAt,
+		&i.Hint,
+	)
+	return i, err
+}
+
+const shareIdentity = `-- name: ShareIdentity :many
+WITH linked AS (
+  INSERT INTO identities (issuer, subject, user_id)
+  SELECT $1, $2, identities.user_id FROM identities
+  WHERE identities.issuer = $3 AND identities.subject = $4
+  ON CONFLICT DO NOTHING
+  RETURNING user_id
+)
+SELECT users.id, users.workspace_id, users.name, users.display_name, users.email, users.avatar_url, users.admin, users.active, users.created_at, users.updated_at FROM users JOIN linked ON linked.user_id = users.id WHERE users.active ORDER BY users.created_at
+`
+
+type ShareIdentityParams struct {
+	Issuer      string
+	Subject     string
+	FromIssuer  string
+	FromSubject string
+}
+
+// ShareIdentity links the identity to every user another identity signs in
+// as, returning the active ones it newly reaches.
+func (q *Queries) ShareIdentity(ctx context.Context, arg ShareIdentityParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, shareIdentity,
+		arg.Issuer,
+		arg.Subject,
+		arg.FromIssuer,
+		arg.FromSubject,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.DisplayName,
+			&i.Email,
+			&i.AvatarURL,
+			&i.Admin,
+			&i.Active,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSessionUser = `-- name: UpdateSessionUser :execrows
 UPDATE sessions SET user_id = $2 WHERE token_hash = $1
 `
@@ -417,7 +512,7 @@ func (q *Queries) UserIdentity(ctx context.Context, userID string) (Identity, er
 }
 
 const usersByEmail = `-- name: UsersByEmail :many
-SELECT id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at FROM users WHERE lower(email) = lower($1) AND active
+SELECT id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at FROM users WHERE lower(email) = lower($1) AND active ORDER BY created_at
 `
 
 func (q *Queries) UsersByEmail(ctx context.Context, lower string) ([]User, error) {

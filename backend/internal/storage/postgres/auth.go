@@ -33,6 +33,10 @@ func (s *Store) CreateAPIKey(ctx context.Context, userID, label, hint string, ke
 	return one(toAPIKey)(s.auth.CreateAPIKey(ctx, authdb.CreateAPIKeyParams{UserID: userID, Label: label, Hint: hint, KeyHash: keyHash}))
 }
 
+func (s *Store) ReplaceAPIKey(ctx context.Context, userID, label, hint string, keyHash []byte) (storage.APIKey, error) {
+	return one(toAPIKey)(s.auth.ReplaceAPIKey(ctx, authdb.ReplaceAPIKeyParams{UserID: userID, Label: label, Hint: hint, KeyHash: keyHash}))
+}
+
 func (s *Store) APIKeys(ctx context.Context, userID string) ([]storage.APIKey, error) {
 	return many(toAPIKey)(s.auth.ListAPIKeys(ctx, userID))
 }

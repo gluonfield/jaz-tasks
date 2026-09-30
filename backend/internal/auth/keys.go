@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,8 +18,25 @@ func (s *Service) CreateKey(ctx context.Context, userID, label, key string) (str
 	if key == "" {
 		key = secret(apiKeyPrefix)
 	}
-	record, err := s.store.CreateAPIKey(ctx, userID, label, "…"+key[max(0, len(key)-4):], hash(key))
+	record, err := s.store.CreateAPIKey(ctx, userID, label, hint(key), hash(key))
 	return key, record, err
+}
+
+// ProvisionKey registers a deployment's key for the user as their only
+// OWNER_API_KEY key, so replacing the key retires the previous one.
+func (s *Service) ProvisionKey(ctx context.Context, userID, key string) error {
+	if len(key) < 32 || strings.HasPrefix(key, accessTokenPrefix) {
+		return fmt.Errorf("OWNER_API_KEY must be at least 32 random characters, such as the output of openssl rand -hex 32")
+	}
+	_, err := s.store.ReplaceAPIKey(ctx, userID, "OWNER_API_KEY", hint(key), hash(key))
+	if errors.Is(err, storage.ErrNotFound) {
+		return fmt.Errorf("OWNER_API_KEY is already another account's key")
+	}
+	return err
+}
+
+func hint(key string) string {
+	return "…" + key[max(0, len(key)-4):]
 }
 
 func (s *Service) APIKeys(ctx context.Context, actor Actor) ([]storage.APIKey, error) {

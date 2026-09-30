@@ -67,6 +67,8 @@ type NewOAuthToken struct {
 type AuthStore interface {
 	UserByAPIKey(ctx context.Context, keyHash []byte) (User, error)
 	CreateAPIKey(ctx context.Context, userID, label, hint string, keyHash []byte) (APIKey, error)
+	// ReplaceAPIKey makes the key the user's only one with the label.
+	ReplaceAPIKey(ctx context.Context, userID, label, hint string, keyHash []byte) (APIKey, error)
 	APIKeys(ctx context.Context, userID string) ([]APIKey, error)
 	DeleteAPIKey(ctx context.Context, userID, id string) error
 	UsersByEmail(ctx context.Context, email string) ([]User, error)
@@ -132,6 +134,9 @@ type NewWorkspace struct {
 type WorkspaceStore interface {
 	UserByID(ctx context.Context, id string) (User, error)
 	UsersByIdentity(ctx context.Context, issuer, subject string) ([]User, error)
+	UsersByEmail(ctx context.Context, email string) ([]User, error)
+	// ShareIdentity links identity to every user from signs in as.
+	ShareIdentity(ctx context.Context, from, identity Identity) ([]User, error)
 	UserIdentity(ctx context.Context, userID string) (Identity, error)
 	// Memberships lists the workspaces of everyone sharing the user's identity.
 	Memberships(ctx context.Context, userID string) ([]Membership, error)

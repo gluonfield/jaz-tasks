@@ -29,6 +29,14 @@ type Config struct {
 	OIDC        auth.OIDCConfig
 	Auth        auth.Config
 	Workspaces  workspaces.Config
+	Owner       Owner
+}
+
+// Owner is the account a deployment provisions at startup, and the API key
+// it gives clients such as Jaz, so the deployment works without a sign-in.
+type Owner struct {
+	Email  string
+	APIKey string
 }
 
 // ParseConfig reads flags, each defaulting to an environment variable, and
@@ -54,6 +62,10 @@ func ParseConfig(args []string) (Config, error) {
 	cfg.Workspaces = workspaces.Config{
 		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
 		AllowedEmails:       list(os.Getenv("ALLOWED_EMAILS")),
+	}
+	cfg.Owner = Owner{Email: strings.TrimSpace(os.Getenv("OWNER_EMAIL")), APIKey: strings.TrimSpace(os.Getenv("OWNER_API_KEY"))}
+	if cfg.Owner.APIKey != "" && cfg.Owner.Email == "" {
+		return cfg, errors.New("OWNER_API_KEY needs OWNER_EMAIL, the account it belongs to")
 	}
 	return cfg, nil
 }
@@ -87,7 +99,7 @@ func Options(cfg Config) fx.Option {
 			tracker.NewService,
 		),
 		HTTPModule(),
-		fx.Invoke(StartHTTP),
+		fx.Invoke(ProvisionOwner, StartHTTP),
 	)
 }
 
@@ -108,6 +120,21 @@ func OpenStore(lc fx.Lifecycle, cfg Config) (*postgres.Store, error) {
 	}
 	lc.Append(fx.StopHook(store.Close))
 	return store, nil
+}
+
+// ProvisionOwner creates the OWNER_EMAIL account when it is new and registers
+// OWNER_API_KEY for it, before the server takes requests.
+func ProvisionOwner(cfg Config, people *workspaces.Service, keys *auth.Service) error {
+	if cfg.Owner.Email == "" {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	user, err := people.Provision(ctx, cfg.Owner.Email)
+	if err != nil || cfg.Owner.APIKey == "" {
+		return err
+	}
+	return keys.ProvisionKey(ctx, user.ID, cfg.Owner.APIKey)
 }
 
 func StartHTTP(lc fx.Lifecycle, handler http.Handler, cfg Config, logger *log.Logger) {
