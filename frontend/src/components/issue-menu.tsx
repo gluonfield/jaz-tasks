@@ -37,7 +37,8 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-52">
+      {/* Focus returning to the row as the menu closes would dismiss the picker "Set parent issue…" opens. */}
+      <ContextMenuContent className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
         <Choice
           label="Status"
           icon={state && stateIcon(state)}
