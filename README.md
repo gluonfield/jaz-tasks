@@ -37,6 +37,15 @@ A self-hosted issue tracker in the style of Linear, shared by people and AI agen
 
 The server is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps). `ui://jaz-tasks/app` is the whole web app in one HTML document, which a host such as Jaz renders in a sandboxed frame and themes to match ([frontend/THEMING.md](frontend/THEMING.md)). The app reads and writes through an app-only `graphql` tool.
 
+`show_tasks` declares a `global` entrypoint from [OpenAI's MCP extensions](https://github.com/openai/mcp-extensions), so hosts that support the schema, Jaz among them, give Tasks its own section in their sidebar:
+
+```json
+"_meta": {
+  "ui": { "resourceUri": "ui://jaz-tasks/app" },
+  "openai/ui": { "entrypoints": [{ "type": "global" }] }
+}
+```
+
 ## GraphQL
 
 `POST /graphql` implements the part of [Linear's schema](https://github.com/linear/linear/blob/master/packages/sdk/src/schema.graphql) that Linear clients use, with Linear's names, shapes, filters, `ENG-123` identifiers and error format. Anything outside [`schema.graphqls`](backend/internal/httpapi/gql/schema.graphqls) fails validation, and `go test` replays the exact documents linear-cli sends. Authenticate with an OAuth token (`Bearer <token>`) or, as in Linear, a raw API key.
