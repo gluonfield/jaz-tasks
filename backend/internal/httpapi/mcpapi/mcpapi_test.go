@@ -255,8 +255,17 @@ func TestMCPApp(t *testing.T) {
 	s := e.session(t, e.key)
 	ctx := context.Background()
 	resources, err := s.ListResources(ctx, nil)
-	if err != nil || len(resources.Resources) != 1 || resources.Resources[0].URI != "ui://jaz-tasks/app" || resources.Resources[0].MIMEType != "text/html;profile=mcp-app" {
+	if err != nil || len(resources.Resources) != 2 {
 		t.Fatalf("resources: %+v %v", resources, err)
+	}
+	for _, resource := range resources.Resources {
+		if resource.MIMEType != "text/html;profile=mcp-app" {
+			t.Fatalf("resource %s has MIME type %s", resource.URI, resource.MIMEType)
+		}
+	}
+	card, err := s.ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/issue"})
+	if err != nil || !strings.Contains(card.Contents[0].Text, "codex://plugins/jaz-tasks/app/show_tasks") || strings.Contains(card.Contents[0].Text, `src="http`) {
+		t.Fatalf("issue card: %v", err)
 	}
 	read, err := s.ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/app"})
 	if err != nil || len(read.Contents) != 1 || read.Contents[0].MIMEType != "text/html;profile=mcp-app" {
@@ -289,6 +298,9 @@ func TestMCPApp(t *testing.T) {
 	if openai, _ := meta["show_tasks"]["openai/ui"].(map[string]any); fmt.Sprint(openai["entrypoints"]) != "[map[type:global]]" {
 		t.Fatalf("show_tasks should be a global entrypoint: %+v", meta["show_tasks"])
 	}
+	if ui, _ := meta["create_issue"]["ui"].(map[string]any); ui["resourceUri"] != "ui://jaz-tasks/issue" {
+		t.Fatalf("create_issue should show the issue card: %+v", meta["create_issue"])
+	}
 	if ui, _ := meta["graphql"]["ui"].(map[string]any); fmt.Sprint(ui["visibility"]) != "[app]" {
 		t.Fatalf("graphql meta: %+v", meta["graphql"])
 	}
@@ -306,6 +318,12 @@ func TestMCPApp(t *testing.T) {
 	want := `{"data":{"issueUpdate":{"issue":{"identifier":"ENG-4","priorityLabel":"Low"}}}}`
 	if err != nil || res.IsError || res.Content[0].(*mcp.TextContent).Text != want {
 		t.Fatalf("graphql tool: %+v %v", res, err)
+	}
+
+	// The card draws the state in its color, which only the card receives.
+	created, err := s.CallTool(ctx, &mcp.CallToolParams{Name: "create_issue", Arguments: map[string]any{"team": "ENG", "title": "Card", "state": "In Progress"}})
+	if err != nil || created.IsError || created.Meta["jaz-tasks/stateColor"] != "#f2c94c" || strings.Contains(created.Content[0].(*mcp.TextContent).Text, "#f2c94c") {
+		t.Fatalf("create_issue result: %+v %v", created, err)
 	}
 }
 

@@ -11,17 +11,22 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// The MCP App (SEP-1865): the web app as one self-contained ui:// resource
-// that hosts render in a sandboxed iframe. It reaches the API through the
-// graphql tool, which only the app may call. `bun run build` in frontend
-// regenerates app/mcp-app.html.
+// The MCP Apps (SEP-1865): self-contained ui:// resources that hosts render
+// in a sandboxed iframe. The web app reaches the API through the graphql
+// tool, which only the app may call; the issue card shows an issue
+// create_issue made inline. `bun run build` in frontend regenerates app/.
 const (
-	appURI  = "ui://jaz-tasks/app"
-	appMIME = "text/html;profile=mcp-app"
+	appURI       = "ui://jaz-tasks/app"
+	issueCardURI = "ui://jaz-tasks/issue"
+	appMIME      = "text/html;profile=mcp-app"
 )
 
-//go:embed app/mcp-app.html
-var appHTML string
+var (
+	//go:embed app/mcp-app.html
+	appHTML string
+	//go:embed app/issue-card.html
+	issueCardHTML string
+)
 
 // icons is the rail mark, a line-drawn circled check in the weight of the
 // host's own navigation glyphs, stroked for light and dark backgrounds.
@@ -45,12 +50,8 @@ func iconSVG(stroke string) string {
 }
 
 func registerApp(server *mcp.Server, t tools) {
-	server.AddResource(&mcp.Resource{URI: appURI, Name: "Jaz Tasks", Title: "Jaz Tasks", MIMEType: appMIME},
-		func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
-				URI: appURI, MIMEType: appMIME, Text: appHTML, Meta: mcp.Meta{"ui": map[string]any{"prefersBorder": false}},
-			}}}, nil
-		})
+	addAppResource(server, appURI, "Jaz Tasks", appHTML)
+	addAppResource(server, issueCardURI, "Jaz Tasks issue", issueCardHTML)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "show_tasks", Title: "Tasks",
 		Description: "Open the Jaz Tasks app for the user at a team, an issue or a section.",
@@ -68,6 +69,15 @@ func registerApp(server *mcp.Server, t tools) {
 		Description: "Run a Linear-compatible GraphQL document. Used by the Jaz Tasks app.",
 		Meta:        mcp.Meta{"ui": map[string]any{"visibility": []string{"app"}}},
 	}, t.runGraphQL)
+}
+
+func addAppResource(server *mcp.Server, uri, title, html string) {
+	server.AddResource(&mcp.Resource{URI: uri, Name: title, Title: title, MIMEType: appMIME},
+		func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
+				URI: uri, MIMEType: appMIME, Text: html, Meta: mcp.Meta{"ui": map[string]any{"prefersBorder": false}},
+			}}}, nil
+		})
 }
 
 type showInput struct {

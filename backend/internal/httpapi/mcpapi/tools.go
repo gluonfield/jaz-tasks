@@ -24,7 +24,8 @@ func register(server *mcp.Server, t tools) {
 	mcp.AddTool(server, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
 		Description: "Get one issue with its description, sub-issues and comments."}, t.getIssue)
 	mcp.AddTool(server, &mcp.Tool{Name: "create_issue", Title: "Create issue",
-		Description: "Create an issue in a team. Unset state defaults to the team's Todo state."}, t.createIssue)
+		Description: "Create an issue in a team. Unset state defaults to the team's Todo state.",
+		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": issueCardURI}, "ui/resourceUri": issueCardURI}}, t.createIssue)
 	mcp.AddTool(server, &mcp.Tool{Name: "update_issue", Title: "Update issue",
 		Description: `Update an issue. Omitted fields stay unchanged; pass "none" to clear assignee, project, due date, estimate or parent.`}, t.updateIssue)
 	mcp.AddTool(server, &mcp.Tool{Name: "add_comment", Title: "Add comment",
@@ -301,7 +302,10 @@ func (t tools) createIssue(ctx context.Context, req *mcp.CallToolRequest, in cre
 		return nil, issueDetail{}, err
 	}
 	out, err := detail(ctx, s, issue)
-	return nil, out, err
+	if err != nil {
+		return nil, issueDetail{}, err
+	}
+	return &mcp.CallToolResult{Meta: mcp.Meta{"jaz-tasks/stateColor": out.stateColor}}, out, nil
 }
 
 type updateIssueInput struct {

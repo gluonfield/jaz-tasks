@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
 import { createRoot } from 'react-dom/client'
 import { setTransport } from './lib/api'
+import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps'
 import { app, connect, graphql } from './lib/mcp-app'
 import { routeTree } from './routeTree.gen'
 import { Route as root } from './routes/__root'
@@ -32,6 +33,14 @@ app.ontoolinput = ({ arguments: args }) => {
   router.navigate({ to })
 }
 
+// A host's deep link (OpenAI's MCP extensions) opens the app at a page, at
+// start and whenever the host changes it.
+function follow(context?: McpUiHostContext) {
+  const url = (context?.['openai/deepLink'] as { url?: unknown } | undefined)?.url
+  if (typeof url === 'string' && url.startsWith('/')) router.navigate({ href: url })
+}
+app.addEventListener('hostcontextchanged', follow)
+
 document.addEventListener('click', (event) => {
   const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="http"]')
   if (link) {
@@ -41,5 +50,6 @@ document.addEventListener('click', (event) => {
 })
 
 connect().finally(() => {
+  follow(app.getHostContext())
   createRoot(document.getElementById('root')!).render(<RouterProvider router={router} />)
 })

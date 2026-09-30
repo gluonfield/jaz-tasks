@@ -22,6 +22,8 @@ type issueView struct {
 	DueDate    string   `json:"dueDate,omitempty"`
 	Estimate   *int32   `json:"estimate,omitempty"`
 	URL        string   `json:"url"`
+	// stateColor reaches the inline issue card through the result's _meta.
+	stateColor string
 }
 
 type issueDetail struct {
@@ -64,6 +66,7 @@ func present(ctx context.Context, s *tracker.Scope, issue storage.Issue) (issueV
 		Priority:   priorityNames[issue.Priority],
 		Estimate:   issue.Estimate,
 		URL:        s.URL("/issue/" + identifier),
+		stateColor: state.Color,
 	}
 	if issue.AssigneeID != nil {
 		if user, err := s.User(ctx, *issue.AssigneeID); err == nil {
