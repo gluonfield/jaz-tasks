@@ -286,6 +286,9 @@ func TestMCPApp(t *testing.T) {
 	if ui, _ := meta["show_tasks"]["ui"].(map[string]any); ui["resourceUri"] != "ui://jaz-tasks/app" {
 		t.Fatalf("show_tasks meta: %+v", meta["show_tasks"])
 	}
+	if openai, _ := meta["show_tasks"]["openai/ui"].(map[string]any); fmt.Sprint(openai["entrypoints"]) != "[map[type:global]]" {
+		t.Fatalf("show_tasks should be a global entrypoint: %+v", meta["show_tasks"])
+	}
 	if ui, _ := meta["graphql"]["ui"].(map[string]any); fmt.Sprint(ui["visibility"]) != "[app]" {
 		t.Fatalf("graphql meta: %+v", meta["graphql"])
 	}

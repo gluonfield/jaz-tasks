@@ -30,6 +30,14 @@ var icons = []mcp.Icon{
 	{Source: iconSVG("#e8e8e8"), MIMEType: "image/svg+xml", Sizes: []string{"any"}, Theme: mcp.IconThemeDark},
 }
 
+// toolIcon marks the sidebar entrypoint the way OpenAI's MCP extensions ask:
+// one monochrome SVG in currentColor on a 20px grid with 1.33px strokes.
+var toolIcon = mcp.Icon{
+	Source:   "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="8.33"/><path d="m7.5 10 1.67 1.67 3.33-3.33"/></svg>`)),
+	MIMEType: "image/svg+xml",
+	Sizes:    []string{"any"},
+}
+
 func iconSVG(stroke string) string {
 	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="` + stroke +
 		`" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`
@@ -44,10 +52,16 @@ func registerApp(server *mcp.Server, t tools) {
 			}}}, nil
 		})
 	mcp.AddTool(server, &mcp.Tool{
-		Name: "show_tasks", Title: "Show Jaz Tasks",
+		Name: "show_tasks", Title: "Tasks",
 		Description: "Open the Jaz Tasks app for the user at a team, an issue or a section.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
-		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": appURI}, "ui/resourceUri": appURI},
+		Icons:       []mcp.Icon{toolIcon},
+		// The global entrypoint puts the app in hosts' sidebars (OpenAI's MCP extensions).
+		Meta: mcp.Meta{
+			"ui":             map[string]any{"resourceUri": appURI},
+			"ui/resourceUri": appURI,
+			"openai/ui":      map[string]any{"entrypoints": []map[string]any{{"type": "global"}}},
+		},
 	}, t.showTasks)
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "graphql", Title: "GraphQL",
