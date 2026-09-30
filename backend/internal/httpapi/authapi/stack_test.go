@@ -84,7 +84,7 @@ func consent(t *testing.T, b *http.Client, authorizeURL string) *url.URL {
 	}
 	body, _ := io.ReadAll(res.Body)
 	res.Body.Close()
-	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), "Allow access") {
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), `value="allow"`) {
 		t.Fatalf("consent page: %d %s", res.StatusCode, body)
 	}
 	form := url.Values{"decision": {"allow"}}

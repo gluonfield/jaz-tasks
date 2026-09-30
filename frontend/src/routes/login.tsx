@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { KeyRound } from 'lucide-react'
+import { CircleCheck, KeyRound } from 'lucide-react'
 
 type AuthConfig = { provider?: string }
 
@@ -21,8 +21,8 @@ function Login() {
   return (
     <div className="flex min-h-full items-center justify-center bg-panel p-6">
       <div className="w-full max-w-[320px] animate-rise text-center">
-        <div className="mx-auto mb-6 flex size-10 items-center justify-center rounded-[10px] bg-primary text-[18px] font-semibold text-on-primary shadow-sm">
-          J
+        <div className="mx-auto mb-5 grid size-11 place-items-center rounded-[12px] bg-raised shadow-xs">
+          <CircleCheck className="size-6 text-ink" strokeWidth={1.75} />
         </div>
         <h1 className="text-[17px] font-semibold text-ink">Sign in to Jaz Tasks</h1>
         <p className="mb-7 mt-1.5 text-[13px] text-ink-3">Your team's issues, for people and agents.</p>
