@@ -114,7 +114,7 @@ export function ViewHeader({ title, tabs, children }: { title: ReactNode; tabs?:
   return (
     <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border px-4">
       <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink">{title}</div>
-      {tabs && <div className="flex items-center gap-1">{tabs}</div>}
+      {tabs && <div className="flex items-center gap-1.5">{tabs}</div>}
       <div className="ml-auto flex items-center gap-1.5">{children}</div>
     </header>
   )
@@ -125,8 +125,8 @@ export function Tab({ active, children, onClick }: { active: boolean; children: 
     <button
       onClick={onClick}
       className={cn(
-        'h-[26px] rounded-[var(--radius-control)] border px-2.5 text-[12.5px] font-medium outline-none transition-colors duration-100',
-        active ? 'border-border bg-list-active text-ink' : 'border-transparent text-ink-2 hover:bg-list-hover hover:text-ink',
+        'h-7 rounded-full border border-border px-3 text-[12.5px] font-medium outline-none transition-colors duration-100',
+        active ? 'bg-list-active text-ink' : 'text-ink-2 hover:bg-list-hover hover:text-ink',
       )}
     >
       {children}

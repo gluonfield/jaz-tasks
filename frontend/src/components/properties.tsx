@@ -52,7 +52,7 @@ export const PropertyButton = forwardRef<
         'inline-flex shrink-0 items-center outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-ring',
         variant === 'icon' && 'size-6 justify-center rounded-[5px] hover:bg-list-active',
         variant === 'chip' &&
-          'h-6 max-w-48 gap-1.5 rounded-[var(--radius-control)] border border-border px-2 text-[12px] text-ink-2 hover:bg-list-hover hover:text-ink',
+          'h-6 max-w-48 gap-1.5 rounded-full border border-border px-2.5 text-[12px] text-ink-2 hover:bg-list-hover hover:text-ink',
         variant === 'row' &&
           'h-8 w-full min-w-0 gap-2.5 rounded-[var(--radius-control)] px-2 text-left text-[13px] text-ink hover:bg-list-hover',
         muted && variant === 'row' && 'text-ink-3',

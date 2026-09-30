@@ -30,7 +30,7 @@ export function DisplayMenu<T extends string>({
 
   return (
     <Popover>
-      <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-[var(--radius-control)] border border-border px-2.5 text-[12.5px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active">
+      <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-[12.5px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active">
         <SlidersHorizontal className="size-3.5" />
         Display
       </PopoverTrigger>

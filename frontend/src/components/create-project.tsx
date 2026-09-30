@@ -14,7 +14,7 @@ export function CreateProjectButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex h-7 items-center gap-1.5 rounded-[var(--radius-control)] border border-border bg-raised px-2.5 text-[12.5px] font-medium text-ink shadow-xs outline-none transition-colors hover:bg-list-hover"
+        className="flex h-7 items-center gap-1.5 rounded-full border border-border bg-raised px-3 text-[12.5px] font-medium text-ink shadow-xs outline-none transition-colors hover:bg-list-hover"
       >
         <Plus className="size-3.5" /> New project
       </button>

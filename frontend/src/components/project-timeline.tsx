@@ -208,7 +208,7 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
                     <button
                       onClick={() => reveal(range)}
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="absolute top-2 z-[2] flex h-6 items-center gap-1 rounded-[6px] border border-border bg-raised px-2 text-[12px] text-ink-2 shadow-xs outline-none hover:text-ink"
+                      className="absolute top-2 z-[2] flex h-6 items-center gap-1 rounded-full border border-border bg-raised px-2.5 text-[12px] text-ink-2 shadow-xs outline-none hover:text-ink"
                       style={off === 'left' ? { left: view.left + 8 } : { left: view.left + view.width - 8, transform: 'translateX(-100%)' }}
                     >
                       {off === 'left' ? `← ${label(range.end)}` : `${label(range.start)} →`}
@@ -300,7 +300,7 @@ function Header({
       <div className="sticky left-0 z-10 flex shrink-0 items-end border-r border-border bg-bg px-4 pb-2" style={{ width: SIDE }}>
         <button
           onClick={onToday}
-          className="h-6 rounded-[var(--radius-control)] border border-border px-2 text-[12px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink"
+          className="h-6 rounded-full border border-border px-2.5 text-[12px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink"
         >
           Today
         </button>
