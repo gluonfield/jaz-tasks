@@ -28,7 +28,7 @@ const zoomOptions: [Zoom, string][] = [
 function Projects() {
   const { catalog } = useCatalogMaps()
   const projects = catalog?.projects ?? []
-  const [layout, setLayout] = usePreference<'list' | 'timeline'>('layout:projects', 'list')
+  const [layout, setLayout] = usePreference<'list' | 'timeline'>('layout:projects', 'timeline')
   const [zoom, setZoom] = usePreference<Zoom>('zoom:projects', 'month')
   return (
     <div className="flex h-full flex-col">
