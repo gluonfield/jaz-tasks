@@ -1,22 +1,62 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Box } from 'lucide-react'
+import { Box, ChartGantt, List, type LucideIcon } from 'lucide-react'
 import { CreateProjectButton } from '@/components/create-project'
+import { DisplayMenu, DisplaySelect } from '@/components/display-menu'
 import { Avatar, EntityIcon, ProgressRing } from '@/components/icons'
 import { ProjectStatusIcon } from '@/components/project-status'
+import { ProjectTimeline } from '@/components/project-timeline'
 import { formatDay } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
+import type { Zoom } from '@/lib/timeline'
+import type { Project } from '@/lib/types'
+import { usePreference } from '@/lib/ui'
 
 export const Route = createFileRoute('/_app/projects')({ component: Projects })
 
+const layouts: ['list' | 'timeline', LucideIcon][] = [
+  ['list', List],
+  ['timeline', ChartGantt],
+]
+
+const zoomOptions: [Zoom, string][] = [
+  ['week', 'Week'],
+  ['month', 'Month'],
+  ['quarter', 'Quarter'],
+  ['year', 'Year'],
+]
+
 function Projects() {
-  const { catalog, users, teams } = useCatalogMaps()
+  const { catalog } = useCatalogMaps()
   const projects = catalog?.projects ?? []
+  const [layout, setLayout] = usePreference<'list' | 'timeline'>('layout:projects', 'list')
+  const [zoom, setZoom] = usePreference<Zoom>('zoom:projects', 'month')
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
         <Box className="size-4 text-ink-2" /> Projects
-        <CreateProjectButton />
+        <div className="ml-auto flex items-center gap-1.5">
+          <CreateProjectButton />
+          <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
+            {layout === 'timeline' && <DisplaySelect label="Zoom" value={zoom} options={zoomOptions} onChange={setZoom} />}
+          </DisplayMenu>
+        </div>
       </header>
+      <div className="min-h-0 flex-1">
+        {layout === 'list' ? (
+          <ProjectList projects={projects} />
+        ) : (
+          // Mounting with its data keeps the router's scroll restoration on the scale it was saved under.
+          catalog && <ProjectTimeline projects={catalog.projects} zoom={zoom} onZoom={setZoom} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProjectList({ projects }: { projects: Project[] }) {
+  const { users, teams } = useCatalogMaps()
+  return (
+    <div className="flex h-full flex-col">
       <div className="grid grid-cols-[minmax(0,1fr)_140px_120px_110px_110px_90px] items-center border-b border-border px-5 py-2 text-[12px] text-ink-3">
         <span>Name</span>
         <span>Status</span>

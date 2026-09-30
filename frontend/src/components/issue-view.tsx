@@ -1,16 +1,27 @@
-import { ChevronRight, LayoutGrid, List, Plus, SlidersHorizontal } from 'lucide-react'
+import { ChevronRight, LayoutGrid, List, type LucideIcon, Plus } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type Ordering, compareIssues, compareStates } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
 import { getUI, openCreateIssue, setUI, usePreference, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
+import { DisplayMenu, DisplaySelect } from './display-menu'
 import { EmptyState } from './empty-state'
 import { IssueBoard } from './issue-board'
 import { IssueRow } from './issue-row'
-import { Kbd } from './kbd'
 import { useStateIcon } from './properties'
+
+const layouts: ['list' | 'board', LucideIcon][] = [
+  ['list', List],
+  ['board', LayoutGrid],
+]
+
+const orderings: [Ordering, string][] = [
+  ['manual', 'Manual'],
+  ['priority', 'Priority'],
+  ['updated', 'Last updated'],
+  ['created', 'Last created'],
+]
 
 export type IssueGroup = { key: string; state: WorkflowState; issues: Issue[] }
 
@@ -73,31 +84,24 @@ export function IssueView({
     [visible, states, ordering, layout, teamStates],
   )
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault()
-        setLayout(layout === 'list' ? 'board' : 'list')
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [layout, setLayout])
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border px-4">
         <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink">{title}</div>
         {tabs && <div className="flex items-center gap-1">{tabs}</div>}
         <div className="ml-auto flex items-center gap-1.5">
-          <DisplayMenu
-            layout={layout}
-            setLayout={setLayout}
-            ordering={ordering}
-            setOrdering={setOrdering}
-            showCompleted={showCompleted === 'yes'}
-            setShowCompleted={(v) => setShowCompleted(v ? 'yes' : 'no')}
-          />
+          <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
+            <DisplaySelect label="Ordering" value={ordering} options={orderings} onChange={setOrdering} />
+            <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
+              Show completed issues
+              <input
+                type="checkbox"
+                checked={showCompleted === 'yes'}
+                onChange={(e) => setShowCompleted(e.target.checked ? 'yes' : 'no')}
+                className="accent-[var(--color-primary)]"
+              />
+            </label>
+          </DisplayMenu>
         </div>
       </header>
       {summary}
@@ -204,67 +208,4 @@ export function useListNavigation(issues: Issue[]) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [issues])
-}
-
-function DisplayMenu({
-  layout,
-  setLayout,
-  ordering,
-  setOrdering,
-  showCompleted,
-  setShowCompleted,
-}: {
-  layout: 'list' | 'board'
-  setLayout: (l: 'list' | 'board') => void
-  ordering: Ordering
-  setOrdering: (o: Ordering) => void
-  showCompleted: boolean
-  setShowCompleted: (v: boolean) => void
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-[var(--radius-control)] border border-border px-2.5 text-[12.5px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active">
-        <SlidersHorizontal className="size-3.5" />
-        Display
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 rounded-[var(--radius-card)] p-3 shadow-[var(--shadow-raised)]">
-        <div className="grid grid-cols-2 gap-1.5">
-          {(['list', 'board'] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLayout(l)}
-              className={cn(
-                'flex h-14 flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border text-[12px] font-medium capitalize outline-none transition-colors',
-                layout === l ? 'border-primary/50 bg-primary-soft text-ink' : 'border-border text-ink-2 hover:bg-list-hover',
-              )}
-            >
-              {l === 'list' ? <List className="size-4" /> : <LayoutGrid className="size-4" />}
-              {l}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center justify-between text-[12.5px]">
-          <span className="text-ink-2">Ordering</span>
-          <select
-            value={ordering}
-            onChange={(e) => setOrdering(e.target.value as Ordering)}
-            className="h-7 rounded-[5px] border border-border bg-bg px-1.5 text-[12.5px] text-ink outline-none"
-          >
-            <option value="manual">Manual</option>
-            <option value="priority">Priority</option>
-            <option value="updated">Last updated</option>
-            <option value="created">Last created</option>
-          </select>
-        </div>
-        <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
-          Show completed issues
-          <input type="checkbox" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} className="accent-[var(--color-primary)]" />
-        </label>
-        <p className="mt-3 border-t border-border pt-2.5 text-[11.5px] text-ink-3">
-          Toggle layout <Kbd>⌘</Kbd>
-          <Kbd>B</Kbd>
-        </p>
-      </PopoverContent>
-    </Popover>
-  )
 }

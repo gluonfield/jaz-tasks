@@ -415,3 +415,24 @@ export function useCreateProject() {
     onSuccess: () => client.invalidateQueries({ queryKey: ['catalog'] }),
   })
 }
+
+export type ProjectPatch = { startDate?: string; targetDate?: string }
+
+// useUpdateProject changes a project's dates, optimistically.
+export function useUpdateProject() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: ProjectPatch }) =>
+      gql(`mutation ($id: String!, $input: ProjectUpdateInput!) { projectUpdate(id: $id, input: $input) { success } }`, { id, input: patch }),
+    onMutate: async ({ id, patch }) => {
+      await client.cancelQueries({ queryKey: ['catalog'] })
+      const previous = client.getQueryData<Catalog>(['catalog'])
+      client.setQueryData<Catalog>(['catalog'], (catalog) =>
+        catalog && { ...catalog, projects: catalog.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) },
+      )
+      return { previous }
+    },
+    onError: (_error, _vars, context) => client.setQueryData(['catalog'], context?.previous),
+    onSettled: () => client.invalidateQueries({ queryKey: ['catalog'] }),
+  })
+}
