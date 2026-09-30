@@ -22,15 +22,15 @@ func (s *Service) CreateKey(ctx context.Context, userID, label, key string) (str
 	return key, record, err
 }
 
-// ProvisionKey registers a deployment's key for the user as their only
-// OWNER_API_KEY key, so replacing the key retires the previous one.
-func (s *Service) ProvisionKey(ctx context.Context, userID, key string) error {
+// ProvisionKey makes a key supplied from outside the user's only key with the
+// label, so replacing it retires the previous one.
+func (s *Service) ProvisionKey(ctx context.Context, userID, label, key string) error {
 	if len(key) < 32 || strings.HasPrefix(key, accessTokenPrefix) {
-		return fmt.Errorf("OWNER_API_KEY must be at least 32 random characters, such as the output of openssl rand -hex 32")
+		return errors.New("the key must be at least 32 random characters, such as the output of openssl rand -hex 32")
 	}
-	_, err := s.store.ReplaceAPIKey(ctx, userID, "OWNER_API_KEY", hint(key), hash(key))
+	_, err := s.store.ReplaceAPIKey(ctx, userID, label, hint(key), hash(key))
 	if errors.Is(err, storage.ErrNotFound) {
-		return fmt.Errorf("OWNER_API_KEY is already another account's key")
+		return errors.New("the key already belongs to another account")
 	}
 	return err
 }

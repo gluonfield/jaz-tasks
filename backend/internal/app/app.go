@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -134,7 +135,10 @@ func ProvisionOwner(cfg Config, people *workspaces.Service, keys *auth.Service) 
 	if err != nil || cfg.Owner.APIKey == "" {
 		return err
 	}
-	return keys.ProvisionKey(ctx, user.ID, cfg.Owner.APIKey)
+	if err := keys.ProvisionKey(ctx, user.ID, "OWNER_API_KEY", cfg.Owner.APIKey); err != nil {
+		return fmt.Errorf("OWNER_API_KEY: %w", err)
+	}
+	return nil
 }
 
 func StartHTTP(lc fx.Lifecycle, handler http.Handler, cfg Config, logger *log.Logger) {

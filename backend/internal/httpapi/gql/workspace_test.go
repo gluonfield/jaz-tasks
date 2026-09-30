@@ -221,7 +221,7 @@ func TestProvisionedOwner(t *testing.T) {
 	}
 	first := strings.Repeat("a1", 32)
 	for range 2 {
-		if err := keys.ProvisionKey(ctx, owner.ID, first); err != nil {
+		if err := keys.ProvisionKey(ctx, owner.ID, "OWNER_API_KEY", first); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -229,7 +229,7 @@ func TestProvisionedOwner(t *testing.T) {
 		t.Fatal("the provisioned key does not act as the owner")
 	}
 	second := strings.Repeat("b2", 32)
-	if err := keys.ProvisionKey(ctx, owner.ID, second); err != nil {
+	if err := keys.ProvisionKey(ctx, owner.ID, "OWNER_API_KEY", second); err != nil {
 		t.Fatal(err)
 	}
 	if viewer(first) != nil || viewer(second) != "owner@example.com" {
@@ -238,14 +238,14 @@ func TestProvisionedOwner(t *testing.T) {
 	if list, _ := c.store.APIKeys(ctx, owner.ID); len(list) != 1 {
 		t.Fatalf("owner keys = %+v, want only the current one", list)
 	}
-	if err := keys.ProvisionKey(ctx, owner.ID, "short"); err == nil {
+	if err := keys.ProvisionKey(ctx, owner.ID, "OWNER_API_KEY", "short"); err == nil {
 		t.Fatal("a short OWNER_API_KEY should be refused")
 	}
 	other, err := people.Provision(ctx, "other@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := keys.ProvisionKey(ctx, other.ID, second); err == nil {
+	if err := keys.ProvisionKey(ctx, other.ID, "OWNER_API_KEY", second); err == nil {
 		t.Fatal("another account's key should be refused")
 	}
 
