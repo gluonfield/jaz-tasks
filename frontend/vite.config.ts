@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     port: 7401,
     strictPort: true,
-    proxy: Object.fromEntries(['/graphql', '/mcp', '/auth', '/oauth', '/.well-known'].map((path) => [path, api])),
+    proxy: Object.fromEntries(['/graphql', '/mcp', '/auth', '/oauth', '/.well-known', '/favicon.svg'].map((path) => [path, api])),
   },
   plugins: [tailwindcss(), tanstackStart({ spa: { enabled: true, prerender: { outputPath: '/index.html' } } }), viteReact()],
 })

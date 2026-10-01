@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
@@ -28,8 +30,11 @@ var (
 	issueCardHTML string
 )
 
-// icons is the rail mark, a line-drawn circled check in the weight of the
-// host's own navigation glyphs, stroked for light and dark backgrounds.
+// glyph is the rail mark, a line-drawn circled check in the weight of the
+// host's own navigation glyphs.
+const glyph = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="STROKE" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`
+
+// icons strokes the glyph for light and dark backgrounds.
 var icons = []mcp.Icon{
 	{Source: iconSVG("#1f2328"), MIMEType: "image/svg+xml", Sizes: []string{"any"}, Theme: mcp.IconThemeLight},
 	{Source: iconSVG("#e8e8e8"), MIMEType: "image/svg+xml", Sizes: []string{"any"}, Theme: mcp.IconThemeDark},
@@ -44,9 +49,15 @@ var toolIcon = mcp.Icon{
 }
 
 func iconSVG(stroke string) string {
-	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="` + stroke +
-		`" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`
-	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg))
+	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(strings.Replace(glyph, "STROKE", stroke, 1)))
+}
+
+// favicon is the glyph for browser tabs, which follows the tab's colour scheme.
+var favicon = strings.Replace(strings.Replace(glyph, "STROKE", "#1f2328", 1), "><", "><style>@media (prefers-color-scheme: dark){svg{stroke:#e8e8e8}}</style><", 1)
+
+func Favicon(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	_, _ = io.WriteString(w, favicon)
 }
 
 func registerApp(server *mcp.Server, t tools) {

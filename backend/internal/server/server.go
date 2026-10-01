@@ -28,6 +28,7 @@ func New(authn *authapi.Handler, graphql *gql.Handler, agents *mcpapi.Handler, w
 	mux.Handle("/.well-known/", cors(authn))
 	mux.Handle("/graphql", cors(authenticate(authn, graphql, logger)))
 	mux.Handle("/mcp", cors(agents))
+	mux.HandleFunc("GET /favicon.svg", mcpapi.Favicon)
 	if web != "" {
 		mux.Handle("/", spa(string(web)))
 	}
