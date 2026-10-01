@@ -1,3 +1,4 @@
+import { Button } from '@jaz/ui/button'
 import { CalendarDays, CircleDashed, CircleSlash, GitFork, Hexagon, RefreshCcw, Tag, Triangle } from 'lucide-react'
 import { type ReactNode, forwardRef, useState } from 'react'
 import { dueStatus, entityColors, formatDay, priorities, toDateInput, workflowOrder } from '@/lib/issues'
@@ -40,28 +41,25 @@ export const PropertyButton = forwardRef<
   { variant: Variant; icon: ReactNode; label?: ReactNode; muted?: boolean; className?: string; title?: string } & React.ButtonHTMLAttributes<HTMLButtonElement>
 >(function PropertyButton({ variant, icon, label, muted, className, ...props }, ref) {
   return (
-    <button
+    <Button
       ref={ref}
-      type="button"
       {...props}
+      variant={variant === 'chip' ? 'secondary' : 'ghost'}
+      size={variant === 'icon' ? 'icon-sm' : variant === 'row' ? 'lg' : 'sm'}
       onClick={(e) => {
         e.stopPropagation()
         props.onClick?.(e)
       }}
       className={cn(
-        'inline-flex shrink-0 items-center outline-none transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-ring',
-        variant === 'icon' && 'size-6 justify-center rounded-[5px] hover:bg-list-active',
-        variant === 'chip' &&
-          'h-6 max-w-48 gap-1.5 rounded-full border border-border px-2.5 text-[12px] text-ink-2 hover:bg-list-hover hover:text-ink',
-        variant === 'row' &&
-          'h-8 w-full min-w-0 gap-2.5 rounded-[var(--radius-control)] px-2 text-left text-[13px] text-ink hover:bg-list-hover',
+        variant === 'chip' && 'max-w-48',
+        variant === 'row' && 'w-full min-w-0 justify-start gap-2.5 text-left',
         muted && variant === 'row' && 'text-ink-3',
         className,
       )}
     >
       {icon}
       {variant !== 'icon' && label && <span className="min-w-0 truncate">{label}</span>}
-    </button>
+    </Button>
   )
 })
 

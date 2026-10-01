@@ -2,18 +2,9 @@
   "name": "@jaz/ui",
   "version": "0.1.0",
   "type": "module",
-  "exports": {
-    "./button": "./ui/button.tsx"
-  },
-  "files": [
-    "ui"
-  ],
+  "exports": { "./button": "./ui/button.tsx" },
+  "files": ["ui"],
   "license": "MIT",
-  "peerDependencies": {
-    "react": "^19",
-    "tailwind-merge": "^3"
-  },
-  "scripts": {
-    "lint": "frontend/node_modules/.bin/eslint --config frontend/eslint.config.js ui"
-  }
+  "peerDependencies": { "react": "^19", "tailwind-merge": "^3" },
+  "scripts": { "lint": "frontend/node_modules/.bin/eslint --config frontend/eslint.config.js ui" }
 }
