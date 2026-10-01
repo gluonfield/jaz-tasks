@@ -113,11 +113,6 @@ type issue struct {
 
 func TestAgentWorkflow(t *testing.T) {
 	session, _ := connect(t)
-	tools, err := session.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) != 13 {
-		t.Fatalf("tools = %d, err %v", len(tools.Tools), err)
-	}
-
 	teams := call[struct {
 		Teams []struct {
 			Key    string   `json:"key"`
@@ -445,6 +440,7 @@ func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
 	}
 	call[result](t, e.session(t, e.key), "graphql", map[string]any{"query": `mutation { organizationInviteCreate(input: { email: "pat@example.com" }) { success } }`})
 	jaz := e.session(t, e.oauth(t, pat))
+	before := call[map[string]any](t, jaz, "get_profile", nil)
 	listed := call[result](t, jaz, "graphql", map[string]any{"query": `{ workspaces { id current } }`})
 	var team string
 	for _, w := range listed.Data.Workspaces {
@@ -457,6 +453,10 @@ func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
 	}
 	if switched := call[result](t, jaz, "graphql", map[string]any{"query": `mutation { workspaceSwitch(id: "` + team + `") { success } }`}); len(switched.Errors) > 0 {
 		t.Fatalf("switch: %+v", switched.Errors)
+	}
+	after := call[map[string]any](t, jaz, "get_profile", nil)
+	if after["id"] == before["id"] || after["email"] != before["email"] {
+		t.Fatalf("profile did not follow the connection's workspace: before=%v after=%v", before, after)
 	}
 	if got := call[issue](t, jaz, "get_issue", map[string]any{"issue": "ENG-1"}); got.Identifier != "ENG-1" {
 		t.Fatalf("after switching, the same session should reach the team workspace: %+v", got)

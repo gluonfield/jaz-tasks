@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jaz-tasks",
+  "version": "0.1.0",
+  "description": "Manage projects, issues, assignments and comments in your Jaz Tasks workspace.",
+  "author": {
+    "name": "Augustinas Malinauskas"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Jaz Tasks",
+        "shortDescription": "Projects and issues",
+        "longDescription": "Manage projects, issues, assignments and comments in your Jaz Tasks workspace.",
+        "developerName": "Augustinas Malinauskas",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive"
+        ],
+        "defaultPrompt": "Show my issues and help me plan the next week.",
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg"
+      }
+    }
+  }
+}

@@ -20,6 +20,10 @@ A self-hosted issue tracker in the style of Linear, shared by people and AI agen
 | Claude Code and other MCP clients | `/mcp`: `claude mcp add --transport http jaz-tasks https://tasks.example.com/mcp` |
 | Linear clients and scripts | `/graphql` with an API key, for example [linear-cli](https://github.com/gluonfield/linear-cli). |
 
+## ChatGPT plugin
+
+The existing MCP server and embedded app can be connected to ChatGPT using OAuth. See [setup, packaging and remaining requirements](docs/chatgpt-plugin.md); `plugin/` contains the portable manifest and ZIP packager.
+
 ## MCP
 
 `/mcp` is a Streamable HTTP server on the same service layer as the web app. Clients that support OAuth discover the authorization server from the first 401 and ask you to sign in and consent; others send an API key as `Authorization: Bearer <key>`. Tools take names: teams by key or name, people by name, email or `me`, and `none` clears a field.

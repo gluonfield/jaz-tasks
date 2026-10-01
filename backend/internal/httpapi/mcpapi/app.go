@@ -60,10 +60,10 @@ func Favicon(w http.ResponseWriter, _ *http.Request) {
 	_, _ = io.WriteString(w, favicon)
 }
 
-func registerApp(server *mcp.Server, t tools) {
-	addAppResource(server, appURI, "Jaz Tasks", appHTML)
-	addAppResource(server, issueCardURI, "Jaz Tasks issue", issueCardHTML)
-	mcp.AddTool(server, &mcp.Tool{
+func registerApp(server *mcp.Server, t tools, publicURL string) {
+	addAppResource(server, appURI, "Jaz Tasks", appHTML, publicURL, []string{"fullscreen"})
+	addAppResource(server, issueCardURI, "Jaz Tasks issue", issueCardHTML, publicURL, []string{"inline"})
+	addTool(server, &mcp.Tool{
 		Name: "show_tasks", Title: "Tasks",
 		Description: "Open the Jaz Tasks app for the user at a team, an issue or a section.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
@@ -75,18 +75,21 @@ func registerApp(server *mcp.Server, t tools) {
 			"openai/ui":      map[string]any{"entrypoints": []map[string]any{{"type": "global"}}},
 		},
 	}, t.showTasks)
-	mcp.AddTool(server, &mcp.Tool{
+	addTool(server, &mcp.Tool{
 		Name: "graphql", Title: "GraphQL",
 		Description: "Run a Linear-compatible GraphQL document. Used by the Jaz Tasks app.",
 		Meta:        mcp.Meta{"ui": map[string]any{"visibility": []string{"app"}}},
 	}, t.runGraphQL)
 }
 
-func addAppResource(server *mcp.Server, uri, title, html string) {
+func addAppResource(server *mcp.Server, uri, title, html, publicURL string, modes []string) {
 	server.AddResource(&mcp.Resource{URI: uri, Name: title, Title: title, MIMEType: appMIME},
 		func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
-				URI: uri, MIMEType: appMIME, Text: html, Meta: mcp.Meta{"ui": map[string]any{"prefersBorder": false}},
+				URI: uri, MIMEType: appMIME, Text: html, Meta: mcp.Meta{
+					"ui":        map[string]any{"prefersBorder": false, "domain": publicURL, "csp": map[string]any{"connectDomains": []string{}, "resourceDomains": []string{}}},
+					"openai/ui": map[string]any{"availableDisplayModes": modes},
+				},
 			}}}, nil
 		})
 }

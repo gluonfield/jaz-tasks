@@ -33,7 +33,8 @@ func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) 
 	}, &mcp.ServerOptions{Instructions: instructions})
 	t := tools{svc: svc, graphql: graphql}
 	register(server, t)
-	registerApp(server, t)
+	registerApp(server, t, keys.Issuer())
+	registerProfile(server, keys, t)
 	verify := func(ctx context.Context, token string, _ *http.Request) (*mcpauth.TokenInfo, error) {
 		actor, err := keys.Authenticate(ctx, token)
 		if errors.Is(err, auth.ErrUnauthenticated) {
