@@ -51,7 +51,7 @@ export function Picker({
       <PopoverContent
         align={align}
         sideOffset={6}
-        className="w-60 overflow-hidden rounded-[var(--radius-card)] p-0 shadow-[var(--shadow-raised)]"
+        className="w-60 overflow-hidden p-0 shadow-[var(--shadow-raised)]"
         onClick={(e) => e.stopPropagation()}
       >
         <CommandPrimitive
@@ -74,9 +74,9 @@ export function Picker({
             value={search}
             onValueChange={setSearch}
             placeholder={placeholder}
-            className="h-9 w-full border-b border-border bg-transparent px-3 text-[13px] text-ink outline-none placeholder:text-ink-3"
+            className="h-10 w-full border-b border-border bg-transparent px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-3"
           />
-          <CommandPrimitive.List className="scrollbar-quiet max-h-72 overflow-y-auto p-1">
+          <CommandPrimitive.List className="scrollbar-quiet max-h-72 overflow-y-auto p-1.5">
             {!creatable && <CommandPrimitive.Empty className="px-2 py-3 text-center text-[12px] text-ink-3">No results</CommandPrimitive.Empty>}
             {options.map((option, index) => {
               const active = selected.includes(option.value)
@@ -91,23 +91,23 @@ export function Picker({
                       onOpenChange(false)
                     }
                   }}
-                  className="group flex h-8 cursor-default items-center gap-2.5 rounded-[5px] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
+                  className="group flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
                 >
                   {multiple && (
                     <span
                       className={cn(
-                        'flex size-3.5 items-center justify-center rounded-[4px] border border-ink-3/60',
+                        'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-ink-3/60',
                         active && 'border-primary bg-primary text-on-primary',
                       )}
                     >
-                      {active && <Check className="size-2.5" strokeWidth={3} />}
+                      {active && <Check className="size-3" strokeWidth={3} />}
                     </span>
                   )}
                   {option.icon}
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
                   {option.detail}
-                  {!multiple && active && <Check className="size-3.5 text-ink-2" />}
-                  {index < 9 && <span className="w-3 text-right text-[11px] tabular-nums text-ink-3">{index + 1}</span>}
+                  {!multiple && active && <Check className="size-4 shrink-0 text-ink" />}
+                  {index < 9 && <span className="w-3 text-right text-[12px] tabular-nums text-ink-3">{index + 1}</span>}
                 </CommandPrimitive.Item>
               )
             })}
@@ -119,9 +119,9 @@ export function Picker({
                   onCreate.create(search.trim())
                   setSearch('')
                 }}
-                className="flex h-8 cursor-default items-center gap-2.5 rounded-[5px] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
+                className="flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
               >
-                <Plus className="size-3.5 text-ink-3" />
+                <Plus className="size-4 text-ink-2" />
                 <span className="truncate">
                   {onCreate.label} <span className="font-medium">"{search.trim()}"</span>
                 </span>

@@ -1,11 +1,10 @@
-import { CircleDot, Copy, CornerDownRight, CornerLeftUp, GitFork, Hexagon, Link2, SquarePlus, Tag } from 'lucide-react'
+import { Box, ChartNoAxesColumnIncreasing, CircleDot, Contrast, Copy, CornerDownRight, CornerLeftUp, GitFork, Link2, SquarePlus, Tag, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuRadioGroup,
-  ContextMenuRadioItem,
+  ContextMenuOptions,
   ContextMenuSeparator,
   ContextMenuShortcut,
   ContextMenuSub,
@@ -13,20 +12,14 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { useCatalogMaps, useIssuePatch } from '@/lib/queries'
+import { useIssuePatch } from '@/lib/queries'
 import type { Issue } from '@/lib/types'
 import { openCreateRelated, setUI } from '@/lib/ui'
-import { Avatar, EntityIcon, PriorityIcon } from './icons'
-import type { PickerOption } from './picker'
-import { priorityOptions, useAssigneeOptions, useProjectOptions, useStateIcon, useStatusOptions } from './properties'
+import { priorityOptions, useAssigneeOptions, useProjectOptions, useStatusOptions } from './properties'
 
 // Right-clicking an issue offers Linear's quick edits without opening it.
 export function IssueContextMenu({ issue, children }: { issue: Issue; children: ReactNode }) {
   const patch = useIssuePatch(issue)
-  const { projects, states, users } = useCatalogMaps()
-  const stateIcon = useStateIcon()
-  const state = states.get(issue.stateId)
-  const project = issue.projectId ? projects.get(issue.projectId) : null
   const statusOptions = useStatusOptions(issue.teamId)
   const assigneeOptions = useAssigneeOptions()
   const projectOptions = useProjectOptions(issue.teamId)
@@ -34,110 +27,81 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       {/* Focus returning to the row as the menu closes would dismiss the pickers the Labels and parent items open. */}
-      <ContextMenuContent className="w-52" onCloseAutoFocus={(e) => e.preventDefault()}>
-        <Choice
+      <ContextMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <ContextMenuOptions
+          icon={<Contrast />}
           label="Status"
-          icon={state && stateIcon(state)}
+          shortcut="S"
           options={statusOptions}
-          value={issue.stateId}
-          onChange={(stateId) => patch({ stateId })}
+          selected={[issue.stateId]}
+          onSelect={(stateId) => patch({ stateId })}
         />
-        <Choice
+        <ContextMenuOptions
+          icon={<ChartNoAxesColumnIncreasing />}
           label="Priority"
-          icon={<PriorityIcon priority={issue.priority} />}
+          shortcut="P"
           options={priorityOptions}
-          value={String(issue.priority)}
-          onChange={(priority) => patch({ priority: Number(priority) })}
+          selected={[String(issue.priority)]}
+          onSelect={(priority) => patch({ priority: Number(priority) })}
         />
-        <Choice
+        <ContextMenuOptions
+          icon={<UserRound />}
           label="Assignee"
-          icon={<Avatar user={issue.assigneeId ? (users.get(issue.assigneeId) ?? null) : null} size={16} />}
+          shortcut="A"
+          placeholder="Assign to…"
           options={assigneeOptions}
-          value={issue.assigneeId ?? ''}
-          onChange={(assigneeId) => patch({ assigneeId: assigneeId || null })}
+          selected={[issue.assigneeId ?? '']}
+          onSelect={(assigneeId) => patch({ assigneeId: assigneeId || null })}
         />
-        <ContextMenuItem className="gap-2" onSelect={() => setUI({ picker: { kind: 'labels', issueId: issue.id } })}>
-          <Tag className="size-3.5 text-ink-3" />
+        <ContextMenuItem onSelect={() => setUI({ picker: { kind: 'labels', issueId: issue.id } })}>
+          <Tag />
           Labels…
           <ContextMenuShortcut>L</ContextMenuShortcut>
         </ContextMenuItem>
-        <Choice
+        <ContextMenuOptions
+          icon={<Box />}
           label="Project"
-          icon={project ? <EntityIcon icon={project.icon} color={project.color} /> : <Hexagon className="size-3.5 text-ink-3" />}
+          placeholder="Move to project…"
           options={projectOptions}
-          value={issue.projectId ?? ''}
-          onChange={(projectId) => patch({ projectId: projectId || null })}
+          selected={[issue.projectId ?? '']}
+          onSelect={(projectId) => patch({ projectId: projectId || null })}
         />
-        <ContextMenuItem className="gap-2" onSelect={() => setUI({ picker: { kind: 'parent', issueId: issue.id } })}>
-          <GitFork className="size-3.5 text-ink-3" />
+        <ContextMenuItem onSelect={() => setUI({ picker: { kind: 'parent', issueId: issue.id } })}>
+          <GitFork />
           Set parent issue…
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
-          <ContextMenuSubTrigger className="gap-2">
-            <SquarePlus className="size-3.5 text-ink-3" />
+          <ContextMenuSubTrigger>
+            <SquarePlus />
             Create related
           </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="w-48">
+          <ContextMenuSubContent className="w-52">
             <ContextMenuItem onSelect={() => openCreateRelated(issue)}>
-              <CircleDot className="size-3.5 text-ink-3" />
+              <CircleDot />
               Issue…
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => openCreateRelated(issue, { parentId: issue.id })}>
-              <CornerDownRight className="size-3.5 text-ink-3" />
+              <CornerDownRight />
               Sub-issue…
-              <ContextMenuShortcut>⌘⇧O</ContextMenuShortcut>
+              <ContextMenuShortcut>⌘ ⇧ O</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => openCreateRelated(issue, { childId: issue.id })}>
-              <CornerLeftUp className="size-3.5 text-ink-3" />
+              <CornerLeftUp />
               Parent issue…
             </ContextMenuItem>
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(issue.identifier)}>
-          <Copy className="size-3.5 text-ink-3" />
+          <Copy />
           Copy ID
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(issue.url)}>
-          <Link2 className="size-3.5 text-ink-3" />
+          <Link2 />
           Copy link
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
-  )
-}
-
-// Choice is a single-select property submenu over the pickers' option list.
-function Choice({
-  label,
-  icon,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  icon: ReactNode
-  options: PickerOption[]
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <ContextMenuSub>
-      <ContextMenuSubTrigger className="gap-2">
-        {icon}
-        {label}
-      </ContextMenuSubTrigger>
-      <ContextMenuSubContent className="w-52">
-        <ContextMenuRadioGroup value={value} onValueChange={onChange}>
-          {options.map((option) => (
-            <ContextMenuRadioItem key={option.value} value={option.value}>
-              {option.icon}
-              <span className="truncate">{option.label}</span>
-            </ContextMenuRadioItem>
-          ))}
-        </ContextMenuRadioGroup>
-      </ContextMenuSubContent>
-    </ContextMenuSub>
   )
 }

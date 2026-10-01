@@ -180,7 +180,7 @@ function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; a
         <ChevronDown className="size-3 shrink-0 text-ink-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-60">
-        {email && <DropdownMenuLabel className="truncate text-[12px] font-normal text-ink-3">{email}</DropdownMenuLabel>}
+        {email && <DropdownMenuLabel>{email}</DropdownMenuLabel>}
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.id}

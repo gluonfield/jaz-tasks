@@ -1,7 +1,8 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
+import { CheckIcon, PlusIcon } from "lucide-react"
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui"
+import { MenuShortcut, SubmenuArrow, menuContent, menuItem, menuSeparator } from "./menu"
 
 function ContextMenu({
   ...props
@@ -17,59 +18,28 @@ function ContextMenuTrigger({
   )
 }
 
-function ContextMenuGroup({
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.Group>) {
-  return (
-    <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />
-  )
-}
-
-function ContextMenuPortal({
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.Portal>) {
-  return (
-    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
-  )
-}
-
 function ContextMenuSub({
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Sub>) {
   return <ContextMenuPrimitive.Sub data-slot="context-menu-sub" {...props} />
 }
 
-function ContextMenuRadioGroup({
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.RadioGroup>) {
-  return (
-    <ContextMenuPrimitive.RadioGroup
-      data-slot="context-menu-radio-group"
-      {...props}
-    />
-  )
-}
-
 function ContextMenuSubTrigger({
   className,
-  inset,
   children,
+  shortcut,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.SubTrigger> & {
-  inset?: boolean
+  shortcut?: string
 }) {
   return (
     <ContextMenuPrimitive.SubTrigger
       data-slot="context-menu-sub-trigger"
-      data-inset={inset}
-      className={cn(
-        "flex cursor-default items-center rounded-sm px-2 py-1.5 text-[13px] outline-hidden select-none focus:bg-list-active focus:text-ink data-[inset]:pl-8 data-[state=open]:bg-list-active data-[state=open]:text-ink [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
-        className
-      )}
+      className={cn(menuItem, className)}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <SubmenuArrow shortcut={shortcut} />
     </ContextMenuPrimitive.SubTrigger>
   )
 }
@@ -79,14 +49,13 @@ function ContextMenuSubContent({
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.SubContent>) {
   return (
-    <ContextMenuPrimitive.SubContent
-      data-slot="context-menu-sub-content"
-      className={cn(
-        "z-50 min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-raised)] data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-        className
-      )}
-      {...props}
-    />
+    <ContextMenuPrimitive.Portal>
+      <ContextMenuPrimitive.SubContent
+        data-slot="context-menu-sub-content"
+        className={cn(menuContent, className)}
+        {...props}
+      />
+    </ContextMenuPrimitive.Portal>
   )
 }
 
@@ -98,10 +67,7 @@ function ContextMenuContent({
     <ContextMenuPrimitive.Portal>
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
-        className={cn(
-          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-raised)] data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-          className
-        )}
+        className={cn(menuContent, className)}
         {...props}
       />
     </ContextMenuPrimitive.Portal>
@@ -110,92 +76,12 @@ function ContextMenuContent({
 
 function ContextMenuItem({
   className,
-  inset,
-  variant = "default",
   ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.Item> & {
-  inset?: boolean
-  variant?: "default" | "destructive"
-}) {
+}: React.ComponentProps<typeof ContextMenuPrimitive.Item>) {
   return (
     <ContextMenuPrimitive.Item
       data-slot="context-menu-item"
-      data-inset={inset}
-      data-variant={variant}
-      className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] outline-hidden select-none focus:bg-list-active focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground data-[variant=destructive]:*:[svg]:text-destructive!",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function ContextMenuCheckboxItem({
-  className,
-  children,
-  checked,
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.CheckboxItem>) {
-  return (
-    <ContextMenuPrimitive.CheckboxItem
-      data-slot="context-menu-checkbox-item"
-      className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-[13px] outline-hidden select-none focus:bg-list-active focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      checked={checked}
-      {...props}
-    >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
-      {children}
-    </ContextMenuPrimitive.CheckboxItem>
-  )
-}
-
-function ContextMenuRadioItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.RadioItem>) {
-  return (
-    <ContextMenuPrimitive.RadioItem
-      data-slot="context-menu-radio-item"
-      className={cn(
-        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-2 pl-8 text-[13px] outline-hidden select-none focus:bg-list-active focus:text-ink data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      {...props}
-    >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
-        <ContextMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
-        </ContextMenuPrimitive.ItemIndicator>
-      </span>
-      {children}
-    </ContextMenuPrimitive.RadioItem>
-  )
-}
-
-function ContextMenuLabel({
-  className,
-  inset,
-  ...props
-}: React.ComponentProps<typeof ContextMenuPrimitive.Label> & {
-  inset?: boolean
-}) {
-  return (
-    <ContextMenuPrimitive.Label
-      data-slot="context-menu-label"
-      data-inset={inset}
-      className={cn(
-        "px-2 py-1.5 text-[13px] font-medium text-foreground data-[inset]:pl-8",
-        className
-      )}
+      className={cn(menuItem, className)}
       {...props}
     />
   )
@@ -208,25 +94,136 @@ function ContextMenuSeparator({
   return (
     <ContextMenuPrimitive.Separator
       data-slot="context-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn(menuSeparator, className)}
       {...props}
     />
   )
 }
 
-function ContextMenuShortcut({
-  className,
-  ...props
-}: React.ComponentProps<"span">) {
+const ContextMenuShortcut = MenuShortcut
+
+type MenuOption = { value: string; label: string; icon?: React.ReactNode }
+
+// ContextMenuOptions is Linear's property submenu: a filter over the options,
+// the chosen ones checked, and number keys picking one of the first nine
+// before anything is typed. Typing anywhere in it, or on its row, filters.
+function ContextMenuOptions({
+  icon,
+  label,
+  shortcut,
+  placeholder = `Change ${label.toLowerCase()}…`,
+  options,
+  selected,
+  onSelect,
+  onCreate,
+  multiple = false,
+  disabled = false,
+}: {
+  icon: React.ReactNode
+  label: string
+  shortcut?: string
+  placeholder?: string
+  options: MenuOption[]
+  selected: string[]
+  onSelect: (value: string) => void
+  onCreate?: (label: string) => void
+  multiple?: boolean
+  disabled?: boolean
+}) {
+  const [query, setQuery] = React.useState("")
+  const input = React.useRef<HTMLInputElement>(null)
+  const text = query.trim()
+  const shown = options.filter((o) => o.label.toLowerCase().includes(text.toLowerCase()))
+  const exact = shown.findIndex((o) => o.label.toLowerCase() === text.toLowerCase())
+  const items = () => [...(input.current?.parentElement?.querySelectorAll<HTMLElement>("[role^=menuitem]") ?? [])]
+  const create = () => {
+    onCreate?.(text)
+    setQuery("")
+  }
+  const typeIn = (e: React.KeyboardEvent) => {
+    if (!input.current || e.key.length !== 1 || e.key === " " || e.metaKey || e.ctrlKey || e.altKey) {
+      return
+    }
+    e.stopPropagation()
+    if (!query && !onCreate && Number(e.key) >= 1) {
+      e.preventDefault()
+      items()[Number(e.key) - 1]?.click()
+    } else if (e.target !== input.current) {
+      input.current.focus()
+    }
+  }
   return (
-    <span
-      data-slot="context-menu-shortcut"
-      className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground",
-        className
-      )}
-      {...props}
-    />
+    <ContextMenuSub onOpenChange={() => setQuery("")}>
+      <ContextMenuSubTrigger shortcut={shortcut} onKeyDownCapture={typeIn}>
+        {icon}
+        {label}
+      </ContextMenuSubTrigger>
+      <ContextMenuSubContent className="w-56" onKeyDownCapture={typeIn}>
+        <input
+          ref={input}
+          value={query}
+          aria-label={placeholder}
+          placeholder={placeholder}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== "Escape") {
+              e.stopPropagation()
+            }
+            if (e.key === "Enter" && text) {
+              if (exact < 0 && onCreate) {
+                create()
+              } else {
+                items()[Math.max(exact, 0)]?.click()
+                setQuery("")
+              }
+            }
+            if (e.key === "ArrowDown") {
+              items()[0]?.focus()
+            }
+          }}
+          className="h-8 w-full bg-transparent px-2 text-[13px] text-ink outline-none placeholder:text-ink-3"
+        />
+        {(shown.length > 0 || (text && onCreate)) && <ContextMenuSeparator />}
+        {shown.map((option, index) =>
+          multiple ? (
+            <ContextMenuPrimitive.CheckboxItem
+              key={option.value}
+              checked={selected.includes(option.value)}
+              disabled={disabled}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={() => onSelect(option.value)}
+              className={cn(menuItem, "group")}
+            >
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-ink-3/60 opacity-0 group-data-[highlighted]:opacity-100 group-data-[state=checked]:border-primary group-data-[state=checked]:bg-primary group-data-[state=checked]:opacity-100">
+                <ContextMenuPrimitive.ItemIndicator>
+                  <CheckIcon className="size-3 text-on-primary" strokeWidth={3} />
+                </ContextMenuPrimitive.ItemIndicator>
+              </span>
+              {option.icon}
+              <span className="truncate">{option.label}</span>
+            </ContextMenuPrimitive.CheckboxItem>
+          ) : (
+            <ContextMenuItem key={option.value} disabled={disabled} onSelect={() => onSelect(option.value)}>
+              {option.icon}
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+              {selected.includes(option.value) && <CheckIcon className="text-ink" />}
+              {!text && !onCreate && index < 9 && <span className="w-3 text-right text-[12px] tabular-nums text-ink-3">{index + 1}</span>}
+            </ContextMenuItem>
+          ),
+        )}
+        {text && exact < 0 && onCreate && (
+          <ContextMenuItem
+            disabled={disabled}
+            onSelect={(e) => {
+              e.preventDefault()
+              create()
+            }}
+          >
+            <PlusIcon /> Create “{text}”
+          </ContextMenuItem>
+        )}
+      </ContextMenuSubContent>
+    </ContextMenuSub>
   )
 }
 
@@ -235,15 +232,10 @@ export {
   ContextMenuTrigger,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuCheckboxItem,
-  ContextMenuRadioItem,
-  ContextMenuLabel,
+  ContextMenuOptions,
   ContextMenuSeparator,
   ContextMenuShortcut,
-  ContextMenuGroup,
-  ContextMenuPortal,
   ContextMenuSub,
-  ContextMenuSubContent,
   ContextMenuSubTrigger,
-  ContextMenuRadioGroup,
+  ContextMenuSubContent,
 }
