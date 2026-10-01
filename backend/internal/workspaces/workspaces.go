@@ -77,7 +77,8 @@ func (s *Service) SignIn(ctx context.Context, id signin.Identity) (storage.User,
 	case joined != nil:
 		return *joined, nil
 	}
-	return s.createOwned(ctx, member(id), "Personal", firstName(id.Name, id.Email), identity)
+	name := firstName(id.Name, id.Email)
+	return s.createOwned(ctx, member(id), personal(name), name, identity)
 }
 
 // Provision returns the account a deployment declares for the email: its
@@ -91,7 +92,8 @@ func (s *Service) Provision(ctx context.Context, email string) (storage.User, er
 	if len(users) > 0 {
 		return users[0], nil
 	}
-	return s.createOwned(ctx, member(signin.Identity{Email: email}), "Personal", firstName("", email), emailIdentity(email))
+	name := firstName("", email)
+	return s.createOwned(ctx, member(signin.Identity{Email: email}), personal(name), name, emailIdentity(email))
 }
 
 // emailIdentity stands for anyone who proves they hold the address, which is
@@ -101,16 +103,16 @@ func emailIdentity(email string) storage.Identity {
 }
 
 // createOwned starts a workspace with the owner as its admin and a first team,
-// as Linear's onboarding does: a newcomer's Personal workspace has a team
-// named after them, and a workspace someone creates has one named after it.
-func (s *Service) createOwned(ctx context.Context, owner storage.NewUser, workspace, team string, identity storage.Identity) (storage.User, error) {
+// as Linear's onboarding does.
+func (s *Service) createOwned(ctx context.Context, owner storage.NewUser, workspace storage.NewWorkspace, team string, identity storage.Identity) (storage.User, error) {
 	owner.Admin = true
-	return s.store.CreateOwnedWorkspace(ctx,
-		storage.NewWorkspace{Name: workspace, URLKey: slug(team) + "-" + suffix()},
-		owner, identity,
-		storage.NewTeam{Key: teamKey(team), Name: team},
-		tracker.DefaultStates,
-	)
+	return s.store.CreateOwnedWorkspace(ctx, workspace, owner, identity, storage.NewTeam{Key: teamKey(team), Name: team}, tracker.DefaultStates)
+}
+
+// personal is the workspace a newcomer starts in; its first team is named
+// after them.
+func personal(name string) storage.NewWorkspace {
+	return storage.NewWorkspace{Name: "Personal", URLKey: urlKey(name)}
 }
 
 // Create starts a workspace with the actor's person as its admin, reachable
@@ -132,7 +134,8 @@ func (s *Service) Create(ctx context.Context, actor auth.Actor, name string) (st
 		return storage.Membership{}, tracker.InvalidInputError{Message: "sign in to create a workspace"}
 	}
 	owner := storage.NewUser{Name: me.Name, DisplayName: me.DisplayName, Email: me.Email, AvatarURL: me.AvatarURL}
-	user, err := s.createOwned(ctx, owner, name, name, identities[0])
+	workspace := storage.NewWorkspace{Name: name, URLKey: urlKey(name)}
+	user, err := s.createOwned(ctx, owner, workspace, name, identities[0])
 	if err != nil {
 		return storage.Membership{}, err
 	}
@@ -141,11 +144,7 @@ func (s *Service) Create(ctx context.Context, actor auth.Actor, name string) (st
 			return storage.Membership{}, err
 		}
 	}
-	memberships, err := s.store.Memberships(ctx, user.ID)
-	if err != nil {
-		return storage.Membership{}, err
-	}
-	return memberships[slices.IndexFunc(memberships, func(m storage.Membership) bool { return m.UserID == user.ID })], nil
+	return storage.Membership{UserID: user.ID, WorkspaceID: user.WorkspaceID, Name: workspace.Name, URLKey: workspace.URLKey}, nil
 }
 
 func (s *Service) allowed(email string) bool {
@@ -334,8 +333,9 @@ func slug(name string) string {
 	return string(out)
 }
 
-func suffix() string {
+// urlKey keys a workspace after a name, with a random suffix to keep it unique.
+func urlKey(name string) string {
 	b := make([]byte, 3)
 	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	return slug(name) + "-" + hex.EncodeToString(b)
 }

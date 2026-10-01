@@ -16,7 +16,7 @@ type profile struct {
 }
 
 func registerProfile(server *mcp.Server, keys *auth.Service, t tools) {
-	addTool(server, &mcp.Tool{
+	addTool(server, t, &mcp.Tool{
 		Name: "get_profile", Title: "Connected account",
 		Description: "Identify the authenticated account and the workspace this call acts in. The profile ID identifies this workspace membership and stays the same across token refresh and reconnection.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},

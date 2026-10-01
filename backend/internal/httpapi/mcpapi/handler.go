@@ -3,7 +3,6 @@ package mcpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -34,12 +33,11 @@ func NewHandler(svc *tracker.Service, members *workspaces.Service, keys *auth.Se
 		Version: "0.1.0",
 		Icons:   icons,
 	}, &mcp.ServerOptions{Instructions: instructions})
-	server.AddReceivingMiddleware(inWorkspace(members))
-	t := tools{svc: svc, graphql: graphql}
+	t := tools{svc: svc, members: members, graphql: graphql}
 	register(server, t)
 	registerApp(server, t, keys.Issuer())
 	registerProfile(server, keys, t)
-	registerWorkspaces(server, members, t)
+	registerWorkspaces(server, t)
 	verify := func(ctx context.Context, token string, _ *http.Request) (*mcpauth.TokenInfo, error) {
 		actor, err := keys.Authenticate(ctx, token)
 		if errors.Is(err, auth.ErrUnauthenticated) {
@@ -63,34 +61,9 @@ func NewHandler(svc *tracker.Service, members *workspaces.Service, keys *auth.Se
 
 const actorKey = "actor"
 
-// inWorkspace runs a tool call as the actor in the workspace its arguments
-// name, leaving the connection's default workspace as it is.
-func inWorkspace(members *workspaces.Service) mcp.Middleware {
-	return func(next mcp.MethodHandler) mcp.MethodHandler {
-		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
-			call, ok := req.(*mcp.CallToolRequest)
-			var args struct {
-				Workspace string `json:"workspace"`
-			}
-			if !ok || json.Unmarshal(call.Params.Arguments, &args) != nil || args.Workspace == "" {
-				return next(ctx, method, req)
-			}
-			info := *call.Extra.TokenInfo
-			actor, err := members.In(ctx, info.Extra[actorKey].(auth.Actor), args.Workspace)
-			if err != nil {
-				res := &mcp.CallToolResult{}
-				res.SetError(err)
-				return res, nil
-			}
-			info.Extra = map[string]any{actorKey: actor}
-			call.Extra.TokenInfo = &info
-			return next(ctx, method, req)
-		}
-	}
-}
-
 type tools struct {
 	svc     *tracker.Service
+	members *workspaces.Service
 	graphql *gql.Handler
 }
 

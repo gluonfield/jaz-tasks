@@ -177,9 +177,10 @@ func TestSwitchWorkspaceMovesTheConnection(t *testing.T) {
 	})
 }
 
-// A person creates a workspace from Jaz's Tasks tab and lands in it as its
-// admin with a first team; an API key creates one but stays where it is.
-func TestCreateWorkspaceMovesTheConnection(t *testing.T) {
+// A person creates a workspace as its admin with a first team named after
+// it, then moves there, as the workspace menu does; creating alone moves
+// nothing, so an API key can create one too.
+func TestCreateWorkspace(t *testing.T) {
 	c := newClient(t)
 	pat := signUp(t, c, "pat")
 	jaz := connect(t, c, pat)
@@ -187,22 +188,25 @@ func TestCreateWorkspaceMovesTheConnection(t *testing.T) {
 	_, out := c.do(`mutation { workspaceCreate(name: "  Acme  ") { id name urlKey current } }`, jaz)
 	id, _ := get(out.Data, "workspaceCreate.id").(string)
 	urlKey, _ := get(out.Data, "workspaceCreate.urlKey").(string)
-	if id == "" || id == pat.WorkspaceID || get(out.Data, "workspaceCreate.name") != "Acme" || !strings.HasPrefix(urlKey, "acme-") || get(out.Data, "workspaceCreate.current") != true {
+	if id == "" || id == pat.WorkspaceID || get(out.Data, "workspaceCreate.name") != "Acme" || !strings.HasPrefix(urlKey, "acme-") || get(out.Data, "workspaceCreate.current") != false {
 		t.Fatalf("create: %+v %+v", out.Data, out.Errors)
 	}
-	_, out = c.do(`{ organization { id name } viewer { email admin } teams { nodes { name key } } workspaces { id current } }`, jaz)
+	if _, out = c.do(`{ organization { id } workspaces { id } }`, jaz); get(out.Data, "organization.id") != pat.WorkspaceID || get(out.Data, "workspaces.#") != 2.0 {
+		t.Fatalf("creating should not move the connection: %+v %+v", out.Data, out.Errors)
+	}
+	c.do(`mutation { workspaceSwitch(id: "`+id+`") { success } }`, jaz)
+	_, out = c.do(`{ organization { id name } viewer { email admin } teams { nodes { name key } } }`, jaz)
 	if get(out.Data, "organization.id") != id || get(out.Data, "viewer.email") != "pat@example.com" || get(out.Data, "viewer.admin") != true ||
-		get(out.Data, "teams.nodes.#") != 1.0 || get(out.Data, "teams.nodes.0.name") != "Acme" || get(out.Data, "teams.nodes.0.key") != "ACM" ||
-		get(out.Data, "workspaces.#") != 2.0 {
-		t.Fatalf("the connection should act in the new workspace: %+v %+v", out.Data, out.Errors)
+		get(out.Data, "teams.nodes.#") != 1.0 || get(out.Data, "teams.nodes.0.name") != "Acme" || get(out.Data, "teams.nodes.0.key") != "ACM" {
+		t.Fatalf("the new workspace should have pat as admin and one team: %+v %+v", out.Data, out.Errors)
 	}
 
 	key, _, err := auth.NewService(c.store, auth.Config{PublicURL: "http://tasks.test"}).CreateKey(context.Background(), pat.ID, "cli", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, out = c.do(`mutation { workspaceCreate(name: "Side") { current } }`, key); len(out.Errors) > 0 || get(out.Data, "workspaceCreate.current") != false {
-		t.Fatalf("an API key creates without moving: %+v %+v", out.Data, out.Errors)
+	if _, out = c.do(`mutation { workspaceCreate(name: "Side") { id } }`, key); len(out.Errors) > 0 {
+		t.Fatalf("an API key creates: %+v", out.Errors)
 	}
 	if _, out = c.do(`{ organization { id } workspaces { id } }`, key); get(out.Data, "organization.id") != pat.WorkspaceID || get(out.Data, "workspaces.#") != 3.0 {
 		t.Fatalf("the key should stay in its workspace: %+v %+v", out.Data, out.Errors)

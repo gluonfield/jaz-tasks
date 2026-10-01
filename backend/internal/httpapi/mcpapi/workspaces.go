@@ -3,7 +3,6 @@ package mcpapi
 import (
 	"context"
 
-	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -23,12 +22,12 @@ type createWorkspaceInput struct {
 
 // registerWorkspaces tells agents which workspaces other tools can name, and
 // lets them start one.
-func registerWorkspaces(server *mcp.Server, members *workspaces.Service, t tools) {
+func registerWorkspaces(server *mcp.Server, t tools) {
 	addUnscopedTool(server, &mcp.Tool{Name: "list_workspaces", Title: "List workspaces", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
 		Description: "The workspaces you belong to. Other tools act in the default one unless their workspace argument names another."},
 		func(ctx context.Context, req *mcp.CallToolRequest, _ empty) (*mcp.CallToolResult, workspacesOutput, error) {
 			actor := t.actor(req)
-			list, err := members.Memberships(ctx, actor)
+			list, err := t.members.Memberships(ctx, actor)
 			out := workspacesOutput{Workspaces: []workspaceView{}}
 			for _, m := range list {
 				out.Workspaces = append(out.Workspaces, workspaceView{ID: m.WorkspaceID, Name: m.Name, Default: m.UserID == actor.UserID})
@@ -38,7 +37,7 @@ func registerWorkspaces(server *mcp.Server, members *workspaces.Service, t tools
 	addUnscopedTool(server, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_workspace", Title: "Create workspace",
 		Description: "Start a workspace with you as its admin and a first team named after it. Name it in other tools' workspace argument to work there; the default stays the same."},
 		func(ctx context.Context, req *mcp.CallToolRequest, in createWorkspaceInput) (*mcp.CallToolResult, workspaceView, error) {
-			m, err := members.Create(ctx, t.actor(req), in.Name)
+			m, err := t.members.Create(ctx, t.actor(req), in.Name)
 			return nil, workspaceView{ID: m.WorkspaceID, Name: m.Name}, err
 		})
 }

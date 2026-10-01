@@ -73,7 +73,7 @@ type Mutation {
   organizationInviteDelete(id: String!): DeletePayload!
   """Moves this session or OAuth connection to another of the viewer's workspaces. Not in Linear's API."""
   workspaceSwitch(id: String!): WorkspaceSwitchPayload!
-  """Creates a workspace with the viewer as its admin and a first team named after it, moving this session or OAuth connection there; an API key stays in its own workspace. Not in Linear's API."""
+  """Creates a workspace with the viewer as its admin and a first team named after it; workspaceSwitch moves there. Not in Linear's API."""
   workspaceCreate(name: String!): Membership!
   organizationUpdate(input: OrganizationUpdateInput!): OrganizationPayload!
   teamCreate(input: TeamCreateInput!): TeamPayload!

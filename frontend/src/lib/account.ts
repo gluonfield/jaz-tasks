@@ -47,6 +47,8 @@ export function useWorkspaces() {
   })
 }
 
+const switchWorkspace = (id: string) => gql('mutation ($id: String!) { workspaceSwitch(id: $id) { success } }', { id })
+
 // useStartOver drops every cached query and starts from home, so nothing from
 // the previous workspace survives a move.
 function useStartOver() {
@@ -62,10 +64,7 @@ function useStartOver() {
 // to another workspace.
 export function useSwitchWorkspace() {
   const startOver = useStartOver()
-  return useMutation({
-    mutationFn: (id: string) => gql('mutation ($id: String!) { workspaceSwitch(id: $id) { success } }', { id }),
-    onSuccess: startOver,
-  })
+  return useMutation({ mutationFn: switchWorkspace, onSuccess: startOver })
 }
 
 // useCreateWorkspace starts a workspace with the viewer as its admin and
@@ -73,7 +72,10 @@ export function useSwitchWorkspace() {
 export function useCreateWorkspace() {
   const startOver = useStartOver()
   return useMutation({
-    mutationFn: (name: string) => gql('mutation ($name: String!) { workspaceCreate(name: $name) { id } }', { name }),
+    mutationFn: async (name: string) => {
+      const { workspaceCreate } = await gql<{ workspaceCreate: { id: string } }>('mutation ($name: String!) { workspaceCreate(name: $name) { id } }', { name })
+      return switchWorkspace(workspaceCreate.id)
+    },
     onSuccess: startOver,
   })
 }

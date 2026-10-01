@@ -13,28 +13,28 @@ import (
 
 func register(server *mcp.Server, t tools) {
 	readOnly := &mcp.ToolAnnotations{ReadOnlyHint: true}
-	addTool(server, &mcp.Tool{Name: "list_teams", Title: "List teams", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "list_teams", Title: "List teams", Annotations: readOnly,
 		Description: "List teams with their key, workflow states and the labels their issues can use."}, t.listTeams)
-	addTool(server, &mcp.Tool{Name: "list_users", Title: "List users", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "list_users", Title: "List users", Annotations: readOnly,
 		Description: "List workspace members who can be assigned issues."}, t.listUsers)
-	addTool(server, &mcp.Tool{Name: "list_projects", Title: "List projects", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "list_projects", Title: "List projects", Annotations: readOnly,
 		Description: "List projects with their one-line description, status, lead, teams, start and target dates and progress."}, t.listProjects)
-	addTool(server, &mcp.Tool{Name: "get_project", Title: "Get project", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "get_project", Title: "Get project", Annotations: readOnly,
 		Description: "Get one project with its content: the markdown brief with its goals, scope and plan. list_issues with project lists its issues."}, t.getProject)
-	addTool(server, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_project", Title: "Create project",
+	addTool(server, t, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_project", Title: "Create project",
 		Description: "Create a project for one or more teams, with a one-line description and the full brief as markdown content."}, t.createProject)
-	addTool(server, &mcp.Tool{Name: "update_project", Title: "Update project",
+	addTool(server, t, &mcp.Tool{Name: "update_project", Title: "Update project",
 		Description: `Update a project. Omitted fields stay unchanged; content replaces the whole brief. Pass "none" to clear lead, start date or target date, and an empty string to clear description or content.`}, t.updateProject)
-	addTool(server, &mcp.Tool{Name: "list_issues", Title: "List issues", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "list_issues", Title: "List issues", Annotations: readOnly,
 		Description: "List issues, newest first, filtered by team, state, assignee, project, label, priority or a full-text query."}, t.listIssues)
-	addTool(server, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
+	addTool(server, t, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
 		Description: "Get one issue with its description, sub-issues and comments."}, t.getIssue)
-	addTool(server, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_issue", Title: "Create issue",
+	addTool(server, t, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_issue", Title: "Create issue",
 		Description: "Create an issue in a team. Unset state defaults to the team's Todo state.",
 		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": issueCardURI}, "ui/resourceUri": issueCardURI}}, t.createIssue)
-	addTool(server, &mcp.Tool{Name: "update_issue", Title: "Update issue",
+	addTool(server, t, &mcp.Tool{Name: "update_issue", Title: "Update issue",
 		Description: `Update an issue. Omitted fields stay unchanged; pass "none" to clear assignee, project, due date, estimate or parent.`}, t.updateIssue)
-	addTool(server, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "add_comment", Title: "Add comment",
+	addTool(server, t, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "add_comment", Title: "Add comment",
 		Description: "Comment on an issue as the authenticated user. Markdown is supported."}, t.addComment)
 }
 
