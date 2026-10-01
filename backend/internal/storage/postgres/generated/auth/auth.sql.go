@@ -495,20 +495,33 @@ func (q *Queries) UserBySession(ctx context.Context, tokenHash []byte) (User, er
 	return i, err
 }
 
-const userIdentity = `-- name: UserIdentity :one
-SELECT issuer, subject, user_id, created_at FROM identities WHERE user_id = $1 LIMIT 1
+const userIdentities = `-- name: UserIdentities :many
+SELECT issuer, subject, user_id, created_at FROM identities WHERE user_id = $1 ORDER BY created_at
 `
 
-func (q *Queries) UserIdentity(ctx context.Context, userID string) (Identity, error) {
-	row := q.db.QueryRow(ctx, userIdentity, userID)
-	var i Identity
-	err := row.Scan(
-		&i.Issuer,
-		&i.Subject,
-		&i.UserID,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) UserIdentities(ctx context.Context, userID string) ([]Identity, error) {
+	rows, err := q.db.Query(ctx, userIdentities, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Identity{}
+	for rows.Next() {
+		var i Identity
+		if err := rows.Scan(
+			&i.Issuer,
+			&i.Subject,
+			&i.UserID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const usersByEmail = `-- name: UsersByEmail :many

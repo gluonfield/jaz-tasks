@@ -30,8 +30,8 @@ func (s *Store) ShareIdentity(ctx context.Context, from, identity storage.Identi
 	}))
 }
 
-func (s *Store) UserIdentity(ctx context.Context, userID string) (storage.Identity, error) {
-	return one(toIdentity)(s.auth.UserIdentity(ctx, userID))
+func (s *Store) UserIdentities(ctx context.Context, userID string) ([]storage.Identity, error) {
+	return many(toIdentity)(s.auth.UserIdentities(ctx, userID))
 }
 
 func (s *Store) Memberships(ctx context.Context, userID string) ([]storage.Membership, error) {

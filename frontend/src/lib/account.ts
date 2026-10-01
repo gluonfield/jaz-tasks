@@ -47,17 +47,33 @@ export function useWorkspaces() {
   })
 }
 
-// useSwitchWorkspace moves this session, or Jaz's connection when embedded,
-// to another workspace, then drops every cached query and starts from home so
-// nothing from the previous workspace survives.
-export function useSwitchWorkspace() {
+// useStartOver drops every cached query and starts from home, so nothing from
+// the previous workspace survives a move.
+function useStartOver() {
   const client = useQueryClient()
   const navigate = useNavigate()
+  return () => {
+    void client.resetQueries()
+    void navigate({ to: '/' })
+  }
+}
+
+// useSwitchWorkspace moves this session, or Jaz's connection when embedded,
+// to another workspace.
+export function useSwitchWorkspace() {
+  const startOver = useStartOver()
   return useMutation({
     mutationFn: (id: string) => gql('mutation ($id: String!) { workspaceSwitch(id: $id) { success } }', { id }),
-    onSuccess: () => {
-      void client.resetQueries()
-      void navigate({ to: '/' })
-    },
+    onSuccess: startOver,
+  })
+}
+
+// useCreateWorkspace starts a workspace with the viewer as its admin and
+// moves there.
+export function useCreateWorkspace() {
+  const startOver = useStartOver()
+  return useMutation({
+    mutationFn: (name: string) => gql('mutation ($name: String!) { workspaceCreate(name: $name) { id } }', { name }),
+    onSuccess: startOver,
   })
 }

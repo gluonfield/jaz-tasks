@@ -2,7 +2,9 @@ package gql
 
 import (
 	"context"
+	"errors"
 
+	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
 )
@@ -150,6 +152,19 @@ func (r mutationResolver) WorkspaceSwitch(ctx context.Context, id string) (*Work
 		return nil, err
 	}
 	return &WorkspaceSwitchPayload{Success: true}, nil
+}
+
+func (r mutationResolver) WorkspaceCreate(ctx context.Context, name string) (*Membership, error) {
+	actor := scope(ctx).Actor()
+	m, err := r.members.Create(ctx, actor, name)
+	if err != nil {
+		return nil, err
+	}
+	err = r.keys.Switch(ctx, actor, m.UserID)
+	if err != nil && !errors.Is(err, auth.ErrFixedWorkspace) {
+		return nil, err
+	}
+	return &Membership{ID: m.WorkspaceID, Name: m.Name, URLKey: m.URLKey, Current: err == nil}, nil
 }
 
 func (mutationResolver) WorkflowStateCreate(ctx context.Context, input tracker.WorkflowStateCreateInput) (*WorkflowStatePayload, error) {

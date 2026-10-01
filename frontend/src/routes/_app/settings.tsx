@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun, UserPlus } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
+import { Button, inputClass } from '@/components/controls'
 import { Avatar, TeamBadge } from '@/components/icons'
 import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
 import { embedded } from '@/lib/api'
@@ -61,22 +62,6 @@ function Row({ children, className }: { children: ReactNode; className?: string 
   return <div className={cn('flex min-h-14 items-center gap-3 border-b border-border/70 px-4 py-2.5 text-[13px] last:border-b-0', className)}>{children}</div>
 }
 
-function Button({ children, onClick, primary, disabled }: { children: ReactNode; onClick?: () => void; primary?: boolean; disabled?: boolean }) {
-  return (
-    <button
-      type={onClick ? 'button' : 'submit'}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'h-7 shrink-0 rounded-full border px-3 text-[12.5px] font-medium outline-none transition-colors disabled:opacity-50',
-        primary ? 'border-primary bg-primary text-on-primary hover:bg-primary-strong' : 'border-border text-ink hover:bg-list-hover',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-
 function Workspace() {
   const { data: catalog } = useCatalog()
   return (
@@ -125,7 +110,7 @@ function Name({ value, teamId, disabled }: { value: string; teamId?: string; dis
           e.currentTarget.blur()
         }
       }}
-      className="h-7 w-60 rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none focus:border-primary disabled:opacity-50"
+      className={cn(inputClass, 'w-60')}
     />
   )
 }
@@ -192,7 +177,7 @@ function APIKeys() {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Key label, e.g. linear-cli"
-          className="h-7 min-w-0 flex-1 rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-primary"
+          className={cn(inputClass, 'flex-1')}
         />
         <Button primary disabled={!label.trim() || create.isPending}>
           Create key
@@ -293,7 +278,7 @@ function Members() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Invite by email"
-            className="h-7 w-full rounded-[var(--radius-control)] border border-border bg-bg px-2.5 text-[13px] text-ink outline-none placeholder:text-ink-3 focus:border-primary"
+            className={cn(inputClass, 'w-full')}
           />
           {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typed) && (
             <button

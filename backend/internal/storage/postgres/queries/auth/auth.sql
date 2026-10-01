@@ -68,8 +68,8 @@ JOIN users ON users.id = identities.user_id
 WHERE identities.issuer = $1 AND identities.subject = $2 AND users.active
 ORDER BY users.created_at;
 
--- name: UserIdentity :one
-SELECT * FROM identities WHERE user_id = $1 LIMIT 1;
+-- name: UserIdentities :many
+SELECT * FROM identities WHERE user_id = $1 ORDER BY created_at;
 
 -- name: Memberships :many
 SELECT users.id AS user_id, workspaces.id AS workspace_id, workspaces.name, workspaces.url_key

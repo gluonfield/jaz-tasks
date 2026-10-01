@@ -183,6 +183,7 @@ type MutationResolver interface {
 	OrganizationInviteCreate(ctx context.Context, input OrganizationInviteCreateInput) (*OrganizationInvitePayload, error)
 	OrganizationInviteDelete(ctx context.Context, id string) (*DeletePayload, error)
 	WorkspaceSwitch(ctx context.Context, id string) (*WorkspaceSwitchPayload, error)
+	WorkspaceCreate(ctx context.Context, name string) (*Membership, error)
 	OrganizationUpdate(ctx context.Context, input tracker.OrganizationUpdateInput) (*OrganizationPayload, error)
 	TeamCreate(ctx context.Context, input tracker.TeamCreateInput) (*TeamPayload, error)
 	TeamUpdate(ctx context.Context, id string, input tracker.TeamUpdateInput) (*TeamPayload, error)
@@ -2064,6 +2065,20 @@ func (ec *executionContext) field_Mutation_workflowStateCreate_args(ctx context.
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_workspaceCreate_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "name",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["name"] = arg0
 	return args, nil
 }
 
@@ -8444,6 +8459,50 @@ func (ec *executionContext) fieldContext_Mutation_workspaceSwitch(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_workspaceSwitch_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_workspaceCreate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_workspaceCreate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().WorkspaceCreate(ctx, fc.Args["name"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *Membership) graphql.Marshaler {
+			return ec.marshalNMembership2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembership(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_workspaceCreate(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Membership(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_workspaceCreate_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -19824,6 +19883,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "workspaceCreate":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_workspaceCreate(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "organizationUpdate":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_organizationUpdate(ctx, field)
@@ -23406,6 +23472,16 @@ func (ec *executionContext) marshalNMembership2ᚕgithubᚗcomᚋgluonfieldᚋja
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNMembership2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐMembership(ctx context.Context, sel ast.SelectionSet, v *Membership) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Membership(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNOrganization2ᚖgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐWorkspace(ctx context.Context, sel ast.SelectionSet, v *storage.Workspace) graphql.Marshaler {

@@ -137,7 +137,7 @@ type WorkspaceStore interface {
 	UsersByEmail(ctx context.Context, email string) ([]User, error)
 	// ShareIdentity links identity to every user from signs in as.
 	ShareIdentity(ctx context.Context, from, identity Identity) ([]User, error)
-	UserIdentity(ctx context.Context, userID string) (Identity, error)
+	UserIdentities(ctx context.Context, userID string) ([]Identity, error)
 	// Memberships lists the workspaces of everyone sharing the user's identity.
 	Memberships(ctx context.Context, userID string) ([]Membership, error)
 	// CreateOwnedWorkspace creates a workspace, its owner linked to the

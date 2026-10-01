@@ -9,6 +9,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Plus,
   Search,
   Settings,
   SquarePen,
@@ -29,8 +30,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useSwitchWorkspace, useWorkspaces } from '@/lib/account'
+import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from '@/lib/account'
 import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
 import { useCatalog } from '@/lib/queries'
@@ -38,6 +40,7 @@ import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Button, inputClass } from './controls'
 import { MyIssuesIcon, TeamBadge, WorkspaceBadge } from './icons'
 import { Kbd } from './kbd'
 
@@ -172,64 +175,102 @@ function IconButton({
 function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; admin?: boolean }) {
   const { data: workspaces = [] } = useWorkspaces()
   const switchTo = useSwitchWorkspace()
+  const [creating, setCreating] = useState(false)
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
-        <WorkspaceBadge name={name} />
-        <span className="truncate">{name}</span>
-        <ChevronDown className="size-3 shrink-0 text-ink-3" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
-        {email && <DropdownMenuLabel>{email}</DropdownMenuLabel>}
-        {workspaces.map((workspace) => (
-          <DropdownMenuItem
-            key={workspace.id}
-            onSelect={() => !workspace.current && switchTo.mutate(workspace.id, { onError: (error) => toast.error(error.message) })}
-          >
-            <WorkspaceBadge name={workspace.name} className="size-4 rounded-[4px] text-[9px]" />
-            <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-            {workspace.current && <Check className="text-ink-2" />}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
+          <WorkspaceBadge name={name} />
+          <span className="truncate">{name}</span>
+          <ChevronDown className="size-3 shrink-0 text-ink-3" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-60">
+          {email && <DropdownMenuLabel>{email}</DropdownMenuLabel>}
+          {workspaces.map((workspace) => (
+            <DropdownMenuItem
+              key={workspace.id}
+              onSelect={() => !workspace.current && switchTo.mutate(workspace.id, { onError: (error) => toast.error(error.message) })}
+            >
+              <WorkspaceBadge name={workspace.name} className="size-4 rounded-[4px] text-[9px]" />
+              <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
+              {workspace.current && <Check className="text-ink-2" />}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuItem onSelect={() => setCreating(true)}>
+            <Plus /> New workspace
           </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Sun /> Theme
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem onSelect={() => setSchemePreference('light')}>
-              <Sun /> Light
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setSchemePreference('dark')}>
-              <Moon /> Dark
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setSchemePreference('system')}>
-              <Monitor /> System
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuItem asChild>
-          <Link to="/settings">
-            <Settings /> Settings
-            <DropdownMenuShortcut>G S</DropdownMenuShortcut>
-          </Link>
-        </DropdownMenuItem>
-        {admin && (
+          <DropdownMenuSeparator />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Sun /> Theme
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onSelect={() => setSchemePreference('light')}>
+                <Sun /> Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSchemePreference('dark')}>
+                <Moon /> Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSchemePreference('system')}>
+                <Monitor /> System
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem asChild>
-            <Link to="/settings" hash="members">
-              <UserPlus /> Invite members
+            <Link to="/settings">
+              <Settings /> Settings
+              <DropdownMenuShortcut>G S</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
-        )}
-        {!embedded() && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => signOut()}>
-              <LogOut /> Sign out
+          {admin && (
+            <DropdownMenuItem asChild>
+              <Link to="/settings" hash="members">
+                <UserPlus /> Invite members
+              </Link>
             </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          )}
+          {!embedded() && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => signOut()}>
+                <LogOut /> Sign out
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <NewWorkspace open={creating} onOpenChange={setCreating} />
+    </>
+  )
+}
+
+// NewWorkspace names a workspace and moves there.
+function NewWorkspace({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [name, setName] = useState('')
+  const create = useCreateWorkspace()
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false} className="w-[380px] gap-3 rounded-[12px] border-border bg-raised p-4 shadow-[var(--shadow-raised)]">
+        <DialogTitle className="text-[14px] font-semibold text-ink">New workspace</DialogTitle>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            create.mutate(name, {
+              onSuccess: () => {
+                onOpenChange(false)
+                setName('')
+              },
+              onError: (error) => toast.error(error.message),
+            })
+          }}
+        >
+          <input autoFocus aria-label="Workspace name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name, such as Acme" className={cn(inputClass, 'flex-1')} />
+          <Button primary disabled={!name.trim() || create.isPending}>
+            Create
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

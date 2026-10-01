@@ -76,7 +76,7 @@ func (s *Service) SignIn(ctx context.Context, id signin.Identity) (storage.User,
 	case joined != nil:
 		return *joined, nil
 	}
-	return s.createOwned(ctx, member(id), firstName(id.Name, id.Email), identity)
+	return s.createOwned(ctx, member(id), "Personal", firstName(id.Name, id.Email), identity)
 }
 
 // Provision returns the account a deployment declares for the email: its
@@ -90,7 +90,7 @@ func (s *Service) Provision(ctx context.Context, email string) (storage.User, er
 	if len(users) > 0 {
 		return users[0], nil
 	}
-	return s.createOwned(ctx, member(signin.Identity{Email: email}), firstName("", email), emailIdentity(email))
+	return s.createOwned(ctx, member(signin.Identity{Email: email}), "Personal", firstName("", email), emailIdentity(email))
 }
 
 // emailIdentity stands for anyone who proves they hold the address, which is
@@ -99,16 +99,52 @@ func emailIdentity(email string) storage.Identity {
 	return storage.Identity{Issuer: "email", Subject: strings.ToLower(email)}
 }
 
-// createOwned starts a person in a workspace of their own, like Linear's
-// onboarding: a Personal workspace and a first team named after them.
-func (s *Service) createOwned(ctx context.Context, owner storage.NewUser, name string, identity storage.Identity) (storage.User, error) {
+// createOwned starts a workspace with the owner as its admin and a first team,
+// as Linear's onboarding does: a newcomer's Personal workspace has a team
+// named after them, and a workspace someone creates has one named after it.
+func (s *Service) createOwned(ctx context.Context, owner storage.NewUser, workspace, team string, identity storage.Identity) (storage.User, error) {
 	owner.Admin = true
 	return s.store.CreateOwnedWorkspace(ctx,
-		storage.NewWorkspace{Name: "Personal", URLKey: slug(name) + "-" + suffix()},
+		storage.NewWorkspace{Name: workspace, URLKey: slug(team) + "-" + suffix()},
 		owner, identity,
-		storage.NewTeam{Key: teamKey(name), Name: name},
+		storage.NewTeam{Key: teamKey(team), Name: team},
 		tracker.DefaultStates,
 	)
+}
+
+// Create starts a workspace with the actor's person as its admin, reachable
+// by every identity they sign in with, and returns their membership there.
+func (s *Service) Create(ctx context.Context, actor auth.Actor, name string) (storage.Membership, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len([]rune(name)) > 80 {
+		return storage.Membership{}, tracker.InvalidInputError{Message: "name the workspace in 1 to 80 characters"}
+	}
+	me, err := s.store.UserByID(ctx, actor.UserID)
+	if err != nil {
+		return storage.Membership{}, err
+	}
+	identities, err := s.store.UserIdentities(ctx, actor.UserID)
+	if err != nil {
+		return storage.Membership{}, err
+	}
+	if len(identities) == 0 {
+		return storage.Membership{}, tracker.InvalidInputError{Message: "sign in to create a workspace"}
+	}
+	owner := storage.NewUser{Name: me.Name, DisplayName: me.DisplayName, Email: me.Email, AvatarURL: me.AvatarURL}
+	user, err := s.createOwned(ctx, owner, name, name, identities[0])
+	if err != nil {
+		return storage.Membership{}, err
+	}
+	for _, id := range identities[1:] {
+		if _, err := s.store.ShareIdentity(ctx, identities[0], id); err != nil {
+			return storage.Membership{}, err
+		}
+	}
+	memberships, err := s.store.Memberships(ctx, user.ID)
+	if err != nil {
+		return storage.Membership{}, err
+	}
+	return memberships[slices.IndexFunc(memberships, func(m storage.Membership) bool { return m.UserID == user.ID })], nil
 }
 
 func (s *Service) allowed(email string) bool {
@@ -151,17 +187,18 @@ func (s *Service) acceptInvites(ctx context.Context, identity storage.Identity, 
 // Memberships lists the actor's workspaces, first accepting invites that
 // arrived while they were signed in.
 func (s *Service) Memberships(ctx context.Context, actor auth.Actor) ([]storage.Membership, error) {
-	identity, err := s.store.UserIdentity(ctx, actor.UserID)
-	if err == nil {
+	identities, err := s.store.UserIdentities(ctx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if len(identities) > 0 {
 		user, err := s.store.UserByID(ctx, actor.UserID)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := s.acceptInvites(ctx, identity, storage.NewUser{Name: user.Name, DisplayName: user.DisplayName, Email: user.Email, AvatarURL: user.AvatarURL}); err != nil {
+		if _, err := s.acceptInvites(ctx, identities[0], storage.NewUser{Name: user.Name, DisplayName: user.DisplayName, Email: user.Email, AvatarURL: user.AvatarURL}); err != nil {
 			return nil, err
 		}
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return nil, err
 	}
 	return s.store.Memberships(ctx, actor.UserID)
 }
