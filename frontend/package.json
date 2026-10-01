@@ -7,7 +7,7 @@
     "build": "vite build && vite build --config vite.mcp-app.config.ts && vite build --config vite.issue-card.config.ts",
     "preview": "vite preview --port 7401",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . && bun run --cwd .. lint",
     "check": "bun run typecheck && bun run lint && bun run build"
   },
   "dependencies": {

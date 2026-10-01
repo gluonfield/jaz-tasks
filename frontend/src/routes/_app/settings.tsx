@@ -132,17 +132,10 @@ function Appearance() {
         <span className="flex-1 text-ink">Theme</span>
         <div className="flex gap-1 rounded-[var(--radius-control)] bg-list-hover p-0.5">
           {options.map((o) => (
-            <button
-              key={o.value}
-              onClick={() => setSchemePreference(o.value)}
-              className={cn(
-                'flex h-6 items-center gap-1.5 rounded-[5px] px-2 text-[12.5px] font-medium outline-none transition-colors',
-                current === o.value ? 'bg-raised text-ink shadow-xs' : 'text-ink-2 hover:text-ink',
-              )}
-            >
+            <Button key={o.value} variant="ghost" size="sm" aria-pressed={current === o.value} onClick={() => setSchemePreference(o.value)} className={current === o.value ? 'bg-raised text-ink' : undefined}>
               {o.icon}
               {o.label}
-            </button>
+            </Button>
           ))}
         </div>
       </Row>
