@@ -63,7 +63,7 @@ func Favicon(w http.ResponseWriter, _ *http.Request) {
 func registerApp(server *mcp.Server, t tools, publicURL string) {
 	addAppResource(server, appURI, "Jaz Tasks", appHTML, publicURL, []string{"fullscreen"})
 	addAppResource(server, issueCardURI, "Jaz Tasks issue", issueCardHTML, publicURL, []string{"inline"})
-	addTool(server, &mcp.Tool{
+	addUnscopedTool(server, &mcp.Tool{
 		Name: "show_tasks", Title: "Tasks",
 		Description: "Open the Jaz Tasks app for the user at a team, an issue or a section.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
@@ -75,7 +75,7 @@ func registerApp(server *mcp.Server, t tools, publicURL string) {
 			"openai/ui":      map[string]any{"entrypoints": []map[string]any{{"type": "global"}}},
 		},
 	}, t.showTasks)
-	addTool(server, &mcp.Tool{
+	addUnscopedTool(server, &mcp.Tool{
 		Name: "graphql", Title: "GraphQL",
 		Description: "Run a Linear-compatible GraphQL document. Used by the Jaz Tasks app.",
 		Meta:        mcp.Meta{"ui": map[string]any{"visibility": []string{"app"}}},

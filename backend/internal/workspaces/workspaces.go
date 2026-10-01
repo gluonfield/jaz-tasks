@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"unicode"
@@ -201,6 +202,34 @@ func (s *Service) Memberships(ctx context.Context, actor auth.Actor) ([]storage.
 		}
 	}
 	return s.store.Memberships(ctx, actor.UserID)
+}
+
+// In returns the actor acting in their workspace of that name, or as they
+// are when no name is given.
+func (s *Service) In(ctx context.Context, actor auth.Actor, name string) (auth.Actor, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return actor, nil
+	}
+	memberships, err := s.store.Memberships(ctx, actor.UserID)
+	if err != nil {
+		return actor, err
+	}
+	var named []storage.Membership
+	names := make([]string, len(memberships))
+	for i, m := range memberships {
+		names[i] = m.Name
+		if strings.EqualFold(m.Name, name) {
+			named = append(named, m)
+		}
+	}
+	switch len(named) {
+	case 0:
+		return actor, tracker.InvalidInputError{Message: fmt.Sprintf("you have no workspace named %q; yours are %s", name, strings.Join(names, ", "))}
+	case 1:
+		return actor.In(named[0].UserID, named[0].WorkspaceID)
+	}
+	return actor, tracker.InvalidInputError{Message: fmt.Sprintf("several of your workspaces are named %q; rename one to tell them apart", name)}
 }
 
 // Switch returns the actor's membership in another of their workspaces.

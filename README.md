@@ -26,7 +26,7 @@ The existing MCP server and embedded app can be connected to ChatGPT using OAuth
 
 ## MCP
 
-`/mcp` is a Streamable HTTP server on the same service layer as the web app. Clients that support OAuth discover the authorization server from the first 401 and ask you to sign in and consent; others send an API key as `Authorization: Bearer <key>`. Tools take names: teams by key or name, people by name, email or `me`, and `none` clears a field.
+`/mcp` is a Streamable HTTP server on the same service layer as the web app. Clients that support OAuth discover the authorization server from the first 401 and ask you to sign in and consent; others send an API key as `Authorization: Bearer <key>`. Tools take names: teams by key or name, people by name, email or `me`, and `none` clears a field. Each acts in the connection's default workspace unless its `workspace` argument names another of yours; an API key acts only in its own.
 
 | Tool | Does |
 | --- | --- |
@@ -38,7 +38,7 @@ The existing MCP server and embedded app can be connected to ChatGPT using OAuth
 | `create_issue`, `update_issue` | every property, including moving teams and clearing fields |
 | `add_comment` | a markdown comment as the signed-in user |
 | `show_tasks` | opens the app at a team, issue or section |
-| `list_workspaces`, `switch_workspace`, `create_workspace` | your workspaces; moving the OAuth connection, and so the app and every agent on it, to another or a new one (an API key stays in its workspace) |
+| `list_workspaces`, `create_workspace` | your workspaces, marking the default; a new one with you as admin |
 
 The server is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps). `ui://jaz-tasks/app` is the whole web app in one HTML document, which a host such as Jaz renders in a sandboxed frame and themes to match ([frontend/THEMING.md](frontend/THEMING.md)). The app reads and writes through an app-only `graphql` tool.
 

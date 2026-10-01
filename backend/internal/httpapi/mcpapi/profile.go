@@ -18,7 +18,7 @@ type profile struct {
 func registerProfile(server *mcp.Server, keys *auth.Service, t tools) {
 	addTool(server, &mcp.Tool{
 		Name: "get_profile", Title: "Connected account",
-		Description: "Identify the authenticated account and current workspace. The profile ID identifies this workspace membership and stays the same across token refresh and reconnection.",
+		Description: "Identify the authenticated account and the workspace this call acts in. The profile ID identifies this workspace membership and stays the same across token refresh and reconnection.",
 		Annotations: &mcp.ToolAnnotations{ReadOnlyHint: true},
 		Meta:        mcp.Meta{"openai/profile": true},
 		OutputSchema: json.RawMessage(`{

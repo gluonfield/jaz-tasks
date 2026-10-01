@@ -465,9 +465,9 @@ func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
 	}
 }
 
-// An agent moves its own connection between workspaces, as the CRM's can:
-// creating one lands there, and switching back reaches the first again.
-func TestAgentManagesWorkspaces(t *testing.T) {
+// An agent names the workspace each call acts in; leaving it out keeps the
+// connection's default, and nothing it does moves that default.
+func TestAgentNamesWorkspacePerCall(t *testing.T) {
 	e := serve(t)
 	ctx := context.Background()
 	pat, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, signin.Identity{
@@ -479,60 +479,56 @@ func TestAgentManagesWorkspaces(t *testing.T) {
 	type workspace struct {
 		ID      string `json:"id"`
 		Name    string `json:"name"`
-		Current bool   `json:"current"`
+		Default bool   `json:"default"`
 	}
-	type list struct {
-		Workspaces []workspace `json:"workspaces"`
+	type teams struct {
+		Teams []struct {
+			Key string `json:"key"`
+		} `json:"teams"`
 	}
 	agent := e.session(t, e.oauth(t, pat))
 
 	created := call[workspace](t, agent, "create_workspace", map[string]any{"name": "Acme"})
-	if created.ID == "" || created.ID == pat.WorkspaceID || created.Name != "Acme" || !created.Current {
+	if created.ID == "" || created.Name != "Acme" || created.Default {
 		t.Fatalf("create: %+v", created)
 	}
-	if profile := call[map[string]any](t, agent, "get_profile", nil); profile["nickname"] != "Acme" {
-		t.Fatalf("the connection should act in the new workspace: %v", profile)
-	}
-	listed := call[list](t, agent, "list_workspaces", nil)
-	if len(listed.Workspaces) != 2 || listed.Workspaces[1] != created || listed.Workspaces[0].ID != pat.WorkspaceID || listed.Workspaces[0].Current {
+	listed := call[struct {
+		Workspaces []workspace `json:"workspaces"`
+	}](t, agent, "list_workspaces", nil)
+	if len(listed.Workspaces) != 2 || listed.Workspaces[0] != (workspace{ID: pat.WorkspaceID, Name: "Personal", Default: true}) || listed.Workspaces[1] != created {
 		t.Fatalf("list: %+v", listed)
 	}
-	if teams := call[struct {
-		Teams []struct {
-			Key string `json:"key"`
-		} `json:"teams"`
-	}](t, agent, "list_teams", nil); len(teams.Teams) != 1 || teams.Teams[0].Key != "ACM" {
-		t.Fatalf("the new workspace starts with one team: %+v", teams)
+
+	if acme := call[teams](t, agent, "list_teams", map[string]any{"workspace": " acme "}); len(acme.Teams) != 1 || acme.Teams[0].Key != "ACM" {
+		t.Fatalf("a named workspace: %+v", acme)
+	}
+	kickoff := call[issue](t, agent, "create_issue", map[string]any{"workspace": "Acme", "team": "ACM", "title": "Kickoff"})
+	if kickoff.Identifier != "ACM-1" {
+		t.Fatalf("create_issue in Acme: %+v", kickoff)
+	}
+	if mine := call[teams](t, agent, "list_teams", nil); len(mine.Teams) != 1 || mine.Teams[0].Key != "PAT" {
+		t.Fatalf("calls without a workspace stay in the default: %+v", mine)
 	}
 
-	if back := call[workspace](t, agent, "switch_workspace", map[string]any{"workspace_id": pat.WorkspaceID}); back.ID != pat.WorkspaceID || back.Name != "Personal" || !back.Current {
-		t.Fatalf("switch: %+v", back)
-	}
-	if profile := call[map[string]any](t, agent, "get_profile", nil); profile["nickname"] != "Personal" {
-		t.Fatalf("the connection should be back in Personal: %v", profile)
-	}
-
-	fails := func(session *mcp.ClientSession, name string, args map[string]any) {
+	fails := func(session *mcp.ClientSession, name string, args map[string]any, want string) {
 		t.Helper()
 		res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
-		if err != nil || !res.IsError {
-			t.Errorf("%s %v should fail: %+v %v", name, args, res, err)
+		if err != nil || !res.IsError || !strings.Contains(res.Content[0].(*mcp.TextContent).Text, want) {
+			t.Errorf("%s %v should fail with %q: %+v %v", name, args, want, res, err)
 		}
 	}
-	stranger := call[list](t, e.session(t, e.key), "list_workspaces", nil).Workspaces[0].ID
-	fails(agent, "switch_workspace", map[string]any{"workspace_id": stranger})
-	fails(agent, "create_workspace", map[string]any{"name": " "})
+	stranger := call[map[string]any](t, e.session(t, e.key), "get_profile", nil)["nickname"].(string)
+	fails(agent, "get_issue", map[string]any{"issue": "ACM-1"}, "")
+	fails(agent, "list_teams", map[string]any{"workspace": stranger}, "Personal, Acme")
+	fails(agent, "show_tasks", map[string]any{"workspace": "Acme"}, "")
 
 	patKey, _, err := e.keys.CreateKey(ctx, pat.ID, "cli", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	script := e.session(t, patKey)
-	fails(script, "switch_workspace", map[string]any{"workspace_id": created.ID})
-	if side := call[workspace](t, script, "create_workspace", map[string]any{"name": "Side"}); side.Current {
-		t.Fatalf("an API key creates without moving: %+v", side)
-	}
-	if profile := call[map[string]any](t, script, "get_profile", nil); profile["nickname"] != "Personal" {
-		t.Fatalf("an API key stays in its workspace: %v", profile)
+	fails(script, "list_teams", map[string]any{"workspace": "Acme"}, "API key")
+	if own := call[teams](t, script, "list_teams", map[string]any{"workspace": "Personal"}); len(own.Teams) != 1 || own.Teams[0].Key != "PAT" {
+		t.Fatalf("an API key names its own workspace: %+v", own)
 	}
 }
