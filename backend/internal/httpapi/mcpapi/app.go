@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"html"
 	"io"
 	"net/http"
 	"strings"
@@ -82,11 +83,12 @@ func registerApp(server *mcp.Server, t tools, publicURL string) {
 	}, t.runGraphQL)
 }
 
-func addAppResource(server *mcp.Server, uri, title, html, publicURL string, modes []string) {
+func addAppResource(server *mcp.Server, uri, title, body, publicURL string, modes []string) {
+	body = strings.Replace(body, `id="root"`, `id="root" data-mcp-url="`+html.EscapeString(publicURL+"/mcp")+`"`, 1)
 	server.AddResource(&mcp.Resource{URI: uri, Name: title, Title: title, MIMEType: appMIME},
 		func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
-				URI: uri, MIMEType: appMIME, Text: html, Meta: mcp.Meta{
+				URI: uri, MIMEType: appMIME, Text: body, Meta: mcp.Meta{
 					"ui":        map[string]any{"prefersBorder": false, "domain": publicURL, "csp": map[string]any{"connectDomains": []string{}, "resourceDomains": []string{}}},
 					"openai/ui": map[string]any{"availableDisplayModes": modes},
 				},

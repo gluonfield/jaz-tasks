@@ -4,6 +4,7 @@ import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
 import { Button, inputClass } from '@/components/controls'
 import { Avatar, TeamBadge } from '@/components/icons'
+import { McpConnection } from '@/components/mcp-connection'
 import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
 import { embedded } from '@/lib/api'
 import { signOut } from '@/lib/auth'
@@ -40,6 +41,7 @@ function Settings() {
           <Workspace />
           <Members />
           <Appearance />
+          <Section id="mcp" title="MCP"><McpConnection /></Section>
           {session && <APIKeys />}
           {session && <Applications />}
         </div>
