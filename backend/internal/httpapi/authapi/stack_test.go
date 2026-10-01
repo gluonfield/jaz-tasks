@@ -50,7 +50,7 @@ func start(t *testing.T, oidc signin.OIDCConfig, members workspaces.Config) stac
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv.Config.Handler = server.New(authn, gql.NewHandler(svc, people, keys, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, people, keys, logger)), "", logger)
+	srv.Config.Handler = server.New(authn, gql.NewHandler(svc, people, keys, logger), mcpapi.NewHandler(svc, people, keys, gql.NewHandler(svc, people, keys, logger)), "", logger)
 	srv.Start()
 	t.Cleanup(srv.Close)
 	return stack{url: base, apiKey: result.APIKey, keys: keys, owner: result.Actor.UserID}

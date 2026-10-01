@@ -38,6 +38,7 @@ The existing MCP server and embedded app can be connected to ChatGPT using OAuth
 | `create_issue`, `update_issue` | every property, including moving teams and clearing fields |
 | `add_comment` | a markdown comment as the signed-in user |
 | `show_tasks` | opens the app at a team, issue or section |
+| `list_workspaces`, `switch_workspace`, `create_workspace` | your workspaces; moving the OAuth connection, and so the app and every agent on it, to another or a new one (an API key stays in its workspace) |
 
 The server is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps). `ui://jaz-tasks/app` is the whole web app in one HTML document, which a host such as Jaz renders in a sandboxed frame and themes to match ([frontend/THEMING.md](frontend/THEMING.md)). The app reads and writes through an app-only `graphql` tool.
 

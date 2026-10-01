@@ -10,6 +10,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
+	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -24,7 +25,7 @@ type Handler struct {
 	http.Handler
 }
 
-func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) *Handler {
+func NewHandler(svc *tracker.Service, members *workspaces.Service, keys *auth.Service, graphql *gql.Handler) *Handler {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "jaz-tasks",
 		Title:   "Jaz Tasks",
@@ -35,6 +36,7 @@ func NewHandler(svc *tracker.Service, keys *auth.Service, graphql *gql.Handler) 
 	register(server, t)
 	registerApp(server, t, keys.Issuer())
 	registerProfile(server, keys, t)
+	registerWorkspaces(server, members, keys, t)
 	verify := func(ctx context.Context, token string, _ *http.Request) (*mcpauth.TokenInfo, error) {
 		actor, err := keys.Authenticate(ctx, token)
 		if errors.Is(err, auth.ErrUnauthenticated) {

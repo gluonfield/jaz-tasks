@@ -54,7 +54,8 @@ func serve(t *testing.T) env {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, workspaces.NewService(store, workspaces.Config{}), keys, log.New(io.Discard))))
+	people := workspaces.NewService(store, workspaces.Config{})
+	srv := httptest.NewServer(mcpapi.NewHandler(svc, people, keys, gql.NewHandler(svc, people, keys, log.New(io.Discard))))
 	t.Cleanup(srv.Close)
 	return env{url: srv.URL, key: result.APIKey, store: store, svc: svc, keys: keys}
 }
@@ -461,5 +462,77 @@ func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
 	}
 	if got := call[issue](t, jaz, "get_issue", map[string]any{"issue": "ENG-1"}); got.Identifier != "ENG-1" {
 		t.Fatalf("after switching, the same session should reach the team workspace: %+v", got)
+	}
+}
+
+// An agent moves its own connection between workspaces, as the CRM's can:
+// creating one lands there, and switching back reaches the first again.
+func TestAgentManagesWorkspaces(t *testing.T) {
+	e := serve(t)
+	ctx := context.Background()
+	pat, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, signin.Identity{
+		Issuer: "https://idp.test", Subject: "pat", Email: "pat@example.com", EmailVerified: true, Name: "Pat",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	type workspace struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Current bool   `json:"current"`
+	}
+	type list struct {
+		Workspaces []workspace `json:"workspaces"`
+	}
+	agent := e.session(t, e.oauth(t, pat))
+
+	created := call[workspace](t, agent, "create_workspace", map[string]any{"name": "Acme"})
+	if created.ID == "" || created.ID == pat.WorkspaceID || created.Name != "Acme" || !created.Current {
+		t.Fatalf("create: %+v", created)
+	}
+	if profile := call[map[string]any](t, agent, "get_profile", nil); profile["nickname"] != "Acme" {
+		t.Fatalf("the connection should act in the new workspace: %v", profile)
+	}
+	listed := call[list](t, agent, "list_workspaces", nil)
+	if len(listed.Workspaces) != 2 || listed.Workspaces[1] != created || listed.Workspaces[0].ID != pat.WorkspaceID || listed.Workspaces[0].Current {
+		t.Fatalf("list: %+v", listed)
+	}
+	if teams := call[struct {
+		Teams []struct {
+			Key string `json:"key"`
+		} `json:"teams"`
+	}](t, agent, "list_teams", nil); len(teams.Teams) != 1 || teams.Teams[0].Key != "ACM" {
+		t.Fatalf("the new workspace starts with one team: %+v", teams)
+	}
+
+	if back := call[workspace](t, agent, "switch_workspace", map[string]any{"workspace_id": pat.WorkspaceID}); back.ID != pat.WorkspaceID || back.Name != "Personal" || !back.Current {
+		t.Fatalf("switch: %+v", back)
+	}
+	if profile := call[map[string]any](t, agent, "get_profile", nil); profile["nickname"] != "Personal" {
+		t.Fatalf("the connection should be back in Personal: %v", profile)
+	}
+
+	fails := func(session *mcp.ClientSession, name string, args map[string]any) {
+		t.Helper()
+		res, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: args})
+		if err != nil || !res.IsError {
+			t.Errorf("%s %v should fail: %+v %v", name, args, res, err)
+		}
+	}
+	stranger := call[list](t, e.session(t, e.key), "list_workspaces", nil).Workspaces[0].ID
+	fails(agent, "switch_workspace", map[string]any{"workspace_id": stranger})
+	fails(agent, "create_workspace", map[string]any{"name": " "})
+
+	patKey, _, err := e.keys.CreateKey(ctx, pat.ID, "cli", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := e.session(t, patKey)
+	fails(script, "switch_workspace", map[string]any{"workspace_id": created.ID})
+	if side := call[workspace](t, script, "create_workspace", map[string]any{"name": "Side"}); side.Current {
+		t.Fatalf("an API key creates without moving: %+v", side)
+	}
+	if profile := call[map[string]any](t, script, "get_profile", nil); profile["nickname"] != "Personal" {
+		t.Fatalf("an API key stays in its workspace: %v", profile)
 	}
 }

@@ -203,17 +203,17 @@ func (s *Service) Memberships(ctx context.Context, actor auth.Actor) ([]storage.
 	return s.store.Memberships(ctx, actor.UserID)
 }
 
-// Switch returns the actor's user in another of their workspaces.
-func (s *Service) Switch(ctx context.Context, actor auth.Actor, workspaceID string) (storage.User, error) {
+// Switch returns the actor's membership in another of their workspaces.
+func (s *Service) Switch(ctx context.Context, actor auth.Actor, workspaceID string) (storage.Membership, error) {
 	memberships, err := s.store.Memberships(ctx, actor.UserID)
 	if err != nil {
-		return storage.User{}, err
+		return storage.Membership{}, err
 	}
 	i := slices.IndexFunc(memberships, func(m storage.Membership) bool { return m.WorkspaceID == workspaceID })
 	if i < 0 {
-		return storage.User{}, ErrNotMember
+		return storage.Membership{}, ErrNotMember
 	}
-	return s.store.UserByID(ctx, memberships[i].UserID)
+	return memberships[i], nil
 }
 
 func (s *Service) Invite(ctx context.Context, actor auth.Actor, email string) (storage.WorkspaceInvite, error) {

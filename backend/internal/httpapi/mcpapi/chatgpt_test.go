@@ -18,7 +18,7 @@ func TestChatGPTContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	additive := map[string]bool{"create_project": true, "create_issue": true, "add_comment": true}
+	additive := map[string]bool{"create_project": true, "create_issue": true, "add_comment": true, "create_workspace": true}
 	var profileTool *mcp.Tool
 	for _, tool := range listed.Tools {
 		annotations := tool.Annotations

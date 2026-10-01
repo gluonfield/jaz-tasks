@@ -144,9 +144,9 @@ func (r mutationResolver) OrganizationInviteDelete(ctx context.Context, id strin
 
 func (r mutationResolver) WorkspaceSwitch(ctx context.Context, id string) (*WorkspaceSwitchPayload, error) {
 	actor := scope(ctx).Actor()
-	user, err := r.members.Switch(ctx, actor, id)
+	m, err := r.members.Switch(ctx, actor, id)
 	if err == nil {
-		err = r.keys.Switch(ctx, actor, user.ID)
+		err = r.keys.Switch(ctx, actor, m.UserID)
 	}
 	if err != nil {
 		return nil, err

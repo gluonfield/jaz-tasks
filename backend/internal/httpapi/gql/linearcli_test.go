@@ -58,7 +58,7 @@ func newClient(t *testing.T) *client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, people, keys, logger), mcpapi.NewHandler(svc, keys, gql.NewHandler(svc, people, keys, logger)), "", logger))
+	srv := httptest.NewServer(server.New(authn, gql.NewHandler(svc, people, keys, logger), mcpapi.NewHandler(svc, people, keys, gql.NewHandler(svc, people, keys, logger)), "", logger))
 	t.Cleanup(srv.Close)
 	return &client{t: t, url: srv.URL + "/graphql", key: result.APIKey, vars: map[string]string{}, store: store}
 }
