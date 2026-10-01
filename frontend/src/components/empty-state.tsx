@@ -1,3 +1,4 @@
+import { Button } from '@jaz/ui/button'
 import { Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { IssuePatch } from '@/lib/types'
@@ -29,12 +30,12 @@ export function EmptyState({
         <p className="mt-1 max-w-72 text-[13px] text-ink-3">{body}</p>
       </div>
       {createDefaults && (
-        <button
+        <Button
           onClick={() => openCreateIssue(createDefaults)}
-          className="mt-1 flex h-7 items-center gap-1.5 rounded-full border border-border bg-raised px-3 text-[12.5px] font-medium text-ink shadow-xs outline-none transition-colors hover:bg-list-hover"
+          className="mt-1"
         >
           <Plus className="size-3.5" /> Create issue <Kbd className="ml-0.5">C</Kbd>
-        </button>
+        </Button>
       )}
     </div>
   )

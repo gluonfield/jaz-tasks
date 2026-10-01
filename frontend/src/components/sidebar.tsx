@@ -40,7 +40,8 @@ import { setSchemePreference } from '@/lib/theme'
 import { openCreateIssue, setUI } from '@/lib/ui'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Button, inputClass } from './controls'
+import { Button } from '@jaz/ui/button'
+import { inputClass } from './controls'
 import { MyIssuesIcon, TeamBadge, WorkspaceBadge } from './icons'
 import { Kbd } from './kbd'
 
@@ -154,16 +155,9 @@ function IconButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          onClick={onClick}
-          aria-label={label}
-          className={cn(
-            'flex size-7 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-ring',
-            className,
-          )}
-        >
+        <Button variant="ghost" size="icon" onClick={onClick} aria-label={label} className={className}>
           {children}
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">
         {label} <Kbd>{shortcut}</Kbd>
@@ -266,7 +260,7 @@ function NewWorkspace({ open, onOpenChange }: { open: boolean; onOpenChange: (op
           }}
         >
           <input autoFocus aria-label="Workspace name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name, such as Acme" className={cn(inputClass, 'flex-1')} />
-          <Button primary disabled={!name.trim() || create.isPending}>
+          <Button type="submit" variant="primary" disabled={!name.trim() || create.isPending}>
             Create
           </Button>
         </form>

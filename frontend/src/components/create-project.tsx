@@ -1,3 +1,4 @@
+import { Button } from '@jaz/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
@@ -12,12 +13,11 @@ export function CreateProjectButton() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button
+      <Button
         onClick={() => setOpen(true)}
-        className="flex h-7 items-center gap-1.5 rounded-full border border-border bg-raised px-3 text-[12.5px] font-medium text-ink shadow-xs outline-none transition-colors hover:bg-list-hover"
       >
         <Plus className="size-3.5" /> New project
-      </button>
+      </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           showCloseButton={false}
@@ -73,9 +73,9 @@ function ProjectForm({ close }: { close: () => void }) {
     >
       <div className="flex items-center px-4 pt-3.5 text-[12.5px] text-ink-2">
         <DialogTitle className="text-[12.5px] font-normal">New project</DialogTitle>
-        <button type="button" aria-label="Close" onClick={close} className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink">
+        <Button aria-label="Close" onClick={close} variant="ghost" size="icon-sm" className="ml-auto">
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
       <div className="px-4 pt-3">
         <input
@@ -103,17 +103,17 @@ function ProjectForm({ close }: { close: () => void }) {
         className="field-sizing-content block max-h-[45vh] min-h-40 w-full resize-none overflow-y-auto bg-transparent px-4 py-3.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3"
       />
       <div className="flex items-center justify-end border-t border-border px-4 py-2.5">
-        <button
+        <Button
           type="submit"
           disabled={!draft.name.trim() || !draft.teamIds.length || create.isPending}
-          className="flex h-8 items-center gap-2 rounded-full bg-primary px-3.5 text-[13px] font-medium text-on-primary shadow-xs outline-none transition-[background-color,opacity] hover:bg-primary-strong disabled:opacity-50"
+          variant="primary" size="lg"
         >
           Create project
           <span className="flex items-center gap-0.5 opacity-70">
             <Kbd className="ml-0 border-on-primary/25 bg-on-primary/15 text-on-primary">⌘</Kbd>
             <Kbd className="ml-0 border-on-primary/25 bg-on-primary/15 text-on-primary">↵</Kbd>
           </span>
-        </button>
+        </Button>
       </div>
     </form>
   )

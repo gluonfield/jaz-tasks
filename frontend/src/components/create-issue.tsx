@@ -1,3 +1,4 @@
+import { Button } from '@jaz/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronRight, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -116,10 +117,10 @@ function CreateIssueForm() {
           selected={[draft.teamId]}
           onSelect={(teamId) => set({ teamId, stateId: defaultState(teamId), labelIds: [], cycleId: null })}
           trigger={
-            <button type="button" className="flex h-6 items-center gap-1.5 rounded-[5px] border border-border px-1.5 font-medium text-ink outline-none hover:bg-list-hover">
+            <Button size="sm">
               {team && <TeamBadge icon={team.icon} color={team.color} className="size-4" />}
               {team?.key}
-            </button>
+            </Button>
           }
         />
         <ChevronRight className="size-3 text-ink-3" />
@@ -132,14 +133,13 @@ function CreateIssueForm() {
         <DialogTitle className="text-[12.5px] font-normal text-ink-2">
           {parent ? 'New sub-issue' : child ? `New parent of ${child.identifier}` : 'New issue'}
         </DialogTitle>
-        <button
-          type="button"
+        <Button
           aria-label="Close"
           onClick={() => setUI({ createOpen: false })}
-          className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink"
+          variant="ghost" size="icon-sm" className="ml-auto"
         >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
       <div className="px-4 pt-3">
         <textarea
@@ -184,17 +184,17 @@ function CreateIssueForm() {
           </button>
           Create more
         </label>
-        <button
+        <Button
           type="submit"
           disabled={!draft.title.trim() || create.isPending}
-          className="flex h-8 items-center gap-2 rounded-full bg-primary px-3.5 text-[13px] font-medium text-on-primary shadow-xs outline-none transition-[background-color,opacity] hover:bg-primary-strong disabled:opacity-50"
+          variant="primary" size="lg"
         >
           Create issue
           <span className="flex items-center gap-0.5 opacity-70">
             <Kbd className="ml-0 border-on-primary/25 bg-on-primary/15 text-on-primary">⌘</Kbd>
             <Kbd className="ml-0 border-on-primary/25 bg-on-primary/15 text-on-primary">↵</Kbd>
           </span>
-        </button>
+        </Button>
       </div>
     </form>
   )

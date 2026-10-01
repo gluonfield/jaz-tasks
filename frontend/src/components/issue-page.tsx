@@ -1,3 +1,4 @@
+import { Button } from '@jaz/ui/button'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Archive, ChevronRight, Copy, GitBranch, Link2, MoreHorizontal, Plus } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
@@ -202,12 +203,12 @@ function SubIssues({ issue }: { issue: Issue }) {
             {done}/{children.length}
           </span>
         )}
-        <button
+        <Button
           onClick={() => openCreateRelated(issue, { parentId: issue.id })}
-          className="ml-auto flex h-6 items-center gap-1 rounded-[5px] px-1.5 text-[12.5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink"
+          variant="ghost" size="sm" className="ml-auto"
         >
           <Plus className="size-3.5" /> Add sub-issue
-        </button>
+        </Button>
       </div>
       {children.length > 0 && (
         <div className="overflow-hidden rounded-[var(--radius-card)] border border-border">

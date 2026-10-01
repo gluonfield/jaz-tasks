@@ -1,9 +1,9 @@
+import { Button } from '@jaz/ui/button'
 import { ArrowUp, Trash2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { formatDay, priorities, timeAgo } from '@/lib/issues'
 import { useCatalogMaps, useCreateComment, useDeleteComment, useIssues } from '@/lib/queries'
 import type { Comment, HistoryEntry, IssueDetail } from '@/lib/types'
-import { cn } from '@/lib/utils'
 import { Avatar, EntityIcon, LabelDot, PriorityIcon } from './icons'
 import { Markdown } from './markdown'
 import { cycleName, useStateIcon } from './properties'
@@ -207,13 +207,13 @@ function CommentItem({ comment, identifier }: { comment: Comment; identifier: st
           {comment.editedAt && ' (edited)'}
         </time>
         {mine && (
-          <button
+          <Button
             aria-label="Delete comment"
             onClick={() => remove.mutate(comment.id)}
-            className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 opacity-0 outline-none transition-opacity hover:bg-list-hover hover:text-ink group-hover:opacity-100"
+            variant="ghost" size="icon-sm" className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           >
             <Trash2 className="size-3.5" />
-          </button>
+          </Button>
         )}
       </div>
       <Markdown className="text-[13.5px]">{comment.body}</Markdown>
@@ -244,17 +244,14 @@ function Composer({ identifier }: { identifier: string }) {
         className="field-sizing-content min-h-10 w-full resize-none bg-transparent text-[13.5px] leading-relaxed text-ink outline-none placeholder:text-ink-3"
       />
       <div className="flex justify-end">
-        <button
+        <Button
           aria-label="Comment"
           disabled={!body.trim() || create.isPending}
           onClick={submit}
-          className={cn(
-            'flex size-7 items-center justify-center rounded-full outline-none transition-colors duration-100',
-            body.trim() ? 'bg-primary text-on-primary hover:bg-primary-strong' : 'bg-list-active text-ink-3',
-          )}
+          variant="primary" size="icon"
         >
           <ArrowUp className="size-4" />
-        </button>
+        </Button>
       </div>
     </div>
   )

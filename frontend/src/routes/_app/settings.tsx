@@ -2,7 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Check, Copy, KeyRound, Mail, Monitor, Moon, Plug, Settings as SettingsIcon, Sun, UserPlus } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { toast } from 'sonner'
-import { Button, inputClass } from '@/components/controls'
+import { Button } from '@jaz/ui/button'
+import { inputClass } from '@/components/controls'
 import { Avatar, TeamBadge } from '@/components/icons'
 import { McpConnection } from '@/components/mcp-connection'
 import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
@@ -181,20 +182,20 @@ function APIKeys() {
           placeholder="Key label, e.g. linear-cli"
           className={cn(inputClass, 'flex-1')}
         />
-        <Button primary disabled={!label.trim() || create.isPending}>
+        <Button type="submit" variant="primary" disabled={!label.trim() || create.isPending}>
           Create key
         </Button>
       </form>
       {created && (
         <div className="flex items-center gap-2 border-b border-border/70 bg-primary-soft px-4 py-3">
           <code className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-ink">{created}</code>
-          <button
+          <Button
             aria-label="Copy key"
             onClick={() => navigator.clipboard.writeText(created).then(() => setCopied(true))}
-            className="flex size-7 items-center justify-center rounded-[5px] text-ink-2 outline-none hover:bg-list-hover"
+            variant="ghost" size="icon"
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          </button>
+          </Button>
           <span className="text-[12px] text-ink-3">Shown once</span>
         </div>
       )}

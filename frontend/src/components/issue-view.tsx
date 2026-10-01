@@ -1,10 +1,10 @@
+import { Button } from '@jaz/ui/button'
 import { LayoutGrid, List, type LucideIcon } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo } from 'react'
 import { type Ordering, compareIssues, compareStates } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
 import { getUI, setUI, usePreference } from '@/lib/ui'
-import { cn } from '@/lib/utils'
 import { DisplayMenu, DisplaySelect } from './display-menu'
 import { EmptyState } from './empty-state'
 import { IssueBoard } from './issue-board'
@@ -122,15 +122,9 @@ export function ViewHeader({ title, tabs, children }: { title: ReactNode; tabs?:
 
 export function Tab({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'h-7 rounded-full border border-border px-3 text-[12.5px] font-medium outline-none transition-colors duration-100',
-        active ? 'bg-list-active text-ink' : 'text-ink-2 hover:bg-list-hover hover:text-ink',
-      )}
-    >
+    <Button aria-pressed={active} onClick={onClick} className={active ? 'bg-list-active' : undefined}>
       {children}
-    </button>
+    </Button>
   )
 }
 
