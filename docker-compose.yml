@@ -20,6 +20,8 @@ services:
     environment:
       DATABASE_URL: postgres://jaztasks:jaztasks@postgres:5432/jaztasks?sslmode=disable
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:7400}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-oidc}
+      FIREBASE_CONFIG: ${FIREBASE_CONFIG:-}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}

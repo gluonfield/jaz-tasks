@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/log"
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
@@ -192,7 +193,7 @@ func TestTenantIsolationMCP(t *testing.T) {
 	}](t, a, "get_issue", map[string]any{"issue": "ENG-1"})
 	projectA := call[project](t, a, "get_project", map[string]any{"project": "Tasks MVP"})
 
-	user, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, auth.Identity{
+	user, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(ctx, signin.Identity{
 		Issuer: "https://idp.test", Subject: "bob", Email: "bob@b.test", EmailVerified: true, Name: "Bob Stone",
 	})
 	if err != nil {
@@ -423,7 +424,7 @@ func (e env) oauth(t *testing.T, user storage.User) string {
 // in the other workspace: the SDK binds a session to whoever opened it.
 func TestWorkspaceSwitchKeepsTheSession(t *testing.T) {
 	e := serve(t)
-	pat, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(context.Background(), auth.Identity{
+	pat, err := workspaces.NewService(e.store, workspaces.Config{}).SignIn(context.Background(), signin.Identity{
 		Issuer: "https://idp.test", Subject: "pat", Email: "pat@example.com", EmailVerified: true, Name: "Pat",
 	})
 	if err != nil {

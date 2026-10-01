@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres"
@@ -17,7 +18,7 @@ import (
 func tenantB(t *testing.T, store *postgres.Store) (string, storage.Issue) {
 	t.Helper()
 	ctx := context.Background()
-	user, err := workspaces.NewService(store, workspaces.Config{}).SignIn(ctx, auth.Identity{
+	user, err := workspaces.NewService(store, workspaces.Config{}).SignIn(ctx, signin.Identity{
 		Issuer: "https://idp.test", Subject: "bob", Email: "bob@b.test", EmailVerified: true, Name: "Bob Stone",
 	})
 	if err != nil {

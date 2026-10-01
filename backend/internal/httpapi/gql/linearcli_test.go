@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/log"
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
@@ -53,7 +54,7 @@ func newClient(t *testing.T) *client {
 	}
 	logger := log.New(io.Discard)
 	people := workspaces.NewService(store, workspaces.Config{})
-	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(auth.OIDCConfig{}), logger)
+	authn, err := authapi.NewHandler(keys, people, signin.Config{}, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/log"
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
@@ -31,7 +32,7 @@ type stack struct {
 }
 
 // start runs the whole HTTP stack on a loopback URL that doubles as PUBLIC_URL.
-func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config) stack {
+func start(t *testing.T, oidc signin.OIDCConfig, members workspaces.Config) stack {
 	t.Helper()
 	srv := httptest.NewUnstartedServer(nil)
 	base := "http://" + srv.Listener.Addr().String()
@@ -45,7 +46,7 @@ func start(t *testing.T, oidc auth.OIDCConfig, members workspaces.Config) stack 
 	logger := log.New(io.Discard)
 	oidc.RedirectURL = base + "/auth/callback"
 	people := workspaces.NewService(store, members)
-	authn, err := authapi.NewHandler(keys, people, auth.NewOIDC(oidc), logger)
+	authn, err := authapi.NewHandler(keys, people, signin.Config{PublicURL: base, OIDC: oidc}, logger)
 	if err != nil {
 		t.Fatal(err)
 	}

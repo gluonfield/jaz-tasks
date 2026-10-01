@@ -24,6 +24,7 @@ func New(authn *authapi.Handler, graphql *gql.Handler, agents *mcpapi.Handler, w
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.Handle("/auth/", authn)
+	mux.Handle("GET /login", authn)
 	mux.Handle("/oauth/", cors(authn))
 	mux.Handle("/.well-known/", cors(authn))
 	mux.Handle("/graphql", cors(authenticate(authn, graphql, logger)))

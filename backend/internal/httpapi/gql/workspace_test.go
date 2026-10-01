@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/workspaces"
@@ -104,7 +105,7 @@ func TestOrganizationInvites(t *testing.T) {
 // signUp signs a new person in, giving them a workspace of their own.
 func signUp(t *testing.T, c *client, name string) storage.User {
 	t.Helper()
-	user, err := workspaces.NewService(c.store, workspaces.Config{}).SignIn(context.Background(), auth.Identity{
+	user, err := workspaces.NewService(c.store, workspaces.Config{}).SignIn(context.Background(), signin.Identity{
 		Issuer: "test", Subject: name, Email: name + "@example.com", EmailVerified: true, Name: name,
 	})
 	if err != nil {
@@ -250,7 +251,7 @@ func TestProvisionedOwner(t *testing.T) {
 	}
 
 	for range 2 {
-		user, err := people.SignIn(ctx, auth.Identity{Issuer: "google", Subject: "owner-sub", Email: "OWNER@example.com", EmailVerified: true, Name: "Owner"})
+		user, err := people.SignIn(ctx, signin.Identity{Issuer: "google", Subject: "owner-sub", Email: "OWNER@example.com", EmailVerified: true, Name: "Owner"})
 		if err != nil || user.ID != owner.ID {
 			t.Fatalf("signing in with the owner's email = %+v, %v; want the provisioned account", user, err)
 		}

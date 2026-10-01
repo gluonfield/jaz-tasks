@@ -5,14 +5,13 @@ go 1.26.0
 require (
 	github.com/99designs/gqlgen v0.17.95
 	github.com/charmbracelet/log v1.0.0
-	github.com/coreos/go-oidc/v3 v3.21.0
+	github.com/gluonfield/jaz-tasks/auth v0.1.1
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pressly/goose/v3 v3.27.1
 	github.com/vektah/gqlparser/v2 v2.5.37
 	go.uber.org/fx v1.24.0
-	golang.org/x/oauth2 v0.37.0
 )
 
 require (
@@ -24,6 +23,7 @@ require (
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/coder/websocket v1.8.15 // indirect
+	github.com/coreos/go-oidc/v3 v3.21.0 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
@@ -51,6 +51,7 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/mod v0.40.0 // indirect
+	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect

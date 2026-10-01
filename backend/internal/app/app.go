@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/server"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
@@ -27,7 +28,7 @@ type Config struct {
 	DatabaseURL string
 	PublicURL   string
 	WebDir      string
-	OIDC        auth.OIDCConfig
+	SignIn      signin.Config
 	Auth        auth.Config
 	Workspaces  workspaces.Config
 	Owner       Owner
@@ -53,12 +54,11 @@ func ParseConfig(args []string) (Config, error) {
 		return cfg, err
 	}
 	cfg.PublicURL = strings.TrimRight(strings.TrimSpace(cfg.PublicURL), "/")
-	cfg.OIDC = auth.OIDCConfig{
-		Issuer:       strings.TrimSpace(os.Getenv("OIDC_ISSUER")),
-		ClientID:     strings.TrimSpace(os.Getenv("OIDC_CLIENT_ID")),
-		ClientSecret: strings.TrimSpace(os.Getenv("OIDC_CLIENT_SECRET")),
-		RedirectURL:  cfg.PublicURL + "/auth/callback",
+	signIn, err := signin.ConfigFromEnv(cfg.PublicURL)
+	if err != nil {
+		return cfg, err
 	}
+	cfg.SignIn = signIn
 	cfg.Auth = auth.Config{PublicURL: cfg.PublicURL}
 	cfg.Workspaces = workspaces.Config{
 		AllowedEmailDomains: list(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
@@ -90,13 +90,12 @@ func env(key, fallback string) string {
 
 func Options(cfg Config) fx.Option {
 	return fx.Options(
-		fx.Supply(cfg, cfg.Auth, cfg.Workspaces, cfg.OIDC, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
+		fx.Supply(cfg, cfg.Auth, cfg.Workspaces, cfg.SignIn, tracker.PublicURL(cfg.PublicURL), server.WebDir(cfg.WebDir)),
 		fx.Provide(
 			NewLogger,
 			fx.Annotate(OpenStore, fx.As(fx.Self()), fx.As(new(storage.TrackerStore)), fx.As(new(storage.AuthStore)), fx.As(new(storage.WorkspaceStore))),
 			auth.NewService,
 			workspaces.NewService,
-			auth.NewOIDC,
 			tracker.NewService,
 		),
 		HTTPModule(),

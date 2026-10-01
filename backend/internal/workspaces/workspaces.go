@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/gluonfield/jaz-tasks/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	"github.com/gluonfield/jaz-tasks/backend/internal/tracker"
@@ -43,7 +44,7 @@ func NewService(store storage.WorkspaceStore, cfg Config) *Service {
 // workspace switcher; people keep landing in their first workspace, a
 // newcomer lands in a provisioned account or else the inviting workspace,
 // and anyone else gets a workspace of their own.
-func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, error) {
+func (s *Service) SignIn(ctx context.Context, id signin.Identity) (storage.User, error) {
 	if !id.EmailVerified || id.Email == "" {
 		return storage.User{}, ErrEmailUnverified
 	}
@@ -51,6 +52,11 @@ func (s *Service) SignIn(ctx context.Context, id auth.Identity) (storage.User, e
 		return storage.User{}, ErrNotAllowed
 	}
 	identity := storage.Identity{Issuer: id.Issuer, Subject: id.Subject}
+	for _, linked := range id.LinkedIdentities {
+		if _, err := s.store.ShareIdentity(ctx, storage.Identity{Issuer: linked.Issuer, Subject: linked.Subject}, identity); err != nil {
+			return storage.User{}, err
+		}
+	}
 	users, err := s.store.UsersByIdentity(ctx, id.Issuer, id.Subject)
 	if err != nil {
 		return storage.User{}, err
@@ -84,7 +90,7 @@ func (s *Service) Provision(ctx context.Context, email string) (storage.User, er
 	if len(users) > 0 {
 		return users[0], nil
 	}
-	return s.createOwned(ctx, member(auth.Identity{Email: email}), firstName("", email), emailIdentity(email))
+	return s.createOwned(ctx, member(signin.Identity{Email: email}), firstName("", email), emailIdentity(email))
 }
 
 // emailIdentity stands for anyone who proves they hold the address, which is
@@ -214,7 +220,7 @@ func (s *Service) requireAdmin(ctx context.Context, actor auth.Actor) error {
 	return nil
 }
 
-func member(id auth.Identity) storage.NewUser {
+func member(id signin.Identity) storage.NewUser {
 	handle, _, _ := strings.Cut(id.Email, "@")
 	name := strings.TrimSpace(id.Name)
 	if name == "" {
