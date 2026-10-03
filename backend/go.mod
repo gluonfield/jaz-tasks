@@ -6,6 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.95
 	github.com/charmbracelet/log v1.0.0
 	github.com/gluonfield/jaz-tasks/auth v0.1.1
+	github.com/gluonfield/jaz-tasks/httpx v0.1.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/jsonschema-go v0.4.3
 	github.com/jackc/pgx/v5 v5.11.0
@@ -60,3 +61,5 @@ require (
 )
 
 tool github.com/99designs/gqlgen
+
+replace github.com/gluonfield/jaz-tasks/httpx => ../httpx

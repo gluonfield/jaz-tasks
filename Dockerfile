@@ -8,6 +8,7 @@ RUN bun run build
 FROM golang:1.26-alpine AS server
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
+COPY httpx/ /httpx/
 RUN go mod download
 COPY backend/ ./
 COPY --from=web /backend/internal/httpapi/mcpapi/app/mcp-app.html internal/httpapi/mcpapi/app/mcp-app.html

@@ -13,6 +13,7 @@ import (
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/authapi"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql"
 	"github.com/gluonfield/jaz-tasks/backend/internal/httpapi/mcpapi"
+	"github.com/gluonfield/jaz-tasks/httpx"
 )
 
 // WebDir holds the built web app; empty serves the API only.
@@ -33,7 +34,7 @@ func New(authn *authapi.Handler, graphql *gql.Handler, agents *mcpapi.Handler, w
 	if web != "" {
 		mux.Handle("/", spa(string(web)))
 	}
-	return mux
+	return httpx.Compress(mux)
 }
 
 // authenticate accepts a session cookie, an OAuth access token or an API key,
