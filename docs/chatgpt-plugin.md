@@ -9,6 +9,7 @@ Jaz Tasks uses its existing Streamable HTTP `/mcp` server and MCP Apps UI in Cha
 - `get_profile` identifies the credential's current workspace membership. Its ID stays stable across token refresh and reconnection; switching workspace changes it to that workspace's membership ID.
 - Self-contained UI resources use the standard MCP Apps bridge, declare their supported display modes and CSP, and use `PUBLIC_URL` as the component origin. Use a distinct origin for each plugin.
 - `show_tasks` is a global sidebar entrypoint. Availability depends on the ChatGPT surface and plan.
+- `list_issues` and `get_issue` are quiet data reads. `show_issues` returns an ordered selection with optional reasons, a `resource_link` to the inline issue UI and current task data in `structuredContent`. Hosts can use the resource link as explicit presentation intent while keeping research calls quiet. Once the host confirms presentation, agents should use the card as their answer instead of repeating it in text.
 - `plugin/` contains the portable Agent Plugins manifest, icons and ZIP packager.
 
 ## Connect and test

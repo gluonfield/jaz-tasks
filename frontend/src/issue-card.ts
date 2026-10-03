@@ -1,11 +1,10 @@
 import { App, type McpUiHostContext, PostMessageTransport, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps'
 import './issue-card.css'
 
-// The card hosts show inline when an agent creates an issue: the issue at a
-// glance, opening in the Tasks app through a deep link.
 const app = new App({ name: 'Jaz Tasks issue', version: '0.1.0' }, { availableDisplayModes: ['inline'] })
 
-type Issue = { identifier: string; title: string; state: string; stateType: string }
+type Issue = { identifier: string; title: string; state: string; stateType: string; priority?: string; assignee?: string; dueDate?: string; reason?: string }
+type IssueList = { title?: string; issues: Issue[] }
 
 // Deep links (OpenAI's MCP extensions) open the Tasks sidebar app, the
 // show_tasks global entrypoint, at a page.
@@ -26,16 +25,23 @@ function statusIcon(type: string, color: string) {
   return `<svg viewBox="0 0 14 14" aria-hidden="true">${glyph}</svg>`
 }
 
-function render(issue: Issue, color: string) {
+function renderIssue(issue: Issue, color: string) {
   const card = document.createElement('button')
   card.type = 'button'
   card.className = 'card'
   card.title = `${issue.state} · Open in Tasks`
-  card.innerHTML = `${statusIcon(issue.stateType, color)}<span class="id"></span><span class="title"></span>${openIcon}`
+  card.innerHTML = `${statusIcon(issue.stateType, color)}<span class="content"><span class="heading"><span class="id"></span><span class="title"></span></span><span class="details"></span></span>${openIcon}`
   card.querySelector('.id')!.textContent = issue.identifier
   card.querySelector('.title')!.textContent = issue.title
+  card.querySelector('.details')!.textContent = [issue.state, issue.priority !== 'No priority' && issue.priority, issue.assignee, issue.dueDate && `Due ${issue.dueDate}`].filter(Boolean).join(' · ')
+  if (issue.reason) {
+    const reason = document.createElement('span')
+    reason.className = 'reason'
+    reason.textContent = issue.reason
+    card.querySelector('.content')!.append(reason)
+  }
   card.onclick = () => void app.openLink({ url: deepLink(`/issue/${issue.identifier}`) })
-  document.body.replaceChildren(card)
+  return card
 }
 
 function theme(context?: McpUiHostContext) {
@@ -45,8 +51,20 @@ function theme(context?: McpUiHostContext) {
 
 app.addEventListener('hostcontextchanged', theme)
 app.addEventListener('toolresult', ({ structuredContent, _meta }) => {
-  const issue = structuredContent as Issue | undefined
-  const color = _meta?.['jaz-tasks/stateColor']
-  if (issue?.identifier) render(issue, typeof color === 'string' && /^#[0-9a-f]{3,8}$/i.test(color) ? color : 'currentColor')
+  const result = structuredContent as Issue | IssueList | undefined
+  if (!result) return
+  const list = 'issues' in result ? result : { issues: [result] }
+  const colors = _meta?.['jaz-tasks/stateColors'] as Record<string, string> | undefined
+  const content = document.createDocumentFragment()
+  if (list.title) {
+    const title = document.createElement('h2')
+    title.textContent = list.title
+    content.append(title)
+  }
+  for (const issue of list.issues) {
+    const color = colors?.[issue.identifier] ?? _meta?.['jaz-tasks/stateColor']
+    content.append(renderIssue(issue, typeof color === 'string' && /^#[0-9a-f]{3,8}$/i.test(color) ? color : 'currentColor'))
+  }
+  document.body.replaceChildren(content)
 })
 void app.connect(new PostMessageTransport(window.parent, window.parent)).then(() => theme(app.getHostContext()))

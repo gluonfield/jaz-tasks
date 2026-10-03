@@ -209,6 +209,7 @@ func TestTenantIsolationMCP(t *testing.T) {
 
 	for name, args := range map[string]map[string]any{
 		"get_issue":      {"issue": issueA.ID},
+		"show_issues":    {"issues": []map[string]string{{"issue": issueA.ID}}},
 		"update_issue":   {"issue": issueA.ID, "title": "owned"},
 		"add_comment":    {"issue": issueA.ID, "body": "hi"},
 		"create_issue":   {"team": "ENG", "title": "x"},

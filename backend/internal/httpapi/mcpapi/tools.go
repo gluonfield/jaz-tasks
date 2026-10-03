@@ -26,9 +26,12 @@ func register(server *mcp.Server, t tools) {
 	addTool(server, t, &mcp.Tool{Name: "update_project", Title: "Update project",
 		Description: `Update a project. Omitted fields stay unchanged; content replaces the whole brief. Pass "none" to clear lead, start date or target date, and an empty string to clear description or content.`}, t.updateProject)
 	addTool(server, t, &mcp.Tool{Name: "list_issues", Title: "List issues", Annotations: readOnly,
-		Description: "List issues, newest first, filtered by team, state, assignee, project, label, priority or a full-text query."}, t.listIssues)
+		Description: "Read issue data without displaying anything to the user. Newest first, filtered by team, state, assignee, project, label, priority or a full-text query. Use show_issues to present selected issues after reading and ranking them."}, t.listIssues)
 	addTool(server, t, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
-		Description: "Get one issue with its description, sub-issues and comments."}, t.getIssue)
+		Description: "Read one issue with its description, sub-issues and comments, without displaying anything to the user."}, t.getIssue)
+	addTool(server, t, &mcp.Tool{Name: "show_issues", Title: "Show issues", Annotations: readOnly,
+		Description: "Present selected issues as one inline task list in the supplied order, with optional short reasons. Returns the renderable resource and current task data. When the host confirms presentation, the list is the answer: do not repeat its titles, reasons or links in prose. Use list_issues or get_issue for private lookups.",
+		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": issueCardURI}, "ui/resourceUri": issueCardURI}}, t.showIssues)
 	addTool(server, t, &mcp.Tool{Annotations: &mcp.ToolAnnotations{DestructiveHint: new(false)}, Name: "create_issue", Title: "Create issue",
 		Description: "Create an issue in a team. Unset state defaults to the team's Todo state.",
 		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": issueCardURI}, "ui/resourceUri": issueCardURI}}, t.createIssue)
