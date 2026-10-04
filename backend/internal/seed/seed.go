@@ -135,7 +135,7 @@ func populate(ctx context.Context, svc *tracker.Service, workspaceID string, use
 		projects[project.Name] = project.ID
 	}
 	cycles := map[int]string{}
-	start := time.Date(now.Year(), now.Month(), now.Day()-int(now.Weekday())+1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -14)
+	start := time.Date(now.Year(), now.Month(), now.Day()-(int(now.Weekday())+6)%7, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -14)
 	for i := range 3 {
 		cycle, err := s.CreateCycle(ctx, tracker.CycleCreateInput{
 			TeamID:   teams["ENG"].ID,

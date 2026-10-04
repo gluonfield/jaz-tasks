@@ -14,6 +14,11 @@ func issuePayload(issue storage.Issue, err error) (*IssuePayload, error) {
 	return &IssuePayload{Issue: &issue, Success: true}, nil
 }
 
+func (mutationResolver) InboxDismiss(ctx context.Context, input []tracker.InboxDismissInput) (bool, error) {
+	err := scope(ctx).DismissInbox(ctx, input)
+	return err == nil, err
+}
+
 func archivePayload(issue storage.Issue, err error) (*IssueArchivePayload, error) {
 	if err != nil {
 		return nil, err

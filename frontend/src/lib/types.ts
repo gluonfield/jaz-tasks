@@ -136,6 +136,8 @@ export type IssueDetail = Issue & {
   history: HistoryEntry[]
 }
 
+export type InboxUpdate = { issue: Issue; updatedAt: string; revision: string }
+
 // IssuePatch is the subset of IssueUpdateInput the UI edits; null clears.
 export type IssuePatch = Partial<{
   title: string

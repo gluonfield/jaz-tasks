@@ -21,6 +21,8 @@ enum ProjectStatusType {
 
 type Query {
   viewer: User!
+  """Undismissed issue updates for this viewer. Not in Linear's API."""
+  inbox: [InboxUpdate!]!
   organization: Organization!
   organizationInvites(after: String, first: Int): OrganizationInviteConnection!
   """Workspaces the viewer belongs to, joining any they were invited to. Not in Linear's API."""
@@ -58,6 +60,8 @@ type Query {
 }
 
 type Mutation {
+  """Dismiss observed Inbox updates without changing their issues. Not in Linear's API."""
+  inboxDismiss(input: [InboxDismissInput!]!): Boolean!
   issueCreate(input: IssueCreateInput!): IssuePayload!
   issueBatchCreate(input: IssueBatchCreateInput!): IssueBatchPayload!
   issueUpdate(id: String!, input: IssueUpdateInput!): IssuePayload!
@@ -92,6 +96,17 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type InboxUpdate {
+  issue: Issue!
+  updatedAt: DateTime!
+  revision: String!
+}
+
+input InboxDismissInput {
+  issueId: String!
+  revision: String!
 }
 
 type Organization {

@@ -12,6 +12,13 @@ omit_complexity: true
 nullable_input_omittable: true
 call_argument_directives_with_null: false
 models:
+  InboxUpdate:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.InboxUpdate
+    fields:
+      revision:
+        resolver: true
+  InboxDismissInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/tracker.InboxDismissInput
   UserConnection:
     model: github.com/gluonfield/jaz-tasks/backend/internal/httpapi/gql.UserConnection
   TeamConnection:

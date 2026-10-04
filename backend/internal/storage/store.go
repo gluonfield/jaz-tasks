@@ -54,6 +54,8 @@ type TrackerStore interface {
 	DeleteIssue(ctx context.Context, workspaceID, id string) error
 	IssueHistory(ctx context.Context, issueID string) ([]IssueHistory, error)
 	CountIssuesByState(ctx context.Context, workspaceID string) ([]IssueCount, error)
+	Inbox(ctx context.Context, workspaceID, userID string) ([]InboxUpdate, error)
+	DismissInbox(ctx context.Context, workspaceID, userID string, updates []InboxDismissal) error
 
 	Comments(ctx context.Context, workspaceID, issueID string) ([]Comment, error)
 	Comment(ctx context.Context, workspaceID, id string) (Comment, error)

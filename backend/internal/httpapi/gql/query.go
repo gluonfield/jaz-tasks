@@ -11,6 +11,10 @@ func (queryResolver) Viewer(ctx context.Context) (*storage.User, error) {
 	return ref(scope(ctx).Viewer(ctx))
 }
 
+func (queryResolver) Inbox(ctx context.Context) ([]storage.InboxUpdate, error) {
+	return scope(ctx).Inbox(ctx)
+}
+
 func (queryResolver) Organization(ctx context.Context) (*storage.Workspace, error) {
 	return ref(scope(ctx).Workspace(ctx))
 }

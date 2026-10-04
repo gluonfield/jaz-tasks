@@ -1,7 +1,7 @@
 import { type QueryClient, queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { gql } from './api'
-import type { Catalog, Comment, HistoryEntry, Invite, Issue, IssueDetail, IssuePatch } from './types'
+import type { Catalog, Comment, HistoryEntry, InboxUpdate, Invite, Issue, IssueDetail, IssuePatch } from './types'
 
 type Ref = { id: string } | null
 type Page<T> = { nodes: T[]; pageInfo: { hasNextPage: boolean; endCursor: string | null } }
@@ -201,6 +201,34 @@ export function useIssues() {
   return useQuery(issuesListQuery)
 }
 
+export function useInbox() {
+  return useQuery({
+    queryKey: ['inbox'],
+    queryFn: async (): Promise<InboxUpdate[]> => {
+      const data = await gql<{ inbox: (Omit<InboxUpdate, 'issue'> & { issue: IssueNode })[] }>(
+        `query { inbox { issue { ${issueFields} } updatedAt revision } }`,
+      )
+      return data.inbox.map((update) => ({ ...update, issue: toIssue(update.issue) }))
+    },
+    refetchInterval: 20_000,
+  })
+}
+
+export function useDismissInbox() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (updates: InboxUpdate[]) =>
+      gql(`mutation ($input: [InboxDismissInput!]!) { inboxDismiss(input: $input) }`, {
+        input: updates.map(({ issue, revision }) => ({ issueId: issue.id, revision })),
+      }),
+    onSuccess: (_data, updates) => {
+      const dismissed = new Map(updates.map(({ issue, revision }) => [issue.id, revision]))
+      client.setQueryData<InboxUpdate[]>(['inbox'], (entries) => entries?.filter(({ issue, revision }) => dismissed.get(issue.id) !== revision))
+      client.invalidateQueries({ queryKey: ['inbox'] })
+    },
+  })
+}
+
 export type SubIssueProgress = { done: number; total: number }
 
 const progressByList = new WeakMap<Issue[], { catalog?: Catalog; counts: Map<string, SubIssueProgress> }>()
@@ -321,6 +349,7 @@ export function useUpdateIssue() {
       patchCaches(client, saved.id, () => saved)
       client.invalidateQueries({ queryKey: ['issue', saved.identifier] })
       client.invalidateQueries({ queryKey: ['catalog'] })
+      client.invalidateQueries({ queryKey: ['inbox'] })
     },
   })
 }
@@ -343,6 +372,7 @@ export function useCreateIssue() {
     onSuccess: (issue) => {
       client.setQueryData<Issue[]>(['issues'], (issues) => (issues ? [issue, ...issues] : [issue]))
       client.invalidateQueries({ queryKey: ['catalog'] })
+      client.invalidateQueries({ queryKey: ['inbox'] })
     },
   })
 }
@@ -354,7 +384,10 @@ export function useArchiveIssue() {
     onMutate: (id) => {
       client.setQueryData<Issue[]>(['issues'], (issues) => issues?.filter((i) => i.id !== id))
     },
-    onSettled: () => client.invalidateQueries({ queryKey: ['issues'] }),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: ['issues'] })
+      client.invalidateQueries({ queryKey: ['inbox'] })
+    },
   })
 }
 
@@ -365,7 +398,10 @@ export function useCreateComment(identifier: string) {
       gql(`mutation ($input: CommentCreateInput!) { commentCreate(input: $input) { success } }`, {
         input: { issueId: identifier, body },
       }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['issue', identifier] }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['issue', identifier] })
+      client.invalidateQueries({ queryKey: ['inbox'] })
+    },
   })
 }
 

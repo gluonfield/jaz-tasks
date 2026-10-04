@@ -33,6 +33,7 @@ type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 type ResolverRoot interface {
 	Comment() CommentResolver
 	Cycle() CycleResolver
+	InboxUpdate() InboxUpdateResolver
 	Issue() IssueResolver
 	IssueHistory() IssueHistoryResolver
 	IssueLabel() IssueLabelResolver
@@ -75,6 +76,9 @@ type CycleResolver interface {
 	Progress(ctx context.Context, obj *storage.Cycle) (float64, error)
 
 	Team(ctx context.Context, obj *storage.Cycle) (*storage.Team, error)
+}
+type InboxUpdateResolver interface {
+	Revision(ctx context.Context, obj *storage.InboxUpdate) (string, error)
 }
 type IssueResolver interface {
 	Assignee(ctx context.Context, obj *storage.Issue) (*storage.User, error)
@@ -169,6 +173,7 @@ type IssueSearchResultResolver interface {
 	URL(ctx context.Context, obj *storage.Issue) (string, error)
 }
 type MutationResolver interface {
+	InboxDismiss(ctx context.Context, input []tracker.InboxDismissInput) (bool, error)
 	IssueCreate(ctx context.Context, input tracker.IssueCreateInput) (*IssuePayload, error)
 	IssueBatchCreate(ctx context.Context, input IssueBatchCreateInput) (*IssueBatchPayload, error)
 	IssueUpdate(ctx context.Context, id string, input IssueUpdateInput) (*IssuePayload, error)
@@ -217,6 +222,7 @@ type ProjectResolver interface {
 }
 type QueryResolver interface {
 	Viewer(ctx context.Context) (*storage.User, error)
+	Inbox(ctx context.Context) ([]storage.InboxUpdate, error)
 	Organization(ctx context.Context) (*storage.Workspace, error)
 	OrganizationInvites(ctx context.Context, after *string, first *int32) (*tracker.Page[storage.WorkspaceInvite], error)
 	Workspaces(ctx context.Context) ([]Membership, error)
@@ -303,6 +309,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCycleFilter,
 		ec.unmarshalInputEntityIdentifierIDComparator,
 		ec.unmarshalInputIDComparator,
+		ec.unmarshalInputInboxDismissInput,
 		ec.unmarshalInputIssueBatchCreateInput,
 		ec.unmarshalInputIssueCreateInput,
 		ec.unmarshalInputIssueFilter,
@@ -546,6 +553,18 @@ func (ec *executionContext) childFields_DeletePayload(ctx context.Context, field
 		return ec.fieldContext_DeletePayload_success(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type DeletePayload", field.Name)
+}
+
+func (ec *executionContext) childFields_InboxUpdate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "issue":
+		return ec.fieldContext_InboxUpdate_issue(ctx, field)
+	case "updatedAt":
+		return ec.fieldContext_InboxUpdate_updatedAt(ctx, field)
+	case "revision":
+		return ec.fieldContext_InboxUpdate_revision(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type InboxUpdate", field.Name)
 }
 
 func (ec *executionContext) childFields_Issue(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1738,6 +1757,20 @@ func (ec *executionContext) field_Mutation_cycleCreate_args(ctx context.Context,
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (tracker.CycleCreateInput, error) {
 			return ec.unmarshalNCycleCreateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐCycleCreateInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_inboxDismiss_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) ([]tracker.InboxDismissInput, error) {
+			return ec.unmarshalNInboxDismissInput2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐInboxDismissInputᚄ(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -4157,6 +4190,84 @@ func (ec *executionContext) _DeletePayload_success(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_DeletePayload_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("DeletePayload", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _InboxUpdate_issue(ctx context.Context, field graphql.CollectedField, obj *storage.InboxUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_InboxUpdate_issue(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Issue, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v storage.Issue) graphql.Marshaler {
+			return ec.marshalNIssue2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐIssue(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_InboxUpdate_issue(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "InboxUpdate",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Issue(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _InboxUpdate_updatedAt(ctx context.Context, field graphql.CollectedField, obj *storage.InboxUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_InboxUpdate_updatedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v time.Time) graphql.Marshaler {
+			return ec.marshalNDateTime2timeᚐTime(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_InboxUpdate_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("InboxUpdate", field, false, false, errors.New("field of type DateTime does not have child fields"))
+}
+
+func (ec *executionContext) _InboxUpdate_revision(ctx context.Context, field graphql.CollectedField, obj *storage.InboxUpdate) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_InboxUpdate_revision(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.InboxUpdate().Revision(ctx, obj)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_InboxUpdate_revision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("InboxUpdate", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Issue_archivedAt(ctx context.Context, field graphql.CollectedField, obj *storage.Issue) (ret graphql.Marshaler) {
@@ -7849,6 +7960,50 @@ func (ec *executionContext) fieldContext_Membership_urlKey(_ context.Context, fi
 	return graphql.NewScalarFieldContext("Membership", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
+func (ec *executionContext) _Mutation_inboxDismiss(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_inboxDismiss(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().InboxDismiss(ctx, fc.Args["input"].([]tracker.InboxDismissInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_inboxDismiss(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_inboxDismiss_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_issueCreate(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -10346,6 +10501,38 @@ func (ec *executionContext) fieldContext_Query_viewer(_ context.Context, field g
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_User(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_inbox(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_inbox(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().Inbox(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []storage.InboxUpdate) graphql.Marshaler {
+			return ec.marshalNInboxUpdate2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐInboxUpdateᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_inbox(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_InboxUpdate(ctx, field)
 		},
 	}
 	return fc, nil
@@ -14235,6 +14422,43 @@ func (ec *executionContext) unmarshalInputIDComparator(ctx context.Context, obj 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputInboxDismissInput(ctx context.Context, obj any) (tracker.InboxDismissInput, error) {
+	var it tracker.InboxDismissInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"issueId", "revision"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "issueId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issueId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IssueID = data
+		case "revision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("revision"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Revision = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputIssueBatchCreateInput(ctx context.Context, obj any) (IssueBatchCreateInput, error) {
 	var it IssueBatchCreateInput
 	if obj == nil {
@@ -16990,6 +17214,87 @@ func (ec *executionContext) _DeletePayload(ctx context.Context, sel ast.Selectio
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var inboxUpdateImplementors = []string{"InboxUpdate"}
+
+func (ec *executionContext) _InboxUpdate(ctx context.Context, sel ast.SelectionSet, obj *storage.InboxUpdate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, inboxUpdateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("InboxUpdate")
+		case "issue":
+			out.Values[i] = ec._InboxUpdate_issue(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._InboxUpdate_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "revision":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._InboxUpdate_revision(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.IsDeferred() {
+				deferredFieldSet.AddField(field)
+				fieldIndex := len(deferredFieldSet.Values) - 1
+				deferredFieldSet.Concurrently(fieldIndex, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, deferredFieldSet)
+				})
+
+				for _, deferrable := range field.Deferrables {
+					view, ok := deferLabelToView[deferrable.Label]
+					if !ok {
+						view = deferredFieldSet.NewView()
+						deferLabelToView[deferrable.Label] = view
+					}
+					view.AddIndices(fieldIndex)
+				}
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -19785,6 +20090,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "inboxDismiss":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_inboxDismiss(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "issueCreate":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_issueCreate(ctx, field)
@@ -20964,6 +21276,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_viewer(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "inbox":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_inbox(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -23217,6 +23551,45 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInboxDismissInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐInboxDismissInput(ctx context.Context, v any) (tracker.InboxDismissInput, error) {
+	res, err := ec.unmarshalInputInboxDismissInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNInboxDismissInput2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐInboxDismissInputᚄ(ctx context.Context, v any) ([]tracker.InboxDismissInput, error) {
+	vSlice := graphql.CoerceList(v)
+	var err error
+	res := make([]tracker.InboxDismissInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInboxDismissInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋtrackerᚐInboxDismissInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInboxUpdate2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐInboxUpdate(ctx context.Context, sel ast.SelectionSet, v storage.InboxUpdate) graphql.Marshaler {
+	return ec._InboxUpdate(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNInboxUpdate2ᚕgithubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐInboxUpdateᚄ(ctx context.Context, sel ast.SelectionSet, v []storage.InboxUpdate) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNInboxUpdate2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐInboxUpdate(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNInt2int32(ctx context.Context, v any) (int32, error) {

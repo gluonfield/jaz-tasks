@@ -33,6 +33,7 @@ type (
 	issueSearchResultResolver struct{ issueResolver }
 	commentResolver           struct{}
 	issueHistoryResolver      struct{}
+	inboxUpdateResolver       struct{}
 )
 
 func (r Resolver) Query() QueryResolver                       { return queryResolver{r} }
@@ -48,6 +49,7 @@ func (Resolver) Issue() IssueResolver                         { return issueReso
 func (Resolver) IssueSearchResult() IssueSearchResultResolver { return issueSearchResultResolver{} }
 func (Resolver) Comment() CommentResolver                     { return commentResolver{} }
 func (Resolver) IssueHistory() IssueHistoryResolver           { return issueHistoryResolver{} }
+func (Resolver) InboxUpdate() InboxUpdateResolver             { return inboxUpdateResolver{} }
 
 type scopeKey struct{}
 
