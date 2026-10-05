@@ -105,7 +105,7 @@ type NewCycle struct {
 // NewIssue takes its number from the team counter; a nil SortOrder places the
 // issue above every other issue of its team.
 type NewIssue struct {
-	ID          *string
+	ID          string
 	WorkspaceID string
 	TeamID      string
 	Title       string

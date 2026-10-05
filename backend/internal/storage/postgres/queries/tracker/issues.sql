@@ -48,7 +48,7 @@ INSERT INTO issues (
   id, workspace_id, team_id, number, title, description, state_id, priority, estimate, assignee_id,
   creator_id, project_id, cycle_id, parent_id, label_ids, due_date, sort_order, started_at, completed_at, canceled_at
 )
-SELECT sqlc.narg('id')::text, @workspace_id::text, @team_id::text, next.issue_count, @title::text, sqlc.narg('description')::text,
+SELECT @id::text, @workspace_id::text, @team_id::text, next.issue_count, @title::text, sqlc.narg('description')::text,
   @state_id::text, @priority::int, sqlc.narg('estimate')::int, sqlc.narg('assignee_id')::text,
   sqlc.narg('creator_id')::text, sqlc.narg('project_id')::text, sqlc.narg('cycle_id')::text,
   sqlc.narg('parent_id')::text, @label_ids::text[], sqlc.narg('due_date')::date,

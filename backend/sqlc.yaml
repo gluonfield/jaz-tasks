@@ -25,13 +25,6 @@ overrides:
       oauth_token: OAuthToken
       api_key: APIKey
     overrides:
-      - db_type: uuid
-        go_type: string
-      - db_type: uuid
-        nullable: true
-        go_type:
-          type: string
-          pointer: true
       - db_type: timestamptz
         go_type: time.Time
       - db_type: timestamptz

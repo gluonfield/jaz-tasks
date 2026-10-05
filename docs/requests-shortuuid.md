@@ -8,3 +8,5 @@
 - [x] Complete code review, Go build/vet/full tests and frontend checks.
 - [x] Confirm the upgrade test fails when new-record generation is reverted to UUID strings.
 - [x] Commit and push.
+
+- [x] Complete the requested thermo-nuclear review; remove obsolete lookup guards and nullable insert IDs, verify caller-supplied IDs, run full checks and push.

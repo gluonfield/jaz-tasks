@@ -24,9 +24,8 @@ func (s *Store) CreateIssues(ctx context.Context, issues []storage.NewIssue) ([]
 	created := make([]db.Issue, len(issues))
 	err := s.tx(ctx, func(q *db.Queries) error {
 		for i, issue := range issues {
-			if issue.ID == nil {
-				id := shortuuid.New()
-				issue.ID = &id
+			if issue.ID == "" {
+				issue.ID = shortuuid.New()
 			}
 			var err error
 			if created[i], err = q.CreateIssue(ctx, db.CreateIssueParams(issue)); err != nil {

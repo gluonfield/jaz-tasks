@@ -72,7 +72,7 @@ RETURNING id, workspace_id, team_id, number, title, description, state_id, prior
 `
 
 type CreateIssueParams struct {
-	ID          *string
+	ID          string
 	WorkspaceID string
 	TeamID      string
 	Title       string

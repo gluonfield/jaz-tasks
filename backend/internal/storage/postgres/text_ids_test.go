@@ -81,7 +81,7 @@ INSERT INTO sessions(token_hash,user_id,expires_at) SELECT 'legacy'::bytea,id,no
 		var rows []string
 		for _, table := range []string{"workspaces", "users", "teams", "workflow_states", "issue_labels", "projects", "cycles", "issues", "comments", "issue_history", "inbox_dismissals", "sessions"} {
 			var row string
-			if err := db.QueryRowContext(ctx, "SELECT jsonb_agg(to_jsonb(t))::text FROM "+table+" t").Scan(&row); err != nil {
+			if err := db.QueryRowContext(ctx, "SELECT jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text)::text FROM "+table+" t").Scan(&row); err != nil {
 				t.Fatal(err)
 			}
 			rows = append(rows, row)
@@ -135,7 +135,17 @@ INSERT INTO sessions(token_hash,user_id,expires_at) SELECT 'legacy'::bytea,id,no
 	if got, err := scope.Comment(ctx, comment.ID); err != nil || got.ID != comment.ID {
 		t.Fatalf("comment lookup: %+v, %v", got, err)
 	}
-	if _, err := scope.Issue(ctx, strings.ToLower(child.ID)); !errors.As(err, new(tracker.NotFoundError)) {
+	suppliedShort := shortuuid.NewWithNamespace("jaz-tasks-client-issued-id")
+	for _, id := range []string{"92a1103c-9a16-4e34-92d4-225c6f41a97e", suppliedShort} {
+		created, err := scope.CreateIssue(ctx, tracker.IssueCreateInput{ID: &id, TeamID: old.TeamID, Title: &title, ParentID: &child.ID})
+		if err != nil || created.ID != id || created.ParentID == nil || *created.ParentID != child.ID {
+			t.Fatalf("caller-supplied ID %q: %+v, %v", id, created, err)
+		}
+		if got, err := scope.Issue(ctx, id); err != nil || got.ID != id {
+			t.Fatalf("caller-supplied ID lookup %q: %+v, %v", id, got, err)
+		}
+	}
+	if _, err := scope.Issue(ctx, strings.ToLower(suppliedShort)); !errors.As(err, new(tracker.NotFoundError)) {
 		t.Fatalf("ID lookup must be case-sensitive: %v", err)
 	}
 }

@@ -197,7 +197,7 @@ func (s *Scope) Issue(ctx context.Context, id string) (storage.Issue, error) {
 		if number, parseErr := strconv.ParseInt(m[2], 10, 32); parseErr == nil {
 			issue, err = s.svc.store.IssueByNumber(ctx, s.actor.WorkspaceID, m[1], int32(number))
 		}
-	} else if validID(id) {
+	} else {
 		issue, err = s.svc.store.Issue(ctx, s.actor.WorkspaceID, id)
 	}
 	return issue, notFound(err, "Issue")
@@ -290,7 +290,7 @@ func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewI
 		return storage.NewIssue{}, err
 	}
 	return storage.NewIssue{
-		ID:          in.ID,
+		ID:          deref(in.ID),
 		WorkspaceID: s.actor.WorkspaceID,
 		TeamID:      issue.TeamID,
 		Title:       issue.Title,
