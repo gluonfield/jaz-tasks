@@ -54,18 +54,18 @@ func (q *Queries) CountIssuesByState(ctx context.Context, workspaceID string) ([
 const createIssue = `-- name: CreateIssue :one
 WITH next AS (
   UPDATE teams SET issue_count = issue_count + 1
-  WHERE teams.id = $3::uuid AND teams.workspace_id = $2::uuid
+  WHERE teams.id = $3::text AND teams.workspace_id = $2::text
   RETURNING issue_count
 )
 INSERT INTO issues (
   id, workspace_id, team_id, number, title, description, state_id, priority, estimate, assignee_id,
   creator_id, project_id, cycle_id, parent_id, label_ids, due_date, sort_order, started_at, completed_at, canceled_at
 )
-SELECT COALESCE($1::uuid, gen_random_uuid()), $2::uuid, $3::uuid, next.issue_count, $4::text, $5::text,
-  $6::uuid, $7::int, $8::int, $9::uuid,
-  $10::uuid, $11::uuid, $12::uuid,
-  $13::uuid, $14::uuid[], $15::date,
-  COALESCE($16::float8, (SELECT COALESCE(min(sort_order), 0) - 1 FROM issues WHERE issues.team_id = $3::uuid)),
+SELECT $1::text, $2::text, $3::text, next.issue_count, $4::text, $5::text,
+  $6::text, $7::int, $8::int, $9::text,
+  $10::text, $11::text, $12::text,
+  $13::text, $14::text[], $15::date,
+  COALESCE($16::float8, (SELECT COALESCE(min(sort_order), 0) - 1 FROM issues WHERE issues.team_id = $3::text)),
   $17::timestamptz, $18::timestamptz, $19::timestamptz
 FROM next
 RETURNING id, workspace_id, team_id, number, title, description, state_id, priority, estimate, assignee_id, creator_id, project_id, cycle_id, parent_id, label_ids, due_date, sort_order, started_at, completed_at, canceled_at, created_at, updated_at, archived_at
@@ -149,9 +149,9 @@ INSERT INTO issue_history (
   issue_id, actor_id, from_state_id, to_state_id, from_assignee_id, to_assignee_id, from_priority, to_priority,
   from_title, to_title, from_team_id, to_team_id, from_project_id, to_project_id, from_cycle_id, to_cycle_id, from_parent_id, to_parent_id,
   from_estimate, to_estimate, from_due_date, to_due_date, added_label_ids, removed_label_ids, updated_description, archived
-) VALUES (
+, id) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
-)
+, $27)
 `
 
 type CreateIssueHistoryParams struct {
@@ -181,6 +181,7 @@ type CreateIssueHistoryParams struct {
 	RemovedLabelIDs    []string
 	UpdatedDescription bool
 	Archived           *bool
+	ID                 string
 }
 
 func (q *Queries) CreateIssueHistory(ctx context.Context, arg CreateIssueHistoryParams) error {
@@ -211,6 +212,7 @@ func (q *Queries) CreateIssueHistory(ctx context.Context, arg CreateIssueHistory
 		arg.RemovedLabelIDs,
 		arg.UpdatedDescription,
 		arg.Archived,
+		arg.ID,
 	)
 	return err
 }
@@ -372,21 +374,21 @@ const listIssues = `-- name: ListIssues :many
 SELECT issues.id, issues.workspace_id, issues.team_id, issues.number, issues.title, issues.description, issues.state_id, issues.priority, issues.estimate, issues.assignee_id, issues.creator_id, issues.project_id, issues.cycle_id, issues.parent_id, issues.label_ids, issues.due_date, issues.sort_order, issues.started_at, issues.completed_at, issues.canceled_at, issues.created_at, issues.updated_at, issues.archived_at FROM issues
 WHERE issues.workspace_id = $1
   AND ($2::bool OR issues.archived_at IS NULL)
-  AND ($3::uuid[] IS NULL OR issues.id = ANY($3::uuid[]))
-  AND ($4::uuid[] IS NULL OR team_id = ANY($4::uuid[]))
-  AND ($5::uuid[] IS NULL OR state_id = ANY($5::uuid[]))
+  AND ($3::text[] IS NULL OR issues.id = ANY($3::text[]))
+  AND ($4::text[] IS NULL OR team_id = ANY($4::text[]))
+  AND ($5::text[] IS NULL OR state_id = ANY($5::text[]))
   AND ($6::int[] IS NULL OR priority = ANY($6::int[]))
-  AND ($7::uuid[] IS NULL OR assignee_id = ANY($7::uuid[])
+  AND ($7::text[] IS NULL OR assignee_id = ANY($7::text[])
     OR ($8::bool AND assignee_id IS NULL))
-  AND ($9::uuid[] IS NULL OR creator_id = ANY($9::uuid[])
+  AND ($9::text[] IS NULL OR creator_id = ANY($9::text[])
     OR ($10::bool AND creator_id IS NULL))
-  AND ($11::uuid[] IS NULL OR project_id = ANY($11::uuid[])
+  AND ($11::text[] IS NULL OR project_id = ANY($11::text[])
     OR ($12::bool AND project_id IS NULL))
-  AND ($13::uuid[] IS NULL OR cycle_id = ANY($13::uuid[])
+  AND ($13::text[] IS NULL OR cycle_id = ANY($13::text[])
     OR ($14::bool AND cycle_id IS NULL))
-  AND ($15::uuid[] IS NULL OR parent_id = ANY($15::uuid[])
+  AND ($15::text[] IS NULL OR parent_id = ANY($15::text[])
     OR ($16::bool AND parent_id IS NULL))
-  AND ($17::uuid[] IS NULL OR label_ids && $17::uuid[]
+  AND ($17::text[] IS NULL OR label_ids && $17::text[]
     OR ($18::bool AND label_ids = '{}'))
   AND ($19::text = ''
     OR to_tsvector('simple', title || ' ' || COALESCE(description, '')) @@ to_tsquery('simple', $19::text)
@@ -535,22 +537,22 @@ func (q *Queries) LockIssue(ctx context.Context, arg LockIssueParams) (Issue, er
 const updateIssue = `-- name: UpdateIssue :one
 WITH next AS (
   UPDATE teams SET issue_count = issue_count + 1
-  WHERE teams.id = $1::uuid AND teams.id <> (SELECT team_id FROM issues WHERE issues.id = $18::uuid)
+  WHERE teams.id = $1::text AND teams.id <> (SELECT team_id FROM issues WHERE issues.id = $18::text)
   RETURNING issue_count
 )
 UPDATE issues SET
-  team_id = $1::uuid,
+  team_id = $1::text,
   number = COALESCE((SELECT issue_count FROM next), number),
   title = $2::text,
   description = $3::text,
-  state_id = $4::uuid,
+  state_id = $4::text,
   priority = $5::int,
   estimate = $6::int,
-  assignee_id = $7::uuid,
-  project_id = $8::uuid,
-  cycle_id = $9::uuid,
-  parent_id = $10::uuid,
-  label_ids = $11::uuid[],
+  assignee_id = $7::text,
+  project_id = $8::text,
+  cycle_id = $9::text,
+  parent_id = $10::text,
+  label_ids = $11::text[],
   due_date = $12::date,
   sort_order = $13::float8,
   started_at = $14::timestamptz,
@@ -558,7 +560,7 @@ UPDATE issues SET
   canceled_at = $16::timestamptz,
   archived_at = $17::timestamptz,
   updated_at = now()
-WHERE issues.id = $18::uuid
+WHERE issues.id = $18::text
 RETURNING id, workspace_id, team_id, number, title, description, state_id, priority, estimate, assignee_id, creator_id, project_id, cycle_id, parent_id, label_ids, due_date, sort_order, started_at, completed_at, canceled_at, created_at, updated_at, archived_at
 `
 

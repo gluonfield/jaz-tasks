@@ -21,8 +21,8 @@ func (q *Queries) CountWorkspaces(ctx context.Context) (int64, error) {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin, id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at
 `
 
@@ -33,6 +33,7 @@ type CreateUserParams struct {
 	Email       string
 	AvatarURL   *string
 	Admin       bool
+	ID          string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -43,6 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Email,
 		arg.AvatarURL,
 		arg.Admin,
+		arg.ID,
 	)
 	var i User
 	err := row.Scan(
@@ -61,16 +63,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const createWorkspace = `-- name: CreateWorkspace :one
-INSERT INTO workspaces (name, url_key) VALUES ($1, $2) RETURNING id, name, url_key, created_at, updated_at
+INSERT INTO workspaces (name, url_key, id) VALUES ($1, $2, $3) RETURNING id, name, url_key, created_at, updated_at
 `
 
 type CreateWorkspaceParams struct {
 	Name   string
 	URLKey string
+	ID     string
 }
 
 func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams) (Workspace, error) {
-	row := q.db.QueryRow(ctx, createWorkspace, arg.Name, arg.URLKey)
+	row := q.db.QueryRow(ctx, createWorkspace, arg.Name, arg.URLKey, arg.ID)
 	var i Workspace
 	err := row.Scan(
 		&i.ID,

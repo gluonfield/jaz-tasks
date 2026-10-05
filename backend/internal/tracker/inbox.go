@@ -20,7 +20,7 @@ func (s *Scope) DismissInbox(ctx context.Context, input []InboxDismissInput) err
 	updates := make([]storage.InboxDismissal, len(input))
 	for i, update := range input {
 		revision, err := time.Parse(time.RFC3339Nano, update.Revision)
-		if err != nil || !isUUID(update.IssueID) {
+		if err != nil || !validID(update.IssueID) {
 			return invalid("invalid inbox update")
 		}
 		updates[i] = storage.InboxDismissal{IssueID: update.IssueID, UpdatedThrough: revision}

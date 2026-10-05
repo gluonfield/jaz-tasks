@@ -12,6 +12,7 @@ import (
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/auth"
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 // PublicURL is the base URL the web app is reachable at; entity urls hang off it.
@@ -209,8 +210,12 @@ func notFound(err error, entity string) error {
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
-func isUUID(id string) bool {
-	return uuidPattern.MatchString(id)
+func validID(id string) bool {
+	if uuidPattern.MatchString(id) {
+		return true
+	}
+	decoded, err := shortuuid.DefaultEncoder.Decode(id)
+	return err == nil && shortuuid.DefaultEncoder.Encode(decoded) == id
 }
 
 // Page is one slice of a Linear-style cursor connection. Cursors are offsets.

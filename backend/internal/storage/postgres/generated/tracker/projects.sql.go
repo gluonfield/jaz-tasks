@@ -11,10 +11,10 @@ import (
 )
 
 const createCycle = `-- name: CreateCycle :one
-INSERT INTO cycles (workspace_id, team_id, number, name, description, starts_at, ends_at)
-SELECT $1::uuid, $2::uuid, COALESCE(max(number), 0) + 1, $3::text,
-  $4::text, $5::timestamptz, $6::timestamptz
-FROM cycles WHERE team_id = $2::uuid
+INSERT INTO cycles (workspace_id, team_id, number, name, description, starts_at, ends_at, id)
+SELECT $1::text, $2::text, COALESCE(max(number), 0) + 1, $3::text,
+  $4::text, $5::timestamptz, $6::timestamptz, $7::text
+FROM cycles WHERE team_id = $2::text
 RETURNING id, workspace_id, team_id, number, name, description, starts_at, ends_at, completed_at, created_at, updated_at, archived_at
 `
 
@@ -25,6 +25,7 @@ type CreateCycleParams struct {
 	Description *string
 	StartsAt    time.Time
 	EndsAt      time.Time
+	ID          string
 }
 
 func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) (Cycle, error) {
@@ -35,6 +36,7 @@ func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) (Cycle
 		arg.Description,
 		arg.StartsAt,
 		arg.EndsAt,
+		arg.ID,
 	)
 	var i Cycle
 	err := row.Scan(
@@ -55,8 +57,8 @@ func (q *Queries) CreateCycle(ctx context.Context, arg CreateCycleParams) (Cycle
 }
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date, content)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+INSERT INTO projects (workspace_id, name, description, icon, color, status, lead_id, team_ids, priority, start_date, target_date, content, id, slug_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)
 RETURNING id, workspace_id, slug_id, name, description, icon, color, status, lead_id, team_ids, priority, sort_order, start_date, target_date, created_at, updated_at, archived_at, content
 `
 
@@ -73,6 +75,7 @@ type CreateProjectParams struct {
 	StartDate   *time.Time
 	TargetDate  *time.Time
 	Content     *string
+	ID          string
 }
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
@@ -89,6 +92,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		arg.StartDate,
 		arg.TargetDate,
 		arg.Content,
+		arg.ID,
 	)
 	var i Project
 	err := row.Scan(

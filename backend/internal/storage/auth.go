@@ -129,6 +129,7 @@ type Membership struct {
 type NewWorkspace struct {
 	Name   string
 	URLKey string
+	ID     string
 }
 
 type WorkspaceStore interface {

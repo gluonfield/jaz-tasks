@@ -197,7 +197,7 @@ func (s *Scope) Issue(ctx context.Context, id string) (storage.Issue, error) {
 		if number, parseErr := strconv.ParseInt(m[2], 10, 32); parseErr == nil {
 			issue, err = s.svc.store.IssueByNumber(ctx, s.actor.WorkspaceID, m[1], int32(number))
 		}
-	} else if isUUID(id) {
+	} else if validID(id) {
 		issue, err = s.svc.store.Issue(ctx, s.actor.WorkspaceID, id)
 	}
 	return issue, notFound(err, "Issue")
@@ -261,8 +261,8 @@ func (s *Scope) newIssue(ctx context.Context, in IssueCreateInput) (storage.NewI
 	if err != nil {
 		return storage.NewIssue{}, err
 	}
-	if in.ID != nil && !isUUID(*in.ID) {
-		return storage.NewIssue{}, invalid("id must be a UUID")
+	if in.ID != nil && !validID(*in.ID) {
+		return storage.NewIssue{}, invalid("id must be a UUID or shortuuid")
 	}
 	parentID, err := s.issueID(ctx, in.ParentID)
 	if err != nil {

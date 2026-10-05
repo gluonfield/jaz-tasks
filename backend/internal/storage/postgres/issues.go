@@ -5,6 +5,7 @@ import (
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	db "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/tracker"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 func (s *Store) Issues(ctx context.Context, query storage.IssueQuery) ([]storage.Issue, error) {
@@ -23,6 +24,10 @@ func (s *Store) CreateIssues(ctx context.Context, issues []storage.NewIssue) ([]
 	created := make([]db.Issue, len(issues))
 	err := s.tx(ctx, func(q *db.Queries) error {
 		for i, issue := range issues {
+			if issue.ID == nil {
+				id := shortuuid.New()
+				issue.ID = &id
+			}
 			var err error
 			if created[i], err = q.CreateIssue(ctx, db.CreateIssueParams(issue)); err != nil {
 				return err
@@ -72,6 +77,7 @@ func (s *Store) UpdateIssue(ctx context.Context, workspaceID, id string, mutate 
 		if history == nil {
 			return nil
 		}
+		history.ID = shortuuid.New()
 		return q.CreateIssueHistory(ctx, db.CreateIssueHistoryParams(*history))
 	})
 	return one(toIssue)(updated, err)
@@ -98,6 +104,7 @@ func (s *Store) Comment(ctx context.Context, workspaceID, id string) (storage.Co
 }
 
 func (s *Store) CreateComment(ctx context.Context, comment storage.NewComment) (storage.Comment, error) {
+	comment.ID = shortuuid.New()
 	return one(toComment)(s.q.CreateComment(ctx, db.CreateCommentParams(comment)))
 }
 

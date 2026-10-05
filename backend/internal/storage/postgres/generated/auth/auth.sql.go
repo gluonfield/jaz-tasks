@@ -11,7 +11,7 @@ import (
 )
 
 const createAPIKey = `-- name: CreateAPIKey :one
-INSERT INTO api_keys (user_id, label, hint, key_hash) VALUES ($1, $2, $3, $4) RETURNING id, user_id, label, key_hash, created_at, hint
+INSERT INTO api_keys (user_id, label, hint, key_hash, id) VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, label, key_hash, created_at, hint
 `
 
 type CreateAPIKeyParams struct {
@@ -19,6 +19,7 @@ type CreateAPIKeyParams struct {
 	Label   string
 	Hint    string
 	KeyHash []byte
+	ID      string
 }
 
 func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (APIKey, error) {
@@ -27,6 +28,7 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (API
 		arg.Label,
 		arg.Hint,
 		arg.KeyHash,
+		arg.ID,
 	)
 	var i APIKey
 	err := row.Scan(
@@ -41,8 +43,8 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (API
 }
 
 const createAuthUser = `-- name: CreateAuthUser :one
-INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin, id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, workspace_id, name, display_name, email, avatar_url, admin, active, created_at, updated_at
 `
 
@@ -53,6 +55,7 @@ type CreateAuthUserParams struct {
 	Email       string
 	AvatarURL   *string
 	Admin       bool
+	ID          string
 }
 
 func (q *Queries) CreateAuthUser(ctx context.Context, arg CreateAuthUserParams) (User, error) {
@@ -63,6 +66,7 @@ func (q *Queries) CreateAuthUser(ctx context.Context, arg CreateAuthUserParams) 
 		arg.Email,
 		arg.AvatarURL,
 		arg.Admin,
+		arg.ID,
 	)
 	var i User
 	err := row.Scan(
@@ -81,7 +85,7 @@ func (q *Queries) CreateAuthUser(ctx context.Context, arg CreateAuthUserParams) 
 }
 
 const createInvite = `-- name: CreateInvite :one
-INSERT INTO workspace_invites (workspace_id, email, invited_by) VALUES ($1, lower($3::text), $2)
+INSERT INTO workspace_invites (workspace_id, email, invited_by, id) VALUES ($1, lower($3::text), $2, $4)
 RETURNING id, workspace_id, email, invited_by, created_at
 `
 
@@ -89,10 +93,16 @@ type CreateInviteParams struct {
 	WorkspaceID string
 	InvitedBy   *string
 	Email       string
+	ID          string
 }
 
 func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) (WorkspaceInvite, error) {
-	row := q.db.QueryRow(ctx, createInvite, arg.WorkspaceID, arg.InvitedBy, arg.Email)
+	row := q.db.QueryRow(ctx, createInvite,
+		arg.WorkspaceID,
+		arg.InvitedBy,
+		arg.Email,
+		arg.ID,
+	)
 	var i WorkspaceInvite
 	err := row.Scan(
 		&i.ID,
@@ -339,8 +349,8 @@ const replaceAPIKey = `-- name: ReplaceAPIKey :one
 WITH replaced AS (
   DELETE FROM api_keys WHERE user_id = $1 AND label = $2 AND key_hash <> $4
 )
-INSERT INTO api_keys (user_id, label, hint, key_hash)
-VALUES ($1, $2, $3, $4)
+INSERT INTO api_keys (user_id, label, hint, key_hash, id)
+VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (key_hash) DO UPDATE SET label = EXCLUDED.label
 WHERE api_keys.user_id = EXCLUDED.user_id
 RETURNING id, user_id, label, key_hash, created_at, hint
@@ -351,6 +361,7 @@ type ReplaceAPIKeyParams struct {
 	Label   string
 	Hint    string
 	KeyHash []byte
+	ID      string
 }
 
 // ReplaceAPIKey makes the key the user's one key with this label, keeping it
@@ -361,6 +372,7 @@ func (q *Queries) ReplaceAPIKey(ctx context.Context, arg ReplaceAPIKeyParams) (A
 		arg.Label,
 		arg.Hint,
 		arg.KeyHash,
+		arg.ID,
 	)
 	var i APIKey
 	err := row.Scan(

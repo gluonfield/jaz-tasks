@@ -5,8 +5,8 @@ SELECT * FROM comments WHERE workspace_id = $1 AND issue_id = $2 ORDER BY create
 SELECT * FROM comments WHERE workspace_id = $1 AND id = $2;
 
 -- name: CreateComment :one
-INSERT INTO comments (workspace_id, issue_id, user_id, parent_id, body)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO comments (workspace_id, issue_id, user_id, parent_id, body, id)
+VALUES ($1, $2, $3, $4, $5, sqlc.arg(id))
 RETURNING *;
 
 -- name: UpdateComment :one

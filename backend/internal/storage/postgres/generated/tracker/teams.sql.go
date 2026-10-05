@@ -10,8 +10,8 @@ import (
 )
 
 const createTeam = `-- name: CreateTeam :one
-INSERT INTO teams (workspace_id, key, name, description, icon, color)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO teams (workspace_id, key, name, description, icon, color, id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id, workspace_id, key, name, description, icon, color, issue_count, created_at, updated_at, archived_at
 `
 
@@ -22,6 +22,7 @@ type CreateTeamParams struct {
 	Description *string
 	Icon        *string
 	Color       *string
+	ID          string
 }
 
 func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, error) {
@@ -32,6 +33,7 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 		arg.Description,
 		arg.Icon,
 		arg.Color,
+		arg.ID,
 	)
 	var i Team
 	err := row.Scan(
@@ -51,8 +53,8 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (Team, e
 }
 
 const createWorkflowState = `-- name: CreateWorkflowState :one
-INSERT INTO workflow_states (workspace_id, team_id, name, type, color, position, description)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO workflow_states (workspace_id, team_id, name, type, color, position, description, id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id, workspace_id, team_id, name, type, color, position, description, created_at, updated_at, archived_at
 `
 
@@ -64,6 +66,7 @@ type CreateWorkflowStateParams struct {
 	Color       string
 	Position    float64
 	Description *string
+	ID          string
 }
 
 func (q *Queries) CreateWorkflowState(ctx context.Context, arg CreateWorkflowStateParams) (WorkflowState, error) {
@@ -75,6 +78,7 @@ func (q *Queries) CreateWorkflowState(ctx context.Context, arg CreateWorkflowSta
 		arg.Color,
 		arg.Position,
 		arg.Description,
+		arg.ID,
 	)
 	var i WorkflowState
 	err := row.Scan(

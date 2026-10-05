@@ -5,6 +5,7 @@ import (
 
 	"github.com/gluonfield/jaz-tasks/backend/internal/storage"
 	db "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/tracker"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 func (s *Store) CountWorkspaces(ctx context.Context) (int64, error) {
@@ -16,7 +17,7 @@ func (s *Store) Workspace(ctx context.Context, id string) (storage.Workspace, er
 }
 
 func (s *Store) CreateWorkspace(ctx context.Context, name, urlKey string) (storage.Workspace, error) {
-	return one(toWorkspace)(s.q.CreateWorkspace(ctx, db.CreateWorkspaceParams{Name: name, URLKey: urlKey}))
+	return one(toWorkspace)(s.q.CreateWorkspace(ctx, db.CreateWorkspaceParams{ID: shortuuid.New(), Name: name, URLKey: urlKey}))
 }
 
 func (s *Store) UpdateWorkspace(ctx context.Context, w storage.Workspace) (storage.Workspace, error) {
@@ -28,6 +29,7 @@ func (s *Store) Users(ctx context.Context, workspaceID string) ([]storage.User, 
 }
 
 func (s *Store) CreateUser(ctx context.Context, user storage.NewUser) (storage.User, error) {
+	user.ID = shortuuid.New()
 	return one(toUser)(s.q.CreateUser(ctx, db.CreateUserParams(user)))
 }
 
@@ -50,6 +52,7 @@ func (s *Store) UpdateTeam(ctx context.Context, t storage.Team) (storage.Team, e
 }
 
 func createTeam(ctx context.Context, q *db.Queries, team storage.NewTeam, states []storage.NewWorkflowState) (db.Team, error) {
+	team.ID = shortuuid.New()
 	created, err := q.CreateTeam(ctx, db.CreateTeamParams(team))
 	if err != nil {
 		return created, err
@@ -57,6 +60,7 @@ func createTeam(ctx context.Context, q *db.Queries, team storage.NewTeam, states
 	for _, state := range states {
 		state.WorkspaceID = created.WorkspaceID
 		state.TeamID = created.ID
+		state.ID = shortuuid.New()
 		if _, err := q.CreateWorkflowState(ctx, db.CreateWorkflowStateParams(state)); err != nil {
 			return created, err
 		}
@@ -69,6 +73,7 @@ func (s *Store) WorkflowStates(ctx context.Context, workspaceID string) ([]stora
 }
 
 func (s *Store) CreateWorkflowState(ctx context.Context, state storage.NewWorkflowState) (storage.WorkflowState, error) {
+	state.ID = shortuuid.New()
 	return one(toState)(s.q.CreateWorkflowState(ctx, db.CreateWorkflowStateParams(state)))
 }
 
@@ -77,6 +82,7 @@ func (s *Store) IssueLabels(ctx context.Context, workspaceID string) ([]storage.
 }
 
 func (s *Store) CreateIssueLabel(ctx context.Context, label storage.NewIssueLabel) (storage.IssueLabel, error) {
+	label.ID = shortuuid.New()
 	return one(toLabel)(s.q.CreateLabel(ctx, db.CreateLabelParams(label)))
 }
 
@@ -105,6 +111,7 @@ func (s *Store) Projects(ctx context.Context, workspaceID string) ([]storage.Pro
 }
 
 func (s *Store) CreateProject(ctx context.Context, project storage.NewProject) (storage.Project, error) {
+	project.ID = shortuuid.New()
 	return one(toProject)(s.q.CreateProject(ctx, db.CreateProjectParams(project)))
 }
 
@@ -132,5 +139,6 @@ func (s *Store) Cycles(ctx context.Context, workspaceID string) ([]storage.Cycle
 }
 
 func (s *Store) CreateCycle(ctx context.Context, cycle storage.NewCycle) (storage.Cycle, error) {
+	cycle.ID = shortuuid.New()
 	return one(toCycle)(s.q.CreateCycle(ctx, db.CreateCycleParams(cycle)))
 }

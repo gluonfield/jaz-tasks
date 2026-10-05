@@ -7,6 +7,7 @@ import (
 	authdb "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/auth"
 	db "github.com/gluonfield/jaz-tasks/backend/internal/storage/postgres/generated/tracker"
 	"github.com/jackc/pgx/v5"
+	"github.com/lithammer/shortuuid/v4"
 )
 
 func toIdentity(r authdb.Identity) storage.Identity             { return storage.Identity(r) }
@@ -41,11 +42,13 @@ func (s *Store) Memberships(ctx context.Context, userID string) ([]storage.Membe
 func (s *Store) CreateOwnedWorkspace(ctx context.Context, workspace storage.NewWorkspace, owner storage.NewUser, identity storage.Identity, team storage.NewTeam, states []storage.NewWorkflowState) (storage.User, error) {
 	var user authdb.User
 	err := s.both(ctx, func(q *db.Queries, a *authdb.Queries) error {
+		workspace.ID = shortuuid.New()
 		created, err := q.CreateWorkspace(ctx, db.CreateWorkspaceParams(workspace))
 		if err != nil {
 			return err
 		}
 		owner.WorkspaceID = created.ID
+		owner.ID = shortuuid.New()
 		if user, err = a.CreateAuthUser(ctx, authdb.CreateAuthUserParams(owner)); err != nil {
 			return err
 		}
@@ -66,6 +69,7 @@ func (s *Store) JoinWorkspace(ctx context.Context, invite storage.WorkspaceInvit
 			return err
 		}
 		member.WorkspaceID = invite.WorkspaceID
+		member.ID = shortuuid.New()
 		var err error
 		if user, err = a.CreateAuthUser(ctx, authdb.CreateAuthUserParams(member)); err != nil {
 			return err
@@ -76,7 +80,7 @@ func (s *Store) JoinWorkspace(ctx context.Context, invite storage.WorkspaceInvit
 }
 
 func (s *Store) CreateInvite(ctx context.Context, workspaceID, email, invitedBy string) (storage.WorkspaceInvite, error) {
-	return one(toInvite)(s.auth.CreateInvite(ctx, authdb.CreateInviteParams{WorkspaceID: workspaceID, Email: email, InvitedBy: &invitedBy}))
+	return one(toInvite)(s.auth.CreateInvite(ctx, authdb.CreateInviteParams{ID: shortuuid.New(), WorkspaceID: workspaceID, Email: email, InvitedBy: &invitedBy}))
 }
 
 func (s *Store) Invites(ctx context.Context, workspaceID string) ([]storage.WorkspaceInvite, error) {

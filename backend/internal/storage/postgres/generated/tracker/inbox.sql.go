@@ -12,10 +12,10 @@ import (
 
 const dismissInboxUpdate = `-- name: DismissInboxUpdate :execrows
 INSERT INTO inbox_dismissals (user_id, issue_id, updated_through)
-SELECT $1::uuid, issues.id, $2::timestamptz
+SELECT $1::text, issues.id, $2::timestamptz
 FROM issues
-WHERE issues.id = $3::uuid AND issues.workspace_id = $4::uuid
-  AND (issues.assignee_id = $1::uuid OR issues.creator_id = $1::uuid)
+WHERE issues.id = $3::text AND issues.workspace_id = $4::text
+  AND (issues.assignee_id = $1::text OR issues.creator_id = $1::text)
   AND $2::timestamptz <= greatest(issues.updated_at, (SELECT max(updated_at) FROM comments WHERE issue_id = issues.id))
 ON CONFLICT (user_id, issue_id) DO UPDATE
 SET updated_through = greatest(inbox_dismissals.updated_through, excluded.updated_through)
@@ -48,9 +48,9 @@ JOIN LATERAL (
   SELECT greatest(issues.updated_at, max(comments.updated_at)) AS updated_at
   FROM comments WHERE comments.issue_id = issues.id
 ) activity ON true
-LEFT JOIN inbox_dismissals ON inbox_dismissals.issue_id = issues.id AND inbox_dismissals.user_id = $1::uuid
-WHERE issues.workspace_id = $2::uuid AND issues.archived_at IS NULL
-  AND (issues.assignee_id = $1::uuid OR issues.creator_id = $1::uuid)
+LEFT JOIN inbox_dismissals ON inbox_dismissals.issue_id = issues.id AND inbox_dismissals.user_id = $1::text
+WHERE issues.workspace_id = $2::text AND issues.archived_at IS NULL
+  AND (issues.assignee_id = $1::text OR issues.creator_id = $1::text)
   AND (inbox_dismissals.updated_through IS NULL OR activity.updated_at > inbox_dismissals.updated_through)
 ORDER BY activity.updated_at DESC, issues.id
 `

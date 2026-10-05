@@ -11,8 +11,8 @@ import (
 )
 
 const createComment = `-- name: CreateComment :one
-INSERT INTO comments (workspace_id, issue_id, user_id, parent_id, body)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO comments (workspace_id, issue_id, user_id, parent_id, body, id)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, workspace_id, issue_id, user_id, parent_id, body, created_at, updated_at, edited_at, resolved_at
 `
 
@@ -22,6 +22,7 @@ type CreateCommentParams struct {
 	UserID      *string
 	ParentID    *string
 	Body        string
+	ID          string
 }
 
 func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (Comment, error) {
@@ -31,6 +32,7 @@ func (q *Queries) CreateComment(ctx context.Context, arg CreateCommentParams) (C
 		arg.UserID,
 		arg.ParentID,
 		arg.Body,
+		arg.ID,
 	)
 	var i Comment
 	err := row.Scan(

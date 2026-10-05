@@ -396,7 +396,7 @@ func (s *Scope) checkLabel(ctx context.Context, id, name string, parentID *strin
 }
 
 func (s *Scope) DeleteIssueLabel(ctx context.Context, id string) error {
-	if !isUUID(id) {
+	if !validID(id) {
 		return NotFoundError{Entity: "IssueLabel"}
 	}
 	err := s.svc.store.DeleteIssueLabel(ctx, s.actor.WorkspaceID, id)

@@ -10,8 +10,8 @@ import (
 )
 
 const createLabel = `-- name: CreateLabel :one
-INSERT INTO issue_labels (workspace_id, team_id, parent_id, name, color, description, is_group)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO issue_labels (workspace_id, team_id, parent_id, name, color, description, is_group, id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id, workspace_id, team_id, parent_id, name, color, description, is_group, created_at, updated_at, archived_at
 `
 
@@ -23,6 +23,7 @@ type CreateLabelParams struct {
 	Color       string
 	Description *string
 	IsGroup     bool
+	ID          string
 }
 
 func (q *Queries) CreateLabel(ctx context.Context, arg CreateLabelParams) (IssueLabel, error) {
@@ -34,6 +35,7 @@ func (q *Queries) CreateLabel(ctx context.Context, arg CreateLabelParams) (Issue
 		arg.Color,
 		arg.Description,
 		arg.IsGroup,
+		arg.ID,
 	)
 	var i IssueLabel
 	err := row.Scan(
@@ -106,8 +108,8 @@ func (q *Queries) ListLabels(ctx context.Context, workspaceID string) ([]IssueLa
 }
 
 const removeLabelFromIssues = `-- name: RemoveLabelFromIssues :exec
-UPDATE issues SET label_ids = array_remove(label_ids, $1::uuid)
-WHERE workspace_id = $2 AND $1::uuid = ANY(label_ids)
+UPDATE issues SET label_ids = array_remove(label_ids, $1::text)
+WHERE workspace_id = $2 AND $1::text = ANY(label_ids)
 `
 
 type RemoveLabelFromIssuesParams struct {

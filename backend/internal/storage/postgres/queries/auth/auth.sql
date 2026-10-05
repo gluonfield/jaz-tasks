@@ -4,7 +4,7 @@ JOIN users ON users.id = api_keys.user_id
 WHERE api_keys.key_hash = $1 AND users.active;
 
 -- name: CreateAPIKey :one
-INSERT INTO api_keys (user_id, label, hint, key_hash) VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO api_keys (user_id, label, hint, key_hash, id) VALUES ($1, $2, $3, $4, sqlc.arg(id)) RETURNING *;
 
 -- name: ReplaceAPIKey :one
 -- ReplaceAPIKey makes the key the user's one key with this label, keeping it
@@ -12,8 +12,8 @@ INSERT INTO api_keys (user_id, label, hint, key_hash) VALUES ($1, $2, $3, $4) RE
 WITH replaced AS (
   DELETE FROM api_keys WHERE user_id = sqlc.arg(user_id) AND label = sqlc.arg(label) AND key_hash <> sqlc.arg(key_hash)
 )
-INSERT INTO api_keys (user_id, label, hint, key_hash)
-VALUES (sqlc.arg(user_id), sqlc.arg(label), sqlc.arg(hint), sqlc.arg(key_hash))
+INSERT INTO api_keys (user_id, label, hint, key_hash, id)
+VALUES (sqlc.arg(user_id), sqlc.arg(label), sqlc.arg(hint), sqlc.arg(key_hash), sqlc.arg(id))
 ON CONFLICT (key_hash) DO UPDATE SET label = EXCLUDED.label
 WHERE api_keys.user_id = EXCLUDED.user_id
 RETURNING *;
@@ -40,8 +40,8 @@ WITH linked AS (
 SELECT users.* FROM users JOIN linked ON linked.user_id = users.id WHERE users.active ORDER BY users.created_at;
 
 -- name: CreateAuthUser :one
-INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO users (workspace_id, name, display_name, email, avatar_url, admin, id)
+VALUES ($1, $2, $3, $4, $5, $6, sqlc.arg(id))
 RETURNING *;
 
 -- name: LinkIdentity :exec
@@ -86,7 +86,7 @@ ORDER BY workspaces.created_at;
 UPDATE sessions SET user_id = $2 WHERE token_hash = $1;
 
 -- name: CreateInvite :one
-INSERT INTO workspace_invites (workspace_id, email, invited_by) VALUES ($1, lower(@email::text), $2)
+INSERT INTO workspace_invites (workspace_id, email, invited_by, id) VALUES ($1, lower(@email::text), $2, sqlc.arg(id))
 RETURNING *;
 
 -- name: ListInvites :many

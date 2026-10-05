@@ -12,7 +12,7 @@ func (s *Scope) Comments(ctx context.Context, issueID string) ([]storage.Comment
 }
 
 func (s *Scope) Comment(ctx context.Context, id string) (storage.Comment, error) {
-	if !isUUID(id) {
+	if !validID(id) {
 		return storage.Comment{}, NotFoundError{Entity: "Comment"}
 	}
 	comment, err := s.svc.store.Comment(ctx, s.actor.WorkspaceID, id)

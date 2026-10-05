@@ -41,6 +41,7 @@ type NewUser struct {
 	Email       string
 	AvatarURL   *string
 	Admin       bool
+	ID          string
 }
 
 type NewTeam struct {
@@ -50,6 +51,7 @@ type NewTeam struct {
 	Description *string
 	Icon        *string
 	Color       *string
+	ID          string
 }
 
 type NewWorkflowState struct {
@@ -60,6 +62,7 @@ type NewWorkflowState struct {
 	Color       string
 	Position    float64
 	Description *string
+	ID          string
 }
 
 type NewIssueLabel struct {
@@ -70,6 +73,7 @@ type NewIssueLabel struct {
 	Color       string
 	Description *string
 	IsGroup     bool
+	ID          string
 }
 
 type NewProject struct {
@@ -85,6 +89,7 @@ type NewProject struct {
 	StartDate   *time.Time
 	TargetDate  *time.Time
 	Content     *string
+	ID          string
 }
 
 type NewCycle struct {
@@ -94,6 +99,7 @@ type NewCycle struct {
 	Description *string
 	StartsAt    time.Time
 	EndsAt      time.Time
+	ID          string
 }
 
 // NewIssue takes its number from the team counter; a nil SortOrder places the
@@ -126,6 +132,7 @@ type NewComment struct {
 	UserID      *string
 	ParentID    *string
 	Body        string
+	ID          string
 }
 
 type NewIssueHistory struct {
@@ -155,4 +162,5 @@ type NewIssueHistory struct {
 	RemovedLabelIDs    []string
 	UpdatedDescription bool
 	Archived           *bool
+	ID                 string
 }
