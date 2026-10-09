@@ -29,6 +29,8 @@ func register(server *mcp.Server, t tools) {
 		Description: "Read issue data without displaying anything to the user. Newest first, filtered by team, state, assignee, project, label, priority or a full-text query. Use show_issues to present selected issues after reading and ranking them."}, t.listIssues)
 	addTool(server, t, &mcp.Tool{Name: "get_issue", Title: "Get issue", Annotations: readOnly,
 		Description: "Read one issue with its description, sub-issues and comments, without displaying anything to the user."}, t.getIssue)
+	addTool(server, t, &mcp.Tool{Name: "search", Title: "Search", Annotations: readOnly,
+		Description: "Find issues by identifier, title or description, newest first, as titles with links. Use list_issues to filter and read issue fields."}, t.search)
 	addTool(server, t, &mcp.Tool{Name: "show_issues", Title: "Show issues", Annotations: readOnly,
 		Description: "Present selected issues as one inline task list in the supplied order, with optional short reasons. Returns the renderable resource and current task data. When the host confirms presentation, the list is the answer: do not repeat its titles, reasons or links in prose. Use list_issues or get_issue for private lookups.",
 		Meta:        mcp.Meta{"ui": map[string]any{"resourceUri": issueCardURI}, "ui/resourceUri": issueCardURI}}, t.showIssues)

@@ -35,6 +35,7 @@ The existing MCP server and embedded app can be connected to ChatGPT using OAuth
 | `create_project`, `update_project` | status, lead, teams, dates, description and brief |
 | `list_issues` | filter by team, state, assignee, project, label, priority or full-text query |
 | `get_issue` | an issue with its description, sub-issues and comments |
+| `search` | issues matching a query as `{results: [{id, title, url, text}]}`, [OpenAI's search convention](https://developers.openai.com/api/docs/mcp), for host search such as Jaz's command palette |
 | `create_issue`, `update_issue` | every property, including moving teams and clearing fields |
 | `add_comment` | a markdown comment as the signed-in user |
 | `show_tasks` | opens the app at a team, issue or section |
