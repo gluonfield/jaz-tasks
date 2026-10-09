@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { QueryClient } from '@tanstack/react-query'
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
 import { createRoot } from 'react-dom/client'
@@ -20,6 +21,25 @@ const router = createRouter({
   context: { queryClient: new QueryClient({ defaultOptions: { queries: { retry: 1 } } }) },
 })
 
+function reportNavigation(replace: boolean, delta?: number) {
+  if (!app.getHostCapabilities()?.experimental?.['jaz/navigation']) return
+  const path = router.history.location.href
+  void app.notification({ method: 'jaz/notifications/navigation', params: { path, replace, ...(delta && { delta }) } }).catch(console.error)
+}
+
+// Subscribe after RouterProvider mounts: the router treats history subscribers as its loading adapter.
+function AppRouter() {
+  useEffect(() => {
+    reportNavigation(true)
+    return router.history.subscribe(({ location, action }) => {
+      const delta = action.type === 'BACK' ? -1 : action.type === 'FORWARD' ? 1 : action.type === 'GO' ? action.index : undefined
+      const target = (app.getHostContext()?.['jaz/navigation'] as { path?: string } | undefined)?.path
+      if (delta || location.href !== target) reportNavigation(action.type !== 'PUSH', delta)
+    })
+  }, [])
+  return <RouterProvider router={router} />
+}
+
 // show_tasks passes a view: a team key, an issue identifier or a section.
 app.ontoolinput = ({ arguments: args }) => {
   const view = typeof args?.view === 'string' ? args.view.trim() : ''
@@ -30,12 +50,17 @@ app.ontoolinput = ({ arguments: args }) => {
       : view
         ? `/team/${view.toUpperCase()}/all`
         : '/'
-  router.navigate({ to })
+  void router.navigate({ to }).then(() => reportNavigation(true))
 }
 
 // A host's deep link (OpenAI's MCP extensions) opens the app at a page, at
 // start and whenever the host changes it.
 function follow(context?: McpUiHostContext) {
+  const path = (context?.['jaz/navigation'] as { path?: unknown } | undefined)?.path
+  if (typeof path === 'string' && path.startsWith('/')) {
+    if (router.history.location.href !== path) void router.navigate({ href: path, replace: true })
+    return
+  }
   const url = (context?.['openai/deepLink'] as { url?: unknown } | undefined)?.url
   if (typeof url === 'string' && url.startsWith('/')) router.navigate({ href: url })
 }
@@ -51,5 +76,5 @@ document.addEventListener('click', (event) => {
 
 connect().finally(() => {
   follow(app.getHostContext())
-  createRoot(document.getElementById('root')!).render(<RouterProvider router={router} />)
+  createRoot(document.getElementById('root')!).render(<AppRouter />)
 })

@@ -3,7 +3,7 @@ import { applyTheme } from './theme'
 
 // The Jaz Tasks MCP App view, connected to the host that embeds the
 // ui://jaz-tasks/app resource.
-export const app = new App({ name: 'Jaz Tasks', version: '0.1.0' }, { availableDisplayModes: ['fullscreen'] })
+export const app = new App({ name: 'Jaz Tasks', version: '0.1.0' }, { availableDisplayModes: ['fullscreen'], experimental: { 'jaz/navigation': {} } })
 
 // Hosts, Jaz included, theme apps with the spec's standard variables, which
 // the stylesheet's tokens use as fallbacks (see THEMING.md).
