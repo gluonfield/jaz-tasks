@@ -26,10 +26,10 @@ function ViewIssues() {
       issues={matched}
       title={
         <>
-          <Link to="/views" className="text-ink-2 outline-none hover:text-ink">
+          <Link to="/views" className="text-ink-2 outline-none hover:text-ink max-md:hidden">
             Views
           </Link>
-          <ChevronRight className="size-3 text-ink-3" />
+          <ChevronRight className="size-3 text-ink-3 max-md:hidden" />
           {view.name}
         </>
       }

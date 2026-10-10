@@ -8,6 +8,7 @@ import { type PickerKind, getUI, openCreateIssue, openCreateRelated, setUI } fro
 import { CommandPalette } from './command-palette'
 import { CreateIssueDialog } from './create-issue'
 import { isTyping } from './issue-view'
+import { NavDrawer } from './nav-drawer'
 import { Sidebar } from './sidebar'
 
 const pickerKeys: Record<string, PickerKind> = { s: 'status', p: 'priority', a: 'assignee', l: 'labels', e: 'estimate', D: 'dueDate' }
@@ -73,26 +74,29 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [client, navigate, teamId])
 
   return (
-    <div className="flex h-full min-h-0">
-      <Sidebar />
-      <main className="my-2 mr-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-card)] bg-bg">
-        {children}
-      </main>
-      <CreateIssueDialog />
-      <CommandPalette />
-      <Toaster
-        position="bottom-left"
-        toastOptions={{
-          unstyled: true,
-          classNames: {
-            toast:
-              'flex w-[340px] items-center gap-2.5 rounded-[var(--radius-card)] border border-border bg-raised px-3.5 py-3 text-[13px] text-ink shadow-[var(--shadow-raised)]',
-            title: 'font-medium',
-            description: 'text-ink-3',
-            actionButton: 'ml-auto rounded-[5px] px-2 py-1 text-[12px] font-medium text-primary hover:bg-list-hover',
-          },
-        }}
-      />
-    </div>
+    <NavDrawer>
+      <div className="flex h-full min-h-0">
+        <Sidebar className="max-md:hidden" />
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-bg md:my-2 md:mr-2 md:rounded-[var(--radius-card)]">
+          {children}
+        </main>
+        <CreateIssueDialog />
+        <CommandPalette />
+        <Toaster
+          position="bottom-left"
+          mobileOffset={{ bottom: 'calc(16px + var(--safe-area-bottom))' }}
+          toastOptions={{
+            unstyled: true,
+            classNames: {
+              toast:
+                'flex w-[340px] items-center gap-2.5 rounded-[var(--radius-card)] border border-border bg-raised px-3.5 py-3 text-[13px] text-ink shadow-[var(--shadow-raised)]',
+              title: 'font-medium',
+              description: 'text-ink-3',
+              actionButton: 'ml-auto rounded-[5px] px-2 py-1 text-[12px] font-medium text-primary hover:bg-list-hover',
+            },
+          }}
+        />
+      </div>
+    </NavDrawer>
   )
 }

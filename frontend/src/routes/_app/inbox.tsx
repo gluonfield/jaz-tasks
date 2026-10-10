@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button } from '@jaz/ui/button'
-import { Check, CheckCheck, Inbox as InboxIcon, MoreHorizontal } from 'lucide-react'
+import { Check, CheckCheck, ChevronLeft, Inbox as InboxIcon, MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/empty-state'
 import { Avatar } from '@/components/icons'
 import { IssuePage } from '@/components/issue-page'
+import { ViewHeader } from '@/components/issue-view'
 import { useStateIcon } from '@/components/properties'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortcut, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { timeAgo } from '@/lib/issues'
@@ -47,12 +48,17 @@ function Inbox() {
         dismissUpdates([selectedUpdate])
       }}
     >
-      <div className={cn('flex w-[340px] shrink-0 flex-col border-r border-border', selected ? 'hidden md:flex' : 'max-w-full')}>
-        <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
-          <InboxIcon className="size-4 text-ink-2" /> Inbox
+      <div className={cn('flex w-full shrink-0 flex-col border-border md:w-[340px] md:border-r', selected && 'max-md:hidden')}>
+        <ViewHeader
+          title={
+            <>
+              <InboxIcon className="size-4 text-ink-2" /> Inbox
+            </>
+          }
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="ml-auto" aria-label="Inbox actions">
+              <Button variant="ghost" size="icon" aria-label="Inbox actions">
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
@@ -68,8 +74,8 @@ function Inbox() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </header>
-        <div className="scrollbar-quiet flex-1 overflow-y-auto p-1.5">
+        </ViewHeader>
+        <div className="scrollbar-quiet flex-1 overflow-y-auto p-1.5 pb-[calc(0.375rem+var(--safe-area-bottom))]">
           {(isPending || isError || !entries.length) && (
             <p className="px-2.5 py-4 text-[12px] text-ink-3">{isPending ? 'Loading updates…' : isError ? 'Could not load updates' : 'No new updates'}</p>
           )}
@@ -117,14 +123,16 @@ function Inbox() {
           })}
         </div>
       </div>
-      <div className={cn('min-w-0 flex-1', !selected && 'hidden md:block')}>
+      <div className={cn('min-w-0 flex-1', !selected && 'max-md:hidden')}>
         {selected ? (
-          <div className="flex h-full min-h-0 flex-col">
-            <Button variant="ghost" size="sm" className="m-2 self-start md:hidden" onClick={() => navigate({ to: '/inbox', search: {} })}>
-              <InboxIcon /> Inbox
-            </Button>
-            <div className="min-h-0 flex-1"><IssuePage identifier={selected} /></div>
-          </div>
+          <IssuePage
+            identifier={selected}
+            back={
+              <Button variant="ghost" size="icon" aria-label="Back to Inbox" className="-ml-1.5 md:hidden" onClick={() => navigate({ to: '/inbox', search: {} })}>
+                <ChevronLeft />
+              </Button>
+            }
+          />
         ) : (
           <EmptyState
             icon={<InboxIcon className="size-5" />}

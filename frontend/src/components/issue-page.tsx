@@ -6,11 +6,11 @@ import { toast } from 'sonner'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useArchiveIssue, useCatalogMaps, useIssueDetail, useIssuePatch, useIssues } from '@/lib/queries'
 import type { Issue, IssueDetail } from '@/lib/types'
-import { openCreateRelated, setUI } from '@/lib/ui'
+import { openCreateRelated, setUI, useWide } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { Activity } from './activity'
 import { Avatar, LabelDot, TeamBadge } from './icons'
-import { isTyping } from './issue-view'
+import { ViewHeader, isTyping } from './issue-view'
 import { EditableMarkdown } from './editable'
 import {
   AssigneePicker,
@@ -25,9 +25,10 @@ import {
   useStateIcon,
 } from './properties'
 
-export function IssuePage({ identifier }: { identifier: string }) {
+export function IssuePage({ identifier, back }: { identifier: string; back?: ReactNode }) {
   const { data: issue, error } = useIssueDetail(identifier)
   const navigate = useNavigate()
+  const wide = useWide()
   const { teams } = useCatalogMaps()
   const team = issue && teams.get(issue.teamId)
 
@@ -55,32 +56,39 @@ export function IssuePage({ identifier }: { identifier: string }) {
   }
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px]">
-        {team && (
-          <Link
-            to="/team/$teamKey/$view"
-            params={{ teamKey: team.key, view: 'all' }}
-            className="flex items-center gap-2 rounded-[5px] px-1 py-0.5 font-medium text-ink-2 outline-none hover:text-ink"
-          >
-            <TeamBadge icon={team.icon} color={team.color} />
-            {team.name}
-          </Link>
-        )}
-        <ChevronRight className="size-3 text-ink-3" />
-        <span className="font-medium text-ink">{issue.identifier}</span>
+      <ViewHeader
+        leading={back}
+        title={
+          <>
+            {team && (
+              <Link
+                to="/team/$teamKey/$view"
+                params={{ teamKey: team.key, view: 'all' }}
+                className="flex items-center gap-2 rounded-[5px] px-1 py-0.5 text-ink-2 outline-none hover:text-ink"
+              >
+                <TeamBadge icon={team.icon} color={team.color} />
+                {team.name}
+              </Link>
+            )}
+            <ChevronRight className="size-3 text-ink-3" />
+            {issue.identifier}
+          </>
+        }
+      >
         <IssueMenu issue={issue} />
-      </header>
+      </ViewHeader>
       <div className="flex min-h-0 flex-1">
         <div className="scrollbar-quiet min-w-0 flex-1 overflow-y-auto">
-          <div key={issue.id} className="mx-auto max-w-[780px] animate-rise px-10 pb-24 pt-9">
+          <div key={issue.id} className="mx-auto max-w-[780px] animate-rise px-4 pb-24 pt-5 md:px-10 md:pt-9">
             <ParentLink issue={issue} />
             <Title key={issue.title} issue={issue} />
+            {!wide && <Properties issue={issue} wide={false} />}
             <Description key={issue.description} issue={issue} />
             <SubIssues issue={issue} />
             <Activity issue={issue} />
           </div>
         </div>
-        <Properties issue={issue} />
+        {wide && <Properties issue={issue} wide />}
       </div>
     </div>
   )
@@ -219,7 +227,7 @@ function SubIssues({ issue }: { issue: Issue }) {
                 key={child.id}
                 to="/issue/$identifier"
                 params={{ identifier: child.identifier }}
-                className="flex h-9 items-center gap-2.5 border-b border-border/60 px-3 text-[13px] outline-none last:border-b-0 hover:bg-list-hover"
+                className="flex h-9 items-center gap-2.5 border-b border-border/60 px-3 text-[13px] outline-none last:border-b-0 hover:bg-list-hover pointer-coarse:h-11"
               >
                 {state && stateIcon(state)}
                 <span className="w-14 shrink-0 text-[12.5px] tabular-nums text-ink-3">{child.identifier}</span>
@@ -243,26 +251,33 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function Properties({ issue }: { issue: Issue }) {
+function Chip({ children }: { label: string; children: ReactNode }) {
+  return children
+}
+
+// Properties is the labelled sidebar on wide screens and a row of chips
+// under the title on narrow ones.
+function Properties({ issue, wide }: { issue: Issue; wide: boolean }) {
   const patch = useIssuePatch(issue)
   const { catalog, labels, states } = useCatalogMaps()
   const done = ['completed', 'canceled'].includes(states.get(issue.stateId)?.type ?? '')
   const hasCycles = !!issue.cycleId || !!catalog?.cycles.some((c) => c.teamId === issue.teamId)
-  const shared = { teamId: issue.teamId, issueId: issue.id, variant: 'row' as const }
-  return (
-    <aside className="scrollbar-quiet w-[296px] shrink-0 overflow-y-auto border-l border-border px-3 py-4">
-      <div className="flex flex-col gap-0.5">
-        <Row label="Status">
-          <StatusPicker {...shared} value={issue.stateId} onChange={(stateId) => patch({ stateId })} />
-        </Row>
-        <Row label="Priority">
-          <PriorityPicker {...shared} value={issue.priority} onChange={(priority) => patch({ priority })} />
-        </Row>
-        <Row label="Assignee">
-          <AssigneePicker {...shared} value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
-        </Row>
-        <Row label="Labels">
-          <LabelsPicker {...shared} value={issue.labelIds} onChange={(labelIds) => patch({ labelIds })}>
+  const shared = { teamId: issue.teamId, issueId: issue.id, variant: wide ? 'row' : 'chip' } as const
+  const Field = wide ? Row : Chip
+  const fields = (
+    <>
+      <Field label="Status">
+        <StatusPicker {...shared} value={issue.stateId} onChange={(stateId) => patch({ stateId })} />
+      </Field>
+      <Field label="Priority">
+        <PriorityPicker {...shared} value={issue.priority} onChange={(priority) => patch({ priority })} />
+      </Field>
+      <Field label="Assignee">
+        <AssigneePicker {...shared} value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
+      </Field>
+      <Field label="Labels">
+        <LabelsPicker {...shared} value={issue.labelIds} onChange={(labelIds) => patch({ labelIds })}>
+          {wide && (
             <span className="flex min-h-8 flex-wrap items-center gap-1 rounded-[var(--radius-control)] px-1 py-1 hover:bg-list-hover">
               {issue.labelIds.map((id) => labels.get(id)).filter((l) => l !== undefined).map((label) => (
                 <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border bg-raised px-2 text-[12px] text-ink-2">
@@ -275,26 +290,34 @@ function Properties({ issue }: { issue: Issue }) {
                 {!issue.labelIds.length && 'Add label'}
               </span>
             </span>
-          </LabelsPicker>
-        </Row>
-        <Row label="Project">
-          <ProjectPicker {...shared} value={issue.projectId} onChange={(projectId) => patch({ projectId })} />
-        </Row>
-        <Row label="Parent">
-          <ParentPicker {...shared} issueId={issue.id} value={issue.parentId} onChange={(parentId) => patch({ parentId })} />
-        </Row>
-        {hasCycles && (
-          <Row label="Cycle">
-            <CyclePicker {...shared} value={issue.cycleId} onChange={(cycleId) => patch({ cycleId })} />
-          </Row>
-        )}
-        <Row label="Estimate">
-          <EstimatePicker {...shared} value={issue.estimate} onChange={(estimate) => patch({ estimate })} />
-        </Row>
-        <Row label="Due date">
-          <DueDatePicker {...shared} done={done} value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} />
-        </Row>
-      </div>
+          )}
+        </LabelsPicker>
+      </Field>
+      <Field label="Project">
+        <ProjectPicker {...shared} value={issue.projectId} onChange={(projectId) => patch({ projectId })} />
+      </Field>
+      <Field label="Parent">
+        <ParentPicker {...shared} issueId={issue.id} value={issue.parentId} onChange={(parentId) => patch({ parentId })} />
+      </Field>
+      {hasCycles && (
+        <Field label="Cycle">
+          <CyclePicker {...shared} value={issue.cycleId} onChange={(cycleId) => patch({ cycleId })} />
+        </Field>
+      )}
+      <Field label="Estimate">
+        <EstimatePicker {...shared} value={issue.estimate} onChange={(estimate) => patch({ estimate })} />
+      </Field>
+      <Field label="Due date">
+        <DueDatePicker {...shared} done={done} value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} />
+      </Field>
+    </>
+  )
+  if (!wide) {
+    return <div className="mt-3 flex flex-wrap gap-1.5">{fields}</div>
+  }
+  return (
+    <aside className="scrollbar-quiet w-[296px] shrink-0 overflow-y-auto border-l border-border px-3 py-4">
+      <div className="flex flex-col gap-0.5">{fields}</div>
     </aside>
   )
 }

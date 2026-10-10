@@ -20,7 +20,7 @@ export function CommandPalette() {
     <Dialog open={open} onOpenChange={(next) => setUI({ paletteOpen: next })}>
       <DialogContent
         showCloseButton={false}
-        className="top-[14%] w-[640px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 overflow-hidden rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] sm:max-w-[640px]"
+        className="top-[14%] w-[640px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 overflow-hidden rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] md:max-w-[640px]"
       >
         <DialogTitle className="sr-only">Command menu</DialogTitle>
         {open && <Palette />}
@@ -76,7 +76,7 @@ function Palette() {
         value={search}
         onValueChange={setSearch}
         placeholder={page === 'root' ? 'Type a command or search...' : `Change ${page}...`}
-        className="h-12 w-full border-b border-border bg-transparent px-4 text-[15px] text-ink outline-none placeholder:text-ink-3"
+        className="h-12 w-full border-b border-border bg-transparent px-4 text-[15px] text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
       />
       <CommandPrimitive.List className="scrollbar-quiet max-h-[min(420px,60vh)] overflow-y-auto p-1.5 [&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[11.5px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-ink-3">
         <CommandPrimitive.Empty className="py-8 text-center text-[13px] text-ink-3">No results</CommandPrimitive.Empty>

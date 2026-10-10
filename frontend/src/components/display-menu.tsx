@@ -30,9 +30,9 @@ export function DisplayMenu<T extends string>({
 
   return (
     <Popover>
-      <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-[12.5px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active">
+      <PopoverTrigger className="flex h-7 items-center gap-1.5 rounded-full border border-border px-3 text-[12.5px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active max-md:w-7 max-md:justify-center max-md:px-0">
         <SlidersHorizontal className="size-3.5" />
-        Display
+        <span className="max-md:sr-only">Display</span>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 rounded-[var(--radius-card)] p-3 shadow-[var(--shadow-raised)]">
         <div className="grid grid-cols-2 gap-1.5">
@@ -51,7 +51,7 @@ export function DisplayMenu<T extends string>({
           ))}
         </div>
         {children}
-        <p className="mt-3 border-t border-border pt-2.5 text-[11.5px] text-ink-3">
+        <p className="mt-3 border-t border-border pt-2.5 text-[11.5px] text-ink-3 pointer-coarse:hidden">
           Toggle layout <Kbd>⌘</Kbd>
           <Kbd>B</Kbd>
         </p>
@@ -67,7 +67,7 @@ export function DisplaySelect<T extends string>({ label, value, options, onChang
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="h-7 rounded-[5px] border border-border bg-bg px-1.5 text-[12.5px] text-ink outline-none"
+        className="h-7 rounded-[5px] border border-border bg-bg px-1.5 text-[12.5px] text-ink outline-none pointer-coarse:text-[16px]"
       >
         {options.map(([option, name]) => (
           <option key={option} value={option}>

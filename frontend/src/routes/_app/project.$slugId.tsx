@@ -23,10 +23,10 @@ function ProjectPage() {
   }
   const title = (
     <>
-      <Link to="/projects" className="text-ink-2 outline-none hover:text-ink">
+      <Link to="/projects" className="text-ink-2 outline-none hover:text-ink max-md:hidden">
         Projects
       </Link>
-      <ChevronRight className="size-3 text-ink-3" />
+      <ChevronRight className="size-3 text-ink-3 max-md:hidden" />
       <EntityIcon icon={project.icon} color={project.color} />
       {project.name}
     </>
@@ -68,7 +68,7 @@ function Overview({ project }: { project: Project }) {
   const content = useProjectContent(project.id)
   return (
     <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto max-w-[760px] px-8 pb-24 pt-10">
+      <div className="mx-auto max-w-[760px] px-4 pb-24 pt-6 md:px-8 md:pt-10">
         <span className="flex size-10 items-center justify-center rounded-[10px]" style={{ background: `color-mix(in oklab, ${project.color} 16%, transparent)` }}>
           <EntityIcon icon={project.icon} color={project.color} className="size-5" />
         </span>
@@ -85,7 +85,7 @@ function Overview({ project }: { project: Project }) {
           value={project.description}
           placeholder="Add a short summary..."
           onSave={(description) => patch({ description })}
-          className="mt-1 text-[15px] text-ink-2"
+          className="mt-1 text-[15px] text-ink-2 pointer-coarse:text-[16px]"
         />
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
           <ProjectProperties

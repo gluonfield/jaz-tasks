@@ -32,7 +32,7 @@ export function CreateIssueDialog() {
     <Dialog open={open} onOpenChange={(next) => setUI({ createOpen: next })}>
       <DialogContent
         showCloseButton={false}
-        className="top-[12%] w-[720px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] sm:max-w-[720px]"
+        className="top-[12%] w-[720px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] md:max-w-[720px]"
       >
         {open && <CreateIssueForm />}
       </DialogContent>
@@ -154,7 +154,7 @@ function CreateIssueForm() {
           value={draft.description ?? ''}
           onChange={(e) => set({ description: e.target.value })}
           placeholder="Add description..."
-          className="field-sizing-content mt-1.5 min-h-20 w-full resize-none bg-transparent text-[14px] leading-relaxed text-ink outline-none placeholder:text-ink-3"
+          className="field-sizing-content mt-1.5 min-h-20 w-full resize-none bg-transparent text-[14px] leading-relaxed text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
         />
       </div>
       <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3.5 pt-1">

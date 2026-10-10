@@ -4,11 +4,10 @@ import { formatDay } from '@/lib/issues'
 import { type ProjectPatch, useUpdateProject } from '@/lib/queries'
 import { type Scale, type Zoom, fromDay, timelineScale, toDay, today, zooms } from '@/lib/timeline'
 import type { Project } from '@/lib/types'
+import { useWide } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon } from './icons'
 import { isTyping } from './issue-view'
-
-const SIDE = 260
 
 type Range = { start: number; end: number }
 type Mode = 'move' | 'start' | 'end' | 'create'
@@ -36,6 +35,7 @@ function dragged(mode: Mode, from: Range, delta: number): Range {
 const label = (day: number) => formatDay(fromDay(day))
 
 export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[]; zoom: Zoom; onZoom: (zoom: Zoom) => void }) {
+  const side = useWide() ? 260 : 140
   const navigate = useNavigate()
   const update = useUpdateProject()
   const now = today()
@@ -56,16 +56,16 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
 
   const measure = useCallback(() => {
     const el = scroller.current!
-    const width = el.clientWidth - SIDE
+    const width = el.clientWidth - side
     center.current = shown.current.start + (el.scrollLeft + width / 2) / shown.current.px
     setView({ left: el.scrollLeft, width })
-  }, [])
+  }, [side])
 
   useLayoutEffect(() => {
     const el = scroller.current!
     shown.current = scale
-    el.scrollLeft = (center.current - scale.start) * scale.px - (el.clientWidth - SIDE) / 2
-  }, [scale])
+    el.scrollLeft = (center.current - scale.start) * scale.px - (el.clientWidth - side) / 2
+  }, [scale, side])
 
   useEffect(() => {
     const observer = new ResizeObserver(measure)
@@ -90,12 +90,12 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
   const x = (day: number) => (day - scale.start) * scale.px
   const dayAt = (clientX: number) => {
     const el = scroller.current!
-    return Math.floor(scale.start + (clientX - el.getBoundingClientRect().left - SIDE + el.scrollLeft) / scale.px)
+    return Math.floor(scale.start + (clientX - el.getBoundingClientRect().left - side + el.scrollLeft) / scale.px)
   }
   // reveal centers a range that fits the lanes and otherwise brings its start in.
   const reveal = ({ start, end }: Range) => {
     const el = scroller.current!
-    const lane = el.clientWidth - SIDE
+    const lane = el.clientWidth - side
     const width = (end - start + 1) * scale.px
     el.scrollTo({ left: width < lane - 96 ? x(start) + (width - lane) / 2 : x(start) - 48, behavior: 'smooth' })
   }
@@ -154,14 +154,14 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
   const band = drag ?? (hovered && hoveredRange && { project: hovered, range: hoveredRange })
   return (
     <div ref={scroller} onScroll={measure} className={cn('scrollbar-quiet h-full overflow-auto', drag && 'select-none')}>
-      <div className="relative flex min-h-full flex-col" style={{ width: SIDE + x(scale.end) }}>
-        <Header scale={scale} x={x} now={now} cursor={band ? null : cursor} band={band} onToday={() => reveal({ start: now, end: now })} />
+      <div className="relative flex min-h-full flex-col" style={{ width: side + x(scale.end) }}>
+        <Header side={side} scale={scale} x={x} now={now} cursor={band ? null : cursor} band={band} onToday={() => reveal({ start: now, end: now })} />
         <div
           className="relative flex flex-1 flex-col"
-          onPointerMove={(e) => setCursor(e.clientX - scroller.current!.getBoundingClientRect().left < SIDE ? null : dayAt(e.clientX))}
+          onPointerMove={(e) => setCursor(e.clientX - scroller.current!.getBoundingClientRect().left < side ? null : dayAt(e.clientX))}
           onPointerLeave={() => setCursor(null)}
         >
-          <div aria-hidden className="pointer-events-none absolute inset-y-0" style={{ left: SIDE, width: x(scale.end) }}>
+          <div aria-hidden className="pointer-events-none absolute inset-y-0" style={{ left: side, width: x(scale.end) }}>
             {scale.major.map((tick) => (
               <span key={tick.day} className="absolute inset-y-0 w-px bg-border" style={{ left: x(tick.day) }} />
             ))}
@@ -177,7 +177,7 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
                   to="/project/$slugId"
                   params={{ slugId: project.slugId }}
                   className="sticky left-0 z-10 flex shrink-0 items-center gap-2.5 border-r border-border bg-bg px-4 text-[13px] font-medium text-ink outline-none group-hover/row:[background:linear-gradient(var(--color-list-hover),var(--color-list-hover)),var(--color-bg)]"
-                  style={{ width: SIDE }}
+                  style={{ width: side }}
                 >
                   <EntityIcon icon={project.icon} color={project.color} />
                   <span className="truncate">{project.name}</span>
@@ -219,7 +219,7 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
             )
           })}
           <div className="flex flex-1">
-            <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-bg" style={{ width: SIDE }} />
+            <div className="sticky left-0 z-10 shrink-0 border-r border-border bg-bg" style={{ width: side }} />
           </div>
         </div>
       </div>
@@ -280,6 +280,7 @@ function Bar({
 }
 
 function Header({
+  side,
   scale,
   x,
   now,
@@ -287,6 +288,7 @@ function Header({
   band,
   onToday,
 }: {
+  side: number
   scale: Scale
   x: (day: number) => number
   now: number
@@ -297,7 +299,7 @@ function Header({
   const pill = 'absolute bottom-1 z-[2] -translate-x-1/2 whitespace-nowrap rounded-[5px] px-1.5 text-[11.5px] font-medium leading-5'
   return (
     <div className="sticky top-0 z-20 flex h-[52px] shrink-0 border-b border-border bg-bg">
-      <div className="sticky left-0 z-10 flex shrink-0 items-end border-r border-border bg-bg px-4 pb-2" style={{ width: SIDE }}>
+      <div className="sticky left-0 z-10 flex shrink-0 items-end border-r border-border bg-bg px-4 pb-2" style={{ width: side }}>
         <button
           onClick={onToday}
           className="h-6 rounded-full border border-border px-2.5 text-[12px] font-medium text-ink-2 outline-none transition-colors hover:bg-list-hover hover:text-ink"
@@ -308,7 +310,7 @@ function Header({
       <div className="relative flex-1 select-none">
         {scale.major.map((tick) => (
           <div key={tick.day} className="absolute top-0 h-6 border-l border-border" style={{ left: x(tick.day), width: x(tick.end) - x(tick.day) }}>
-            <span className="sticky inline-block whitespace-nowrap px-2 pt-1.5 text-[12px] font-medium text-ink-2" style={{ left: SIDE }}>
+            <span className="sticky inline-block whitespace-nowrap px-2 pt-1.5 text-[12px] font-medium text-ink-2" style={{ left: side }}>
               {tick.label}
             </span>
           </div>

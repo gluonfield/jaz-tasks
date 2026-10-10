@@ -30,7 +30,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCreateWorkspace, useSwitchWorkspace, useWorkspaces } from '@/lib/account'
 import { embedded } from '@/lib/api'
@@ -45,10 +45,10 @@ import { inputClass } from './controls'
 import { MyIssuesIcon, TeamBadge, WorkspaceBadge } from './icons'
 import { Kbd } from './kbd'
 
-export function Sidebar() {
+export function Sidebar({ className }: { className?: string }) {
   const { data: catalog } = useCatalog()
   return (
-    <aside className="flex w-[232px] shrink-0 flex-col gap-px px-2.5 pb-3 pt-2.5 text-[13px]">
+    <aside className={cn('flex w-[232px] shrink-0 flex-col gap-px px-2.5 pb-3 pt-2.5 text-[13px]', className)}>
       <div className="mb-2 flex items-center gap-1">
         <WorkspaceMenu name={catalog?.organization.name ?? 'Jaz'} email={catalog?.viewer.email} admin={catalog?.viewer.admin} />
         <IconButton label="Search" shortcut="⌘K" onClick={() => setUI({ paletteOpen: true })}>
@@ -98,7 +98,7 @@ function NavItem({ to, icon, children, indent = false }: { to: string; icon?: Re
     <Link
       to={to}
       className={cn(
-        'flex h-7 items-center gap-2.5 rounded-[var(--radius-control)] px-2 font-medium text-ink-2 outline-none transition-colors duration-100 hover:bg-list-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4 [&_svg]:shrink-0',
+        'flex h-7 items-center gap-2.5 rounded-[var(--radius-control)] px-2 font-medium text-ink-2 outline-none transition-colors duration-100 hover:bg-list-hover hover:text-ink focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-10 [&_svg]:size-4 [&_svg]:shrink-0',
         active && 'bg-list-active text-ink hover:bg-list-active',
         indent && 'pl-[30px]',
       )}
@@ -116,7 +116,7 @@ function TeamNav({ team }: { team: { id: string; key: string; name: string; icon
     <div className="flex flex-col gap-px">
       <button
         onClick={() => setOpen(!open)}
-        className="group flex h-7 items-center gap-2 rounded-[var(--radius-control)] px-2 font-medium text-ink-2 outline-none hover:bg-list-hover hover:text-ink"
+        className="group flex h-7 items-center gap-2 rounded-[var(--radius-control)] px-2 font-medium text-ink-2 outline-none hover:bg-list-hover hover:text-ink pointer-coarse:h-10"
       >
         <TeamBadge icon={team.icon} color={team.color} />
         <span className="truncate">{team.name}</span>
@@ -155,9 +155,12 @@ function IconButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={onClick} aria-label={label} className={className}>
-          {children}
-        </Button>
+        {/* Opening another layer from the navigation drawer closes the drawer. */}
+        <DialogClose asChild>
+          <Button variant="ghost" size="icon" onClick={onClick} aria-label={label} className={className}>
+            {children}
+          </Button>
+        </DialogClose>
       </TooltipTrigger>
       <TooltipContent side="bottom">
         {label} <Kbd>{shortcut}</Kbd>
@@ -173,7 +176,7 @@ function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; a
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active">
+        <DropdownMenuTrigger className="flex h-7 min-w-0 flex-1 select-none items-center gap-2 rounded-[var(--radius-control)] px-1.5 font-semibold text-ink outline-none hover:bg-list-hover data-[state=open]:bg-list-active pointer-coarse:h-10">
           <WorkspaceBadge name={name} />
           <span className="truncate">{name}</span>
           <ChevronDown className="size-3 shrink-0 text-ink-3" />

@@ -74,7 +74,7 @@ export function Picker({
             value={search}
             onValueChange={setSearch}
             placeholder={placeholder}
-            className="h-10 w-full border-b border-border bg-transparent px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-3"
+            className="h-10 w-full border-b border-border bg-transparent px-3.5 text-[13px] text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
           />
           <CommandPrimitive.List className="scrollbar-quiet max-h-72 overflow-y-auto p-1.5">
             {!creatable && <CommandPrimitive.Empty className="px-2 py-3 text-center text-[12px] text-ink-3">No results</CommandPrimitive.Empty>}
@@ -91,7 +91,7 @@ export function Picker({
                       onOpenChange(false)
                     }
                   }}
-                  className="group flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
+                  className="group flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active pointer-coarse:h-10"
                 >
                   {multiple && (
                     <span
@@ -107,7 +107,7 @@ export function Picker({
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
                   {option.detail}
                   {!multiple && active && <Check className="size-4 shrink-0 text-ink" />}
-                  {index < 9 && <span className="w-3 text-right text-[12px] tabular-nums text-ink-3">{index + 1}</span>}
+                  {index < 9 && <span className="w-3 text-right text-[12px] tabular-nums text-ink-3 pointer-coarse:hidden">{index + 1}</span>}
                 </CommandPrimitive.Item>
               )
             })}
@@ -119,7 +119,7 @@ export function Picker({
                   onCreate.create(search.trim())
                   setSearch('')
                 }}
-                className="flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active"
+                className="flex h-8 cursor-default items-center gap-2.5 rounded-[var(--radius-control)] px-2 text-[13px] text-ink outline-none data-[selected=true]:bg-list-active pointer-coarse:h-10"
               >
                 <Plus className="size-4 text-ink-2" />
                 <span className="truncate">

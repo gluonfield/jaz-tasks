@@ -458,7 +458,7 @@ export function DueDatePicker({ value, onChange, variant, issueId, className, do
                 setOpen(false)
               }
             }}
-            className="h-7 flex-1 rounded-[5px] border border-border bg-transparent px-2 text-[12px] text-ink outline-none"
+            className="h-7 flex-1 rounded-[5px] border border-border bg-transparent px-2 text-[12px] text-ink outline-none pointer-coarse:text-[16px]"
           />
         </div>
       }

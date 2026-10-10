@@ -39,6 +39,21 @@ export function useUI<T>(select: (s: UIState) => T): T {
   )
 }
 
+// useWide reports whether the viewport reaches Tailwind's md breakpoint, where
+// the desktop layout starts.
+export function useWide() {
+  const query = '(min-width: 48rem)'
+  return useSyncExternalStore(
+    (listener) => {
+      const media = window.matchMedia(query)
+      media.addEventListener('change', listener)
+      return () => media.removeEventListener('change', listener)
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  )
+}
+
 export function openCreateIssue(defaults: UIState['createDefaults'] = {}) {
   setUI({ createOpen: true, createDefaults: defaults })
 }

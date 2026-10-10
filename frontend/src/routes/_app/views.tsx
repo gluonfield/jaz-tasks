@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Layers } from 'lucide-react'
+import { ViewHeader } from '@/components/issue-view'
 import { useCatalogMaps, useIssues } from '@/lib/queries'
 import { views } from '@/lib/views'
 
@@ -10,10 +11,14 @@ function Views() {
   const { data: issues = [] } = useIssues()
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
-        <Layers className="size-4 text-ink-2" /> Views
-      </header>
-      <div className="scrollbar-quiet flex-1 overflow-y-auto">
+      <ViewHeader
+        title={
+          <>
+            <Layers className="size-4 text-ink-2" /> Views
+          </>
+        }
+      />
+      <div className="scrollbar-quiet flex-1 overflow-y-auto pb-[var(--safe-area-bottom)]">
         {views.map((view) => {
           const count = issues.filter((i) => view.match(i, { states, viewerId: catalog?.viewer.id })).length
           return (

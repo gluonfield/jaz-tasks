@@ -21,7 +21,7 @@ export function CreateProjectButton() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           showCloseButton={false}
-          className="top-[10%] w-[760px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] sm:max-w-[760px]"
+          className="top-[10%] w-[760px] max-w-[calc(100vw-2rem)] translate-y-0 gap-0 rounded-[12px] border-border bg-raised p-0 shadow-[var(--shadow-raised)] md:max-w-[760px]"
         >
           {open && <ProjectForm close={() => setOpen(false)} />}
         </DialogContent>
@@ -89,7 +89,7 @@ function ProjectForm({ close }: { close: () => void }) {
           value={draft.description ?? ''}
           onChange={(e) => set({ description: e.target.value })}
           placeholder="Add a short summary..."
-          className="field-sizing-content mt-2 min-h-12 w-full resize-none bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3"
+          className="field-sizing-content mt-2 min-h-12 w-full resize-none bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
         />
       </div>
       <div className="px-4 pb-3.5 pt-1">
@@ -100,7 +100,7 @@ function ProjectForm({ close }: { close: () => void }) {
         value={draft.content ?? ''}
         onChange={(e) => set({ content: e.target.value })}
         placeholder="Write a description, a project brief, or collect ideas..."
-        className="field-sizing-content block max-h-[45vh] min-h-40 w-full resize-none overflow-y-auto bg-transparent px-4 py-3.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3"
+        className="field-sizing-content block max-h-[45vh] min-h-40 w-full resize-none overflow-y-auto bg-transparent px-4 py-3.5 text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
       />
       <div className="flex items-center justify-end border-t border-border px-4 py-2.5">
         <Button

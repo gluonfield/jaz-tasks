@@ -82,6 +82,8 @@
 
 :root {
   color-scheme: light;
+  /* An MCP host sets this from its safeAreaInsets. */
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 :root:where(.dark) {

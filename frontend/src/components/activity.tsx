@@ -210,7 +210,7 @@ function CommentItem({ comment, identifier }: { comment: Comment; identifier: st
           <Button
             aria-label="Delete comment"
             onClick={() => remove.mutate(comment.id)}
-            variant="ghost" size="icon-sm" className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            variant="ghost" size="icon-sm" className="ml-auto opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
           >
             <Trash2 className="size-3.5" />
           </Button>
@@ -241,7 +241,7 @@ function Composer({ identifier }: { identifier: string }) {
           }
         }}
         placeholder="Leave a comment..."
-        className="field-sizing-content min-h-10 w-full resize-none bg-transparent text-[13.5px] leading-relaxed text-ink outline-none placeholder:text-ink-3"
+        className="field-sizing-content min-h-10 w-full resize-none bg-transparent text-[13.5px] leading-relaxed text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]"
       />
       <div className="flex justify-end">
         <Button

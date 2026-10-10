@@ -32,7 +32,7 @@ export function IssueList({
       <div className="scrollbar-quiet h-full overflow-y-auto pb-24" role="grid">
         {groups.map((group) => (
           <Section key={group.key} id={group.key}>
-            <div className="sticky top-0 z-10 flex h-9 items-center gap-2 bg-column pl-3 pr-3">
+            <div className="sticky top-0 z-10 flex h-9 items-center gap-2 bg-column pl-3 pr-3 pointer-coarse:h-11">
               <button
                 onClick={() => {
                   const next = new Set(collapsed)
@@ -51,7 +51,7 @@ export function IssueList({
               <button
                 aria-label={`Create issue in ${group.state.name}`}
                 onClick={() => openCreateIssue({ ...createDefaults, teamId: group.state.teamId, stateId: group.state.id })}
-                className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink"
+                className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink pointer-coarse:size-9"
               >
                 <Plus className="size-3.5" />
               </button>

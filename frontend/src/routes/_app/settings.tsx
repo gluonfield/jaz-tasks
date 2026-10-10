@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@jaz/ui/button'
 import { inputClass } from '@/components/controls'
 import { Avatar, TeamBadge } from '@/components/icons'
+import { ViewHeader } from '@/components/issue-view'
 import { McpConnection } from '@/components/mcp-connection'
 import { useAPIKeys, useCreateAPIKey, useDeleteAPIKey, useGrants, useRevokeGrant } from '@/lib/account'
 import { embedded } from '@/lib/api'
@@ -22,11 +23,15 @@ function Settings() {
   const session = !embedded()
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-4 text-[13px] font-medium text-ink">
-        <SettingsIcon className="size-4 text-ink-2" /> Settings
-      </header>
+      <ViewHeader
+        title={
+          <>
+            <SettingsIcon className="size-4 text-ink-2" /> Settings
+          </>
+        }
+      />
       <div className="scrollbar-quiet flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[680px] animate-rise px-8 pb-24 pt-10">
+        <div className="mx-auto max-w-[680px] animate-rise px-4 pb-24 pt-6 md:px-8 md:pt-10">
           {session && (
             <Section title="Account">
               <Row>

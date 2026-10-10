@@ -9,6 +9,7 @@ import { DisplayMenu, DisplaySelect } from './display-menu'
 import { EmptyState } from './empty-state'
 import { IssueBoard } from './issue-board'
 import { IssueList } from './issue-list'
+import { NavButton } from './nav-drawer'
 
 const layouts: ['list' | 'board', LucideIcon][] = [
   ['list', List],
@@ -110,11 +111,12 @@ export function IssueView({
   )
 }
 
-export function ViewHeader({ title, tabs, children }: { title: ReactNode; tabs?: ReactNode; children?: ReactNode }) {
+export function ViewHeader({ title, tabs, leading = <NavButton />, children }: { title: ReactNode; tabs?: ReactNode; leading?: ReactNode; children?: ReactNode }) {
   return (
     <header className="flex h-11 shrink-0 items-center gap-3 border-b border-border px-4">
-      <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-ink">{title}</div>
-      {tabs && <div className="flex items-center gap-1.5">{tabs}</div>}
+      {leading}
+      <div className="flex max-w-[60%] shrink-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[13px] font-medium text-ink">{title}</div>
+      {tabs && <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">{tabs}</div>}
       <div className="ml-auto flex items-center gap-1.5">{children}</div>
     </header>
   )

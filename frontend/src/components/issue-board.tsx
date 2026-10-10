@@ -51,7 +51,7 @@ export function IssueBoard({
                 </button>
               </div>
               <SortableContext items={ids[group.key]} strategy={verticalListSortingStrategy}>
-                <div className="scrollbar-quiet flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-1.5 pb-3">
+                <div className="scrollbar-quiet flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-1.5 pb-[calc(0.75rem+var(--safe-area-bottom))]">
                   {ids[group.key].map((id) => (
                     <SortableIssue key={id} id={id}>
                       <IssueCard issue={issues.get(id)!} />

@@ -25,7 +25,7 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
         onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
         onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
         className={cn(
-          'group relative flex h-9 cursor-default items-center gap-2 pl-[18px] pr-4 text-[13px] transition-colors duration-75',
+          'group relative flex h-9 cursor-default items-center gap-2 pl-[18px] pr-4 text-[13px] transition-colors duration-75 pointer-coarse:h-11',
           focused && 'bg-list-hover',
         )}
       >
@@ -62,7 +62,7 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
               className="h-[22px] rounded-full"
             />
           )}
-          <span className="w-14 text-right text-[12px] tabular-nums text-ink-3">{formatDate(issue.createdAt)}</span>
+          <span className="w-14 text-right text-[12px] tabular-nums text-ink-3 max-md:hidden">{formatDate(issue.createdAt)}</span>
           <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} issueId={issue.id} />
         </div>
       </div>

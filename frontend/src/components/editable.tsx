@@ -37,7 +37,7 @@ export function EditableMarkdown({
           }
         }}
         placeholder={placeholder}
-        className={cn('field-sizing-content min-h-24 w-full resize-none bg-transparent text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3', className)}
+        className={cn('field-sizing-content min-h-24 w-full resize-none bg-transparent text-[14px] leading-[1.6] text-ink outline-none placeholder:text-ink-3 pointer-coarse:text-[16px]', className)}
       />
     )
   }
@@ -85,7 +85,7 @@ export function EditableLine({
           e.currentTarget.blur()
         }
       }}
-      className={cn('w-full bg-transparent text-ink outline-none placeholder:text-ink-3', className)}
+      className={cn('w-full text-ellipsis bg-transparent text-ink outline-none placeholder:text-ink-3', className)}
     />
   )
 }
