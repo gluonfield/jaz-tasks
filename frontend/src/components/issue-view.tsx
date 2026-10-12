@@ -55,7 +55,10 @@ function orderGroups(groups: IssueGroup[], layout: 'list' | 'board') {
     const rank = (g: IssueGroup) => names.indexOf(g.state.name.toLowerCase())
     return groups.filter((g) => rank(g) >= 0).sort((a, b) => rank(a) - rank(b))
   }
-  return groups.sort((a, b) => (layout === 'board' && workflowOrder(a.state, b.state)) || compareStates(a.state, b.state))
+  if (layout === 'board') {
+    return groups.sort((a, b) => workflowOrder(a.state, b.state) || compareStates(a.state, b.state))
+  }
+  return groups.sort((a, b) => compareStates(a.state, b.state))
 }
 
 export function IssueView({

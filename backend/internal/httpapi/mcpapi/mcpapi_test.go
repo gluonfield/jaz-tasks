@@ -67,10 +67,15 @@ func serve(t *testing.T) env {
 
 func (e env) session(t *testing.T, key string) *mcp.ClientSession {
 	t.Helper()
+	return e.sessionWith(t, bearer{key: key})
+}
+
+func (e env) sessionWith(t *testing.T, transport bearer) *mcp.ClientSession {
+	t.Helper()
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
 	session, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{
 		Endpoint:   e.url,
-		HTTPClient: &http.Client{Transport: bearer{key: key}},
+		HTTPClient: &http.Client{Transport: transport},
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -433,16 +438,7 @@ func TestAppDisplayHeaders(t *testing.T) {
 	e := serve(t)
 	ctx := context.Background()
 	read := func(headers map[string]string) (string, error) {
-		client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
-		session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
-			Endpoint:   e.url,
-			HTTPClient: &http.Client{Transport: bearer{key: e.key, headers: headers}},
-		}, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer session.Close()
-		res, err := session.ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/app"})
+		res, err := e.sessionWith(t, bearer{key: e.key, headers: headers}).ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/app"})
 		if err != nil {
 			return "", err
 		}

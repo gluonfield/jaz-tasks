@@ -87,8 +87,12 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
             <Title key={issue.title} issue={issue} />
             {!wide && <Properties issue={issue} wide={false} />}
             <Description key={issue.description} issue={issue} />
-            {!minimal && <SubIssues issue={issue} />}
-            {!minimal && <Activity issue={issue} />}
+            {!minimal && (
+              <>
+                <SubIssues issue={issue} />
+                <Activity issue={issue} />
+              </>
+            )}
           </div>
         </div>
         {wide && <Properties issue={issue} wide />}
