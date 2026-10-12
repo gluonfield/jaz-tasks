@@ -83,9 +83,24 @@ jaz:
 
 Jaz's built-in Tasks connection sends no custom headers.
 
-### Chat buttons
+### Chat buttons: `jaz.newthread`
 
-`<jaz.newthread prompt:"..." />` in an issue description or comment renders a **New chat** button showing its prompt. In Jaz, a click starts a new chat on that prompt with the agent, model and project selected for new chats, and opens it. The web app and hosts without Jaz's `jaz/threads` capability show the button disabled. Markdown inside the prompt stays literal, and inside code the tag shows as written.
+A `jaz.newthread` tag turns a prompt into a button that starts a Jaz chat, so a ticket can carry the exact instruction an agent should work from:
+
+```md
+Compare urban agglomerations, not city proper.
+
+<jaz.newthread prompt:"The ticket id is ENG-123, you should find the biggest city in the world" />
+```
+
+- **Syntax:** `<jaz.newthread prompt:"..." />`, with the prompt in double quotes, which it cannot itself contain. The tag can sit on its own line or inside a sentence.
+- **Where:** issue descriptions, comments and project briefs. Inside inline code or a fenced code block the tag shows as written, so it can be documented. Markdown inside the prompt stays literal: links, `*` and backticks reach the chat unchanged.
+- **Button:** **New chat** followed by the prompt, truncated to fit, with the full prompt on hover.
+- **In Jaz:** a click starts a new chat on the prompt, as if you had typed and sent it on Jaz's new-chat page. It uses the agent, model, effort and project currently selected there, leaves any draft on that page untouched, and opens the chat; Back returns to Tasks. Jaz accepts the request only from the app you are clicking in. The chat runs with the agent's normal permissions, so add buttons only for prompts you would send yourself.
+- **Elsewhere:** in the web app and in hosts without Jaz's support, the button is disabled.
+- **Agents:** the MCP server's instructions describe the tag, so an agent creating or updating issues can add buttons.
+
+The app asks the host through MCP Apps: when the host advertises the experimental `jaz/threads` capability, a click sends the request `jaz/threads/create` with `{ "prompt": "..." }`, answered with `{}`.
 
 ## GraphQL
 
