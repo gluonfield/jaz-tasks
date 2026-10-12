@@ -24,7 +24,7 @@ function MyIssues() {
   return (
     <IssueView
       viewKey={`my:${tab}`}
-      loading={isLoading || !catalog}
+      loading={isLoading}
       issues={mine}
       createDefaults={{ assigneeId: me }}
       title={

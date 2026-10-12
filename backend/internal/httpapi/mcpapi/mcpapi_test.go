@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -28,12 +29,16 @@ import (
 )
 
 type bearer struct {
-	key string
+	key     string
+	headers map[string]string
 }
 
 func (b bearer) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	req.Header.Set("Authorization", "Bearer "+b.key)
+	for name, value := range b.headers {
+		req.Header.Set(name, value)
+	}
 	return http.DefaultTransport.RoundTrip(req)
 }
 
@@ -420,6 +425,47 @@ func (e env) oauth(t *testing.T, user storage.User) string {
 		t.Fatal(err)
 	}
 	return tokens.AccessToken
+}
+
+// A host configures the app per connection through headers it sends with
+// every request, the resource read included.
+func TestAppDisplayHeaders(t *testing.T) {
+	e := serve(t)
+	ctx := context.Background()
+	read := func(headers map[string]string) (string, error) {
+		client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "1"}, nil)
+		session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
+			Endpoint:   e.url,
+			HTTPClient: &http.Client{Transport: bearer{key: e.key, headers: headers}},
+		}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer session.Close()
+		res, err := session.ReadResource(ctx, &mcp.ReadResourceParams{URI: "ui://jaz-tasks/app"})
+		if err != nil {
+			return "", err
+		}
+		return res.Contents[0].Text, nil
+	}
+	for _, c := range []struct {
+		headers map[string]string
+		config  string
+	}{
+		{nil, `{}`},
+		{map[string]string{"Tasks-Mode": "Minimal", "Tasks-View": " board", "Tasks-Columns": "Todo, In Progress,,Done"}, `{"minimal":true,"view":"board","columns":["Todo","In Progress","Done"]}`},
+	} {
+		body, err := read(c.headers)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := `<div id="root" data-config="` + html.EscapeString(c.config) + `"`; !strings.Contains(body, want) {
+			t.Fatalf("app for %v lacks %s", c.headers, want)
+		}
+	}
+	if _, err := read(map[string]string{"Tasks-View": "grid"}); err == nil || !strings.Contains(err.Error(), `Tasks-View must be list or board, not "grid"`) {
+		t.Fatalf("invalid view: %v", err)
+	}
 }
 
 // Switching workspace from the app keeps the host's MCP session working, now

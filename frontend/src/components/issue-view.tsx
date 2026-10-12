@@ -1,7 +1,8 @@
 import { Button } from '@jaz/ui/button'
 import { LayoutGrid, List, type LucideIcon } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo } from 'react'
-import { type Ordering, compareIssues, compareStates } from '@/lib/issues'
+import { host } from '@/lib/host'
+import { type Ordering, compareIssues, compareStates, workflowOrder } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
 import { getUI, setUI, usePreference } from '@/lib/ui'
@@ -42,9 +43,19 @@ export function groupByState(issues: Issue[], states: Map<string, WorkflowState>
     group.issues.push(issue)
     groups.set(key(state), group)
   }
-  const sorted = [...groups.values()].sort((a, b) => compareStates(a.state, b.state))
-  sorted.forEach((g) => g.issues.sort(compareIssues(ordering)))
-  return sorted
+  groups.forEach((g) => g.issues.sort(compareIssues(ordering)))
+  return [...groups.values()]
+}
+
+// orderGroups puts rows in state order and boards in workflow order. Columns
+// the host names replace both: only those states, in the named order.
+function orderGroups(groups: IssueGroup[], layout: 'list' | 'board') {
+  const names = host.columns?.map((name) => name.toLowerCase())
+  if (names) {
+    const rank = (g: IssueGroup) => names.indexOf(g.state.name.toLowerCase())
+    return groups.filter((g) => rank(g) >= 0).sort((a, b) => rank(a) - rank(b))
+  }
+  return groups.sort((a, b) => (layout === 'board' && workflowOrder(a.state, b.state)) || compareStates(a.state, b.state))
 }
 
 export function IssueView({
@@ -66,10 +77,10 @@ export function IssueView({
   createDefaults?: IssuePatch & { teamId?: string }
   empty?: ReactNode
 }) {
-  const [layout, setLayout] = usePreference<'list' | 'board'>(`layout:${viewKey}`, 'list')
+  const [layout, setLayout] = usePreference<'list' | 'board'>(`layout:${viewKey}`, host.view ?? 'list')
   const [ordering, setOrdering] = usePreference<Ordering>(`ordering:${viewKey}`, 'manual')
   const [showCompleted, setShowCompleted] = usePreference<'yes' | 'no'>(`completed:${viewKey}`, 'yes')
-  const { states } = useCatalogMaps()
+  const { catalog, states } = useCatalogMaps()
   const visible = useMemo(
     () =>
       showCompleted === 'yes'
@@ -78,28 +89,31 @@ export function IssueView({
     [issues, showCompleted, states],
   )
   const groups = useMemo(
-    () => groupByState(visible, states, ordering, layout === 'board' ? teamStates : []),
+    () => orderGroups(groupByState(visible, states, ordering, layout === 'board' ? teamStates : []), layout),
     [visible, states, ordering, layout, teamStates],
   )
+  const minimal = host.minimal
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <ViewHeader title={title} tabs={tabs}>
-        <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
-          <DisplaySelect label="Ordering" value={ordering} options={orderings} onChange={setOrdering} />
-          <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
-            Show completed issues
-            <input
-              type="checkbox"
-              checked={showCompleted === 'yes'}
-              onChange={(e) => setShowCompleted(e.target.checked ? 'yes' : 'no')}
-              className="accent-[var(--color-primary)]"
-            />
-          </label>
-        </DisplayMenu>
+      <ViewHeader title={title} tabs={!minimal && tabs}>
+        {!minimal && (
+          <DisplayMenu layouts={layouts} layout={layout} setLayout={setLayout}>
+            <DisplaySelect label="Ordering" value={ordering} options={orderings} onChange={setOrdering} />
+            <label className="mt-2.5 flex items-center justify-between text-[12.5px] text-ink-2">
+              Show completed issues
+              <input
+                type="checkbox"
+                checked={showCompleted === 'yes'}
+                onChange={(e) => setShowCompleted(e.target.checked ? 'yes' : 'no')}
+                className="accent-[var(--color-primary)]"
+              />
+            </label>
+          </DisplayMenu>
+        )}
       </ViewHeader>
       <div className="min-h-0 flex-1">
-        {loading ? null : !visible.length ? (
+        {loading || !catalog ? null : !groups.some((g) => g.issues.length) ? (
           (empty ?? <EmptyState title="No issues" body="Issues that match this view will show up here." createDefaults={createDefaults} />)
         ) : layout === 'board' ? (
           <IssueBoard groups={groups} ordering={ordering} createDefaults={createDefaults} />

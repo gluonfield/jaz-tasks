@@ -4,6 +4,7 @@ import { PanelLeft } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { host } from '@/lib/host'
 import { Sidebar } from './sidebar'
 
 // NavDrawer shows the sidebar as a drawer below md. It wraps the whole shell
@@ -32,6 +33,9 @@ export function NavDrawer({ children }: { children: ReactNode }) {
 }
 
 export function NavButton() {
+  if (host.minimal) {
+    return null
+  }
   return (
     <DialogTrigger asChild>
       <Button variant="ghost" size="icon" aria-label="Open navigation" className="-ml-1.5 md:hidden">

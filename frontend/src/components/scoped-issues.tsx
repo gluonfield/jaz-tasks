@@ -44,7 +44,7 @@ export function ScopedIssues({
   return (
     <IssueView
       viewKey={teamId ? `team:${teamId}:${view}` : `all:${view}`}
-      loading={isLoading || !catalog}
+      loading={isLoading}
       issues={scoped}
       teamStates={scopeStates}
       createDefaults={teamId ? { teamId } : undefined}

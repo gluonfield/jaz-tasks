@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"html"
 	"io"
 	"net/http"
@@ -86,14 +87,47 @@ func registerApp(server *mcp.Server, t tools, publicURL string) {
 func addAppResource(server *mcp.Server, uri, title, body, publicURL string, modes []string) {
 	body = strings.Replace(body, `id="root"`, `id="root" data-mcp-url="`+html.EscapeString(publicURL+"/mcp")+`"`, 1)
 	server.AddResource(&mcp.Resource{URI: uri, Name: title, Title: title, MIMEType: appMIME},
-		func(context.Context, *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+			config, err := displayConfig(req.Extra.Header)
+			if err != nil {
+				return nil, err
+			}
+			text := strings.Replace(body, `id="root"`, `id="root" data-config="`+html.EscapeString(config)+`"`, 1)
 			return &mcp.ReadResourceResult{Contents: []*mcp.ResourceContents{{
-				URI: uri, MIMEType: appMIME, Text: body, Meta: mcp.Meta{
+				URI: uri, MIMEType: appMIME, Text: text, Meta: mcp.Meta{
 					"ui":        map[string]any{"prefersBorder": false, "domain": publicURL, "csp": map[string]any{"connectDomains": []string{}, "resourceDomains": []string{}}},
 					"openai/ui": map[string]any{"availableDisplayModes": modes},
 				},
 			}}}, nil
 		})
+}
+
+// displayConfig reads the app's display settings from the headers a host
+// sends with every request on its connection: Tasks-Mode: minimal, Tasks-View:
+// list or board, and Tasks-Columns, the workflow state names to show in order.
+func displayConfig(header http.Header) (string, error) {
+	mode := strings.ToLower(strings.TrimSpace(header.Get("Tasks-Mode")))
+	if mode != "" && mode != "minimal" {
+		return "", fmt.Errorf("Tasks-Mode must be minimal, not %q", mode)
+	}
+	config := struct {
+		Minimal bool     `json:"minimal,omitempty"`
+		View    string   `json:"view,omitempty"`
+		Columns []string `json:"columns,omitempty"`
+	}{
+		Minimal: mode == "minimal",
+		View:    strings.ToLower(strings.TrimSpace(header.Get("Tasks-View"))),
+	}
+	if config.View != "" && config.View != "list" && config.View != "board" {
+		return "", fmt.Errorf("Tasks-View must be list or board, not %q", config.View)
+	}
+	for name := range strings.SplitSeq(header.Get("Tasks-Columns"), ",") {
+		if name = strings.TrimSpace(name); name != "" {
+			config.Columns = append(config.Columns, name)
+		}
+	}
+	raw, err := json.Marshal(config)
+	return string(raw), err
 }
 
 type showInput struct {

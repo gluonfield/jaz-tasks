@@ -3,7 +3,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { memo, useMemo } from 'react'
-import { type Ordering, workflowOrder } from '@/lib/issues'
+import { host } from '@/lib/host'
+import type { Ordering } from '@/lib/issues'
 import { useCatalogMaps, useIssuePatch } from '@/lib/queries'
 import type { Issue, IssuePatch } from '@/lib/types'
 import { openCreateIssue, setUI, useUI } from '@/lib/ui'
@@ -24,9 +25,8 @@ export function IssueBoard({
   createDefaults?: IssuePatch & { teamId?: string }
 }) {
   const stateIcon = useStateIcon()
-  const board = useMemo(() => [...groups].sort((a, b) => workflowOrder(a.state, b.state)), [groups])
-  const { ids, issues, active, context } = useGroupDrag(board, ordering)
-  const ordered = useMemo(() => board.flatMap((g) => g.issues), [board])
+  const { ids, issues, active, context } = useGroupDrag(groups, ordering)
+  const ordered = useMemo(() => groups.flatMap((g) => g.issues), [groups])
   useListNavigation(ordered)
 
   return (
@@ -34,7 +34,7 @@ export function IssueBoard({
     // columns out from under the pointer.
     <DndContext {...context} autoScroll={{ threshold: { x: 0.05, y: 0.1 } }}>
       <div className="scrollbar-quiet flex h-full gap-2.5 overflow-x-auto p-3">
-        {board.map((group) => {
+        {groups.map((group) => {
           const create = () => openCreateIssue({ ...createDefaults, teamId: group.state.teamId, stateId: group.state.id })
           return (
             <Column key={group.key} id={group.key}>
@@ -112,7 +112,7 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
           focused && 'bg-tile-hover',
         )}
       >
-        {!lifted && <ShortcutPicker issue={issue} visible={['assignee', 'priority']} />}
+        {!lifted && <ShortcutPicker issue={issue} visible={host.minimal ? ['assignee'] : ['assignee', 'priority']} />}
         <div className="flex h-5 items-center justify-between">
           <span className="text-[12px] text-ink-3">{issue.identifier}</span>
           <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} className="-mr-1.5 size-5" />
@@ -121,25 +121,27 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
           {state && <span className="mt-[3px]">{stateIcon(state)}</span>}
           <span className={cn('line-clamp-2 font-medium leading-[19px] text-ink', done && 'text-ink-2')}>{issue.title}</span>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1">
-          <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
-          <SubIssueCount issueId={issue.id} className="h-[22px] rounded-full border border-border px-2" />
-          {issueLabels.map((label) => (
-            <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
-              <LabelDot color={label.color} />
-              {label.name}
-            </span>
-          ))}
-          {project && (
-            <span className="inline-flex h-[22px] max-w-44 items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
-              <EntityIcon icon={project.icon} color={project.color} className="size-3" />
-              <span className="truncate">{project.name}</span>
-            </span>
-          )}
-          {issue.dueDate && (
-            <DueDatePicker variant="chip" value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} teamId={issue.teamId} done={done} className="h-[22px] rounded-full" />
-          )}
-        </div>
+        {!host.minimal && (
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
+            <SubIssueCount issueId={issue.id} className="h-[22px] rounded-full border border-border px-2" />
+            {issueLabels.map((label) => (
+              <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
+                <LabelDot color={label.color} />
+                {label.name}
+              </span>
+            ))}
+            {project && (
+              <span className="inline-flex h-[22px] max-w-44 items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">
+                <EntityIcon icon={project.icon} color={project.color} className="size-3" />
+                <span className="truncate">{project.name}</span>
+              </span>
+            )}
+            {issue.dueDate && (
+              <DueDatePicker variant="chip" value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} teamId={issue.teamId} done={done} className="h-[22px] rounded-full" />
+            )}
+          </div>
+        )}
       </div>
     </IssueContextMenu>
   )

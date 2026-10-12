@@ -52,6 +52,18 @@ The server is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps
 }
 ```
 
+A connection shapes the app with headers it sends on every MCP request, such as those under Advanced in Jaz's Settings › MCP:
+
+| Header | Value |
+|---|---|
+| `Tasks-View` | `list` or `board`, the layout views open in |
+| `Tasks-Columns` | comma-separated workflow state names, the only groups and board columns shown, in that order |
+| `Tasks-Mode` | `minimal`: no sidebar, tabs or display menu; rows and cards show status, ID, title and assignee; an issue shows its status, assignee and description |
+
+An invalid value fails the app's resource read with the reason.
+
+`<jaz.newthread prompt:"..." />` in a description or comment renders a **New chat** button. In Jaz it starts a chat on that prompt with the agent, model and project selected for new chats; hosts without Jaz's `jaz/threads` capability show it disabled.
+
 ## GraphQL
 
 `POST /graphql` implements the part of [Linear's schema](https://github.com/linear/linear/blob/master/packages/sdk/src/schema.graphql) that Linear clients use, with Linear's names, shapes, filters, `ENG-123` identifiers and error format. Anything outside [`schema.graphqls`](backend/internal/httpapi/gql/schema.graphqls) fails validation, and `go test` replays the exact documents linear-cli sends. Authenticate with an OAuth token (`Bearer <token>`) or, as in Linear, a raw API key.

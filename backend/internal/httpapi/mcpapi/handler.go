@@ -18,7 +18,9 @@ import (
 const instructions = `Jaz Tasks is a Linear-style issue tracker. Issues belong to teams (keys like ENG) and are
 identified as ENG-123. Refer to teams, states, people, projects and labels by name; "me" is the
 authenticated user. Call list_teams first to learn team keys, workflow states and labels. Tools act
-in your default workspace; to work in another, pass its name as the workspace argument (list_workspaces).`
+in your default workspace; to work in another, pass its name as the workspace argument (list_workspaces).
+Descriptions and comments may include <jaz.newthread prompt:"..." />, which Jaz shows as a button that
+starts a new chat with that prompt.`
 
 // Handler serves /mcp. Requests carry an OAuth access token or API key as a
 // Bearer token; a 401 points clients at the protected-resource metadata.

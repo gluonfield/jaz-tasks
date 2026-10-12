@@ -4,7 +4,8 @@ import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/rea
 import { createRoot } from 'react-dom/client'
 import { setTransport } from './lib/api'
 import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps'
-import { app, connect, graphql } from './lib/mcp-app'
+import { host } from './lib/host'
+import { app, connect, graphql, newThread } from './lib/mcp-app'
 import { routeTree } from './routeTree.gen'
 import { Route as root } from './routes/__root'
 import './styles.css'
@@ -74,7 +75,12 @@ document.addEventListener('click', (event) => {
   }
 })
 
+Object.assign(host, JSON.parse(document.getElementById('root')!.dataset.config ?? '{}'))
+
 connect().finally(() => {
+  if (app.getHostCapabilities()?.experimental?.['jaz/threads']) {
+    host.newThread = newThread
+  }
   follow(app.getHostContext())
   createRoot(document.getElementById('root')!).render(<AppRouter />)
 })

@@ -4,6 +4,7 @@ import { Archive, ChevronRight, Copy, GitBranch, Link2, MoreHorizontal, Plus } f
 import { type ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { host } from '@/lib/host'
 import { useArchiveIssue, useCatalogMaps, useIssueDetail, useIssuePatch, useIssues } from '@/lib/queries'
 import type { Issue, IssueDetail } from '@/lib/types'
 import { openCreateRelated, setUI, useWide } from '@/lib/ui'
@@ -21,6 +22,7 @@ import {
   ParentPicker,
   PriorityPicker,
   ProjectPicker,
+  ShortcutPicker,
   StatusPicker,
   useStateIcon,
 } from './properties'
@@ -28,7 +30,8 @@ import {
 export function IssuePage({ identifier, back }: { identifier: string; back?: ReactNode }) {
   const { data: issue, error } = useIssueDetail(identifier)
   const navigate = useNavigate()
-  const wide = useWide()
+  const minimal = host.minimal
+  const wide = useWide() && !minimal
   const { teams } = useCatalogMaps()
   const team = issue && teams.get(issue.teamId)
 
@@ -75,7 +78,7 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
           </>
         }
       >
-        <IssueMenu issue={issue} />
+        {!minimal && <IssueMenu issue={issue} />}
       </ViewHeader>
       <div className="flex min-h-0 flex-1">
         <div className="scrollbar-quiet min-w-0 flex-1 overflow-y-auto">
@@ -84,8 +87,8 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
             <Title key={issue.title} issue={issue} />
             {!wide && <Properties issue={issue} wide={false} />}
             <Description key={issue.description} issue={issue} />
-            <SubIssues issue={issue} />
-            <Activity issue={issue} />
+            {!minimal && <SubIssues issue={issue} />}
+            {!minimal && <Activity issue={issue} />}
           </div>
         </div>
         {wide && <Properties issue={issue} wide />}
@@ -264,17 +267,29 @@ function Properties({ issue, wide }: { issue: Issue; wide: boolean }) {
   const hasCycles = !!issue.cycleId || !!catalog?.cycles.some((c) => c.teamId === issue.teamId)
   const shared = { teamId: issue.teamId, issueId: issue.id, variant: wide ? 'row' : 'chip' } as const
   const Field = wide ? Row : Chip
-  const fields = (
+  const status = (
+    <Field label="Status">
+      <StatusPicker {...shared} value={issue.stateId} onChange={(stateId) => patch({ stateId })} />
+    </Field>
+  )
+  const assignee = (
+    <Field label="Assignee">
+      <AssigneePicker {...shared} value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
+    </Field>
+  )
+  const fields = host.minimal ? (
     <>
-      <Field label="Status">
-        <StatusPicker {...shared} value={issue.stateId} onChange={(stateId) => patch({ stateId })} />
-      </Field>
+      {status}
+      {assignee}
+      <ShortcutPicker issue={issue} visible={['status', 'assignee']} />
+    </>
+  ) : (
+    <>
+      {status}
       <Field label="Priority">
         <PriorityPicker {...shared} value={issue.priority} onChange={(priority) => patch({ priority })} />
       </Field>
-      <Field label="Assignee">
-        <AssigneePicker {...shared} value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} />
-      </Field>
+      {assignee}
       <Field label="Labels">
         <LabelsPicker {...shared} value={issue.labelIds} onChange={(labelIds) => patch({ labelIds })}>
           {wide && (

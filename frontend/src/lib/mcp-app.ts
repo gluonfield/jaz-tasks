@@ -1,4 +1,5 @@
 import { App, type McpUiHostContext, PostMessageTransport, applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps'
+import { z } from 'zod'
 import { applyTheme } from './theme'
 
 // The Jaz Tasks MCP App view, connected to the host that embeds the
@@ -24,6 +25,11 @@ export async function connect() {
   app.onhostcontextchanged = applyHostContext
   await app.connect(new PostMessageTransport(window.parent, window.parent))
   applyHostContext(app.getHostContext())
+}
+
+// newThread asks Jaz to start a new chat with prompt.
+export function newThread(prompt: string) {
+  return app.request({ method: 'jaz/threads/create', params: { prompt } }, z.object({}))
 }
 
 // graphql runs a document through the server's app-only graphql tool.

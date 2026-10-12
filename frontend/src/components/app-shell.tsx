@@ -2,9 +2,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { type ReactNode, useEffect } from 'react'
 import { Toaster } from 'sonner'
+import { host } from '@/lib/host'
 import { useCatalog } from '@/lib/queries'
 import type { Issue } from '@/lib/types'
 import { type PickerKind, getUI, openCreateIssue, openCreateRelated, setUI } from '@/lib/ui'
+import { cn } from '@/lib/utils'
 import { CommandPalette } from './command-palette'
 import { CreateIssueDialog } from './create-issue'
 import { isTyping } from './issue-view'
@@ -76,8 +78,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <NavDrawer>
       <div className="flex h-full min-h-0">
-        <Sidebar className="max-md:hidden" />
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-bg md:my-2 md:mr-2 md:rounded-[var(--radius-card)]">
+        {!host.minimal && <Sidebar className="max-md:hidden" />}
+        <main className={cn('flex min-w-0 flex-1 flex-col overflow-hidden bg-bg', !host.minimal && 'md:my-2 md:mr-2 md:rounded-[var(--radius-card)]')}>
           {children}
         </main>
         <CreateIssueDialog />
