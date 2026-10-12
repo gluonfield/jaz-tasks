@@ -52,17 +52,40 @@ The server is also an [MCP App](https://github.com/modelcontextprotocol/ext-apps
 }
 ```
 
-A connection shapes the app with headers it sends on every MCP request, such as those under Advanced in Jaz's Settings › MCP:
+### Configure the app
 
-| Header | Value |
-|---|---|
-| `Tasks-View` | `list` or `board`, the layout views open in |
-| `Tasks-Columns` | comma-separated workflow state names, the only groups and board columns shown, in that order |
-| `Tasks-Mode` | `minimal`: no sidebar, tabs or display menu; rows and cards show status, ID, title and assignee; an issue shows its status, assignee and description |
+A connection configures the app with headers it sends on every MCP request. They change only what the app shows; tools and data stay the same. Leave a header out to keep its default.
 
-An invalid value fails the app's resource read with the reason.
+| Header | Value | Default |
+| --- | --- | --- |
+| `Tasks-View` | `list` or `board`, the layout views open in | `list` |
+| `Tasks-Columns` | comma-separated workflow state names, such as `Todo, In Progress, Done`: the only states shown as list groups and board columns, in that order, matched case-insensitively | every state |
+| `Tasks-Mode` | `minimal`: no sidebar, tabs, display or issue menus; rows and cards show status, ID, title and assignee; an issue shows its title, status, assignee and description | the full app |
 
-`<jaz.newthread prompt:"..." />` in a description or comment renders a **New chat** button. In Jaz it starts a chat on that prompt with the agent, model and project selected for new chats; hosts without Jaz's `jaz/threads` capability show it disabled.
+An invalid value fails the app's resource read with the reason, for example `Tasks-View must be list or board, not "grid"`.
+
+Any MCP client that can set request headers can send them; they matter in hosts that render the app, such as Jaz. In Jaz, add Tasks as an MCP server and set the headers under Advanced in Settings › MCP, or declare it in `application.yaml` as `jaz.mcpservers` (or the `JAZ_MCP_SERVERS` variable), a JSON array that Jaz applies on every start:
+
+```yaml
+jaz:
+  mcpservers: |
+    [{
+      "name": "Tasks",
+      "url": "https://tasks.example.com/mcp",
+      "bearer_token_env_var": "JAZ_TASKS_API_KEY",
+      "headers": [
+        {"name": "Tasks-View", "value": "board"},
+        {"name": "Tasks-Columns", "value": "Todo, In Progress, Done"},
+        {"name": "Tasks-Mode", "value": "minimal"}
+      ]
+    }]
+```
+
+Jaz's built-in Tasks connection sends no custom headers.
+
+### Chat buttons
+
+`<jaz.newthread prompt:"..." />` in an issue description or comment renders a **New chat** button showing its prompt. In Jaz, a click starts a new chat on that prompt with the agent, model and project selected for new chats, and opens it. The web app and hosts without Jaz's `jaz/threads` capability show the button disabled. Markdown inside the prompt stays literal, and inside code the tag shows as written.
 
 ## GraphQL
 
