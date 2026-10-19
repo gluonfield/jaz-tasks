@@ -156,7 +156,7 @@ sqlc generate                  # after editing queries or migrations
 cd frontend
 bun install
 bun run dev                    # http://localhost:7401, proxies the API to :7400
-bun run check                  # typecheck, lint, build
+bun run check                  # typecheck, lint, build, headless browser tests (Chrome + Postgres)
 ```
 
 The web app is a TanStack Start SPA with TanStack Query, Tailwind v4 and shadcn/ui, and talks to the server only through `/graphql`.
@@ -178,3 +178,5 @@ frontend/
   src/components            views, pickers, dialogs; ui/ holds shadcn primitives
   src/lib                   GraphQL client, queries, theme bridge, shared types
 ```
+
+Keyboard shortcuts and the full Linear mapping: [Keyboard Shortcuts](docs/keyboard-shortcuts.md).

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button } from '@jaz/ui/button'
-import { Check, CheckCheck, ChevronLeft, Inbox as InboxIcon, MoreHorizontal } from 'lucide-react'
+import { Check, CheckCheck, Inbox as InboxIcon, MoreHorizontal } from 'lucide-react'
 import { toast } from 'sonner'
 import { EmptyState } from '@/components/empty-state'
 import { Avatar } from '@/components/icons'
@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortc
 import { timeAgo } from '@/lib/issues'
 import { useCatalogMaps, useDismissInbox, useInbox } from '@/lib/queries'
 import type { InboxUpdate } from '@/lib/types'
+import { useShortcutActions } from '@/lib/shortcuts'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/_app/inbox')({
@@ -34,20 +35,19 @@ function Inbox() {
   const dismissUpdates = (updates: InboxUpdate[]) => {
     dismiss.mutate(updates, { onError: () => toast.error('Could not dismiss updates') })
   }
+  const move = (delta: number) => {
+    const index = entries.findIndex(({ issue }) => issue.identifier === selected)
+    const next = entries[Math.max(0, Math.min(entries.length - 1, index < 0 ? 0 : index + delta))]
+    if (next) {
+      void navigate({ to: '/inbox', search: { issue: next.issue.identifier } })
+    }
+  }
+  useShortcutActions({
+    ...(entries.length && { up: () => move(-1), down: () => move(1) }),
+    ...(selectedUpdate && !dismiss.isPending && { dismiss: () => dismissUpdates([selectedUpdate]) }),
+  })
   return (
-    <div
-      className="flex h-full min-h-0"
-      onKeyDown={(event) => {
-        if (event.key !== 'Backspace' || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || dismiss.isPending || !selectedUpdate) {
-          return
-        }
-        if ((event.target as HTMLElement).closest('input, textarea, [contenteditable="true"], [role="dialog"], [role="menu"]')) {
-          return
-        }
-        event.preventDefault()
-        dismissUpdates([selectedUpdate])
-      }}
-    >
+    <div className="flex h-full min-h-0">
       <div className={cn('flex w-full shrink-0 flex-col border-border md:w-[340px] md:border-r', selected && 'max-md:hidden')}>
         <ViewHeader
           title={
@@ -125,14 +125,7 @@ function Inbox() {
       </div>
       <div className={cn('min-w-0 flex-1', !selected && 'max-md:hidden')}>
         {selected ? (
-          <IssuePage
-            identifier={selected}
-            back={
-              <Button variant="ghost" size="icon" aria-label="Back to Inbox" className="-ml-1.5 md:hidden" onClick={() => navigate({ to: '/inbox', search: {} })}>
-                <ChevronLeft />
-              </Button>
-            }
-          />
+          <IssuePage identifier={selected} back={() => { void navigate({ to: '/inbox', search: {} }) }} />
         ) : (
           <EmptyState
             icon={<InboxIcon className="size-5" />}

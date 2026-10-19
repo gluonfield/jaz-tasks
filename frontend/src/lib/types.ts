@@ -81,6 +81,7 @@ export type Issue = {
   startedAt: string | null
   completedAt: string | null
   canceledAt: string | null
+  archivedAt: string | null
   labelIds: string[]
   teamId: string
   stateId: string
@@ -140,6 +141,7 @@ export type InboxUpdate = { issue: Issue; updatedAt: string; revision: string }
 
 // IssuePatch is the subset of IssueUpdateInput the UI edits; null clears.
 export type IssuePatch = Partial<{
+  teamId: string
   title: string
   description: string | null
   stateId: string

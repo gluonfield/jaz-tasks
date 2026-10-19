@@ -1,4 +1,4 @@
-import { Box, ChartNoAxesColumnIncreasing, CircleDot, Contrast, Copy, CornerDownRight, CornerLeftUp, GitFork, Link2, SquarePlus, Tag, UserRound } from 'lucide-react'
+import { Box, ChartNoAxesColumnIncreasing, CircleDot, Contrast, Trash2, GitBranch, Copy, CornerDownRight, CornerLeftUp, GitFork, Link2, SquarePlus, Tag, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   ContextMenu,
@@ -12,6 +12,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { copyIssue } from '@/lib/issue-copy'
+import { shortcutLabel, shortcuts } from '@/lib/shortcut-definitions'
 import { useIssuePatch } from '@/lib/queries'
 import type { Issue } from '@/lib/types'
 import { openCreateRelated, setUI } from '@/lib/ui'
@@ -27,7 +29,7 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       {/* Focus returning to the row as the menu closes would dismiss the pickers the Labels and parent items open. */}
-      <ContextMenuContent className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
+      <ContextMenuContent className="w-72" onCloseAutoFocus={(e) => e.preventDefault()}>
         <ContextMenuOptions
           icon={<Contrast />}
           label="Status"
@@ -70,6 +72,9 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
           <GitFork />
           Set parent issue…
         </ContextMenuItem>
+        <ContextMenuItem onSelect={() => setUI({ picker: { kind: 'team', issueId: issue.id } })}>
+          Move to team… <ContextMenuShortcut>{shortcutLabel(shortcuts.team.keys[0])}</ContextMenuShortcut>
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>
@@ -84,7 +89,7 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
             <ContextMenuItem onSelect={() => openCreateRelated(issue, { parentId: issue.id })}>
               <CornerDownRight />
               Sub-issue…
-              <ContextMenuShortcut>⌘ ⇧ O</ContextMenuShortcut>
+              <ContextMenuShortcut>{shortcutLabel(shortcuts.subIssue.keys[0])}</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => openCreateRelated(issue, { childId: issue.id })}>
               <CornerLeftUp />
@@ -93,13 +98,23 @@ export function IssueContextMenu({ issue, children }: { issue: Issue; children: 
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(issue.identifier)}>
+        <ContextMenuItem onSelect={() => copyIssue(issue, 'copyId')}>
           <Copy />
           Copy ID
+          <ContextMenuShortcut>{shortcutLabel(shortcuts.copyId.keys[0])}</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => void navigator.clipboard.writeText(issue.url)}>
+        <ContextMenuItem onSelect={() => copyIssue(issue, 'copyUrl')}>
           <Link2 />
           Copy link
+          <ContextMenuShortcut>{shortcutLabel(shortcuts.copyUrl.keys[0])}</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => copyIssue(issue, 'branch')}>
+          <GitBranch /> Copy git branch name
+          <ContextMenuShortcut>{shortcutLabel(shortcuts.branch.keys[0])}</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={() => setUI({ deleteIssue: issue })}>
+          <Trash2 /> Delete issue… <ContextMenuShortcut>{shortcutLabel(shortcuts.deleteIssue.keys[0])}</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

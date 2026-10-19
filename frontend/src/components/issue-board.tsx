@@ -11,7 +11,8 @@ import { openCreateIssue, setUI, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon, LabelDot } from './icons'
 import { SortableIssue, dropAnimation, useGroupDrag } from './issue-dnd'
-import { type IssueGroup, useListNavigation } from './issue-view'
+import type { IssueGroup } from './issue-view'
+import { useListNavigation } from '@/lib/issue-shortcuts'
 import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, SubIssueCount, useStateIcon } from './properties'
 import { IssueContextMenu } from './issue-menu'
 
@@ -27,7 +28,7 @@ export function IssueBoard({
   const stateIcon = useStateIcon()
   const { ids, issues, active, context } = useGroupDrag(groups, ordering)
   const ordered = useMemo(() => groups.flatMap((g) => g.issues), [groups])
-  useListNavigation(ordered)
+  useListNavigation(ordered, groups.map((g) => g.issues))
 
   return (
     // Scroll only from the board's outer edge; the default 20% band scrolled
@@ -115,7 +116,7 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
         {!lifted && <ShortcutPicker issue={issue} visible={host.minimal ? ['assignee'] : ['assignee', 'priority']} />}
         <div className="flex h-5 items-center justify-between">
           <span className="text-[12px] text-ink-3">{issue.identifier}</span>
-          <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} className="-mr-1.5 size-5" />
+          <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} issueId={issue.id} className="-mr-1.5 size-5" />
         </div>
         <div className="mt-0.5 flex gap-2">
           {state && <span className="mt-[3px]">{stateIcon(state)}</span>}
@@ -123,7 +124,7 @@ const IssueCard = memo(function IssueCard({ issue, lifted = false }: { issue: Is
         </div>
         {!host.minimal && (
           <div className="mt-2 flex flex-wrap items-center gap-1">
-            <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} className="size-[22px] rounded-[5px] border border-border" />
+            <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} issueId={issue.id} className="size-[22px] rounded-[5px] border border-border" />
             <SubIssueCount issueId={issue.id} className="h-[22px] rounded-full border border-border px-2" />
             {issueLabels.map((label) => (
               <span key={label.id} className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-ink-2">

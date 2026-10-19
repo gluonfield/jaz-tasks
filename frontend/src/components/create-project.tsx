@@ -1,3 +1,4 @@
+import { isMac, matchesKey } from '@/lib/shortcut-definitions'
 import { Button } from '@jaz/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { Plus, X } from 'lucide-react'
@@ -65,7 +66,7 @@ function ProjectForm({ close }: { close: () => void }) {
         submit()
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        if (matchesKey(e.nativeEvent, 'Mod+Enter', isMac())) {
           e.preventDefault()
           submit()
         }
@@ -86,6 +87,7 @@ function ProjectForm({ close }: { close: () => void }) {
           className="w-full bg-transparent text-[18px] font-semibold text-ink outline-none placeholder:text-ink-3"
         />
         <textarea
+          data-markdown
           value={draft.description ?? ''}
           onChange={(e) => set({ description: e.target.value })}
           placeholder="Add a short summary..."
@@ -97,6 +99,7 @@ function ProjectForm({ close }: { close: () => void }) {
       </div>
       <div className="mx-4 border-t border-border" />
       <textarea
+          data-markdown
         value={draft.content ?? ''}
         onChange={(e) => set({ content: e.target.value })}
         placeholder="Write a description, a project brief, or collect ideas..."

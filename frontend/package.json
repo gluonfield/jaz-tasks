@@ -8,7 +8,8 @@
     "preview": "vite preview --port 7401",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && bun run --cwd .. lint",
-    "check": "bun run typecheck && bun run lint && bun run build"
+    "test": "node tests/shortcuts.mjs",
+    "check": "bun run typecheck && bun run lint && bun run build && bun run test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

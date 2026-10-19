@@ -1,17 +1,21 @@
 import { Button } from '@jaz/ui/button'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { Archive, ChevronRight, Copy, GitBranch, Link2, MoreHorizontal, Plus } from 'lucide-react'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Archive, ArchiveRestore, Trash2, ChevronLeft, ChevronRight, Copy, GitBranch, Link2, MoreHorizontal, PanelRight, Plus } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuShortcut, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { host } from '@/lib/host'
-import { useArchiveIssue, useCatalogMaps, useIssueDetail, useIssuePatch, useIssues } from '@/lib/queries'
+import { useArchiveIssue, useCatalogMaps, useIssueDetail, useIssuePatch, useIssues, useRestoreIssue } from '@/lib/queries'
 import type { Issue, IssueDetail } from '@/lib/types'
-import { openCreateRelated, setUI, useWide } from '@/lib/ui'
+import { getUI, openCreateRelated, setUI, useWide } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { Activity } from './activity'
 import { Avatar, LabelDot, TeamBadge } from './icons'
-import { ViewHeader, isTyping } from './issue-view'
+import { ViewHeader } from './issue-view'
+import { useIssueShortcuts } from '@/lib/issue-shortcuts'
+import { copyIssue } from '@/lib/issue-copy'
+import { shortcutLabel, shortcuts } from '@/lib/shortcut-definitions'
+import { useShortcutActions } from '@/lib/shortcuts'
 import { EditableMarkdown } from './editable'
 import {
   AssigneePicker,
@@ -27,13 +31,20 @@ import {
   useStateIcon,
 } from './properties'
 
-export function IssuePage({ identifier, back }: { identifier: string; back?: ReactNode }) {
+export function IssuePage({ identifier, back }: { identifier: string; back?: () => void }) {
   const { data: issue, error } = useIssueDetail(identifier)
   const navigate = useNavigate()
   const minimal = host.minimal
   const wide = useWide() && !minimal
+  const [detailsOpen, setDetailsOpen] = useState(true)
   const { teams } = useCatalogMaps()
   const team = issue && teams.get(issue.teamId)
+  const edit = useRouterState({ select: (state) => state.location.search.edit })
+  useIssueShortcuts(issue)
+  useShortcutActions({
+    ...(wide && { details: () => setDetailsOpen(!detailsOpen) }),
+    back: back ?? (team ? () => { void navigate({ to: '/team/$teamKey/$view', params: { teamKey: team.key, view: 'all' } }) } : undefined),
+  })
 
   useEffect(() => {
     if (issue) {
@@ -42,14 +53,14 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
   }, [issue?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isTyping(e) && team) {
-        navigate({ to: '/team/$teamKey/$view', params: { teamKey: team.key, view: 'all' } })
-      }
+    if (!edit || !issue) {
+      return
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [navigate, team])
+    const element = document.querySelector<HTMLElement>(`[data-issue-edit="${edit}"]`)
+    element?.click()
+    element?.focus()
+    void navigate({ to: '/issue/$identifier', params: { identifier }, search: {}, replace: true })
+  }, [edit, issue, identifier, navigate])
 
   if (error) {
     return <p className="p-8 text-[13px] text-ink-3">{error.message}</p>
@@ -60,7 +71,7 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ViewHeader
-        leading={back}
+        leading={back && <Button variant="ghost" size="icon" aria-label="Back" className="-ml-1.5 md:hidden" onClick={back}><ChevronLeft /></Button>}
         title={
           <>
             {team && (
@@ -78,6 +89,7 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
           </>
         }
       >
+        {wide && <Button variant="ghost" size="icon" aria-label="Toggle issue details" aria-pressed={detailsOpen} onClick={() => setDetailsOpen(!detailsOpen)}><PanelRight /></Button>}
         {!minimal && <IssueMenu issue={issue} />}
       </ViewHeader>
       <div className="flex min-h-0 flex-1">
@@ -95,7 +107,8 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
             )}
           </div>
         </div>
-        {wide && <Properties issue={issue} wide />}
+        {wide && detailsOpen && <Properties issue={issue} wide />}
+        {wide && !detailsOpen && <ShortcutPicker issue={issue} visible={[]} />}
       </div>
     </div>
   )
@@ -104,23 +117,36 @@ export function IssuePage({ identifier, back }: { identifier: string; back?: Rea
 function IssueMenu({ issue }: { issue: Issue }) {
   const navigate = useNavigate()
   const archive = useArchiveIssue()
-  const copy = (text: string, what: string) => navigator.clipboard.writeText(text).then(() => toast(`${what} copied`))
+  const restore = useRestoreIssue()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="ml-auto flex size-7 items-center justify-center rounded-[var(--radius-control)] text-ink-2 outline-none hover:bg-list-hover hover:text-ink data-[state=open]:bg-list-active">
         <MoreHorizontal className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onSelect={() => copy(issue.url, 'Issue URL')}>
-          <Link2 /> Copy issue URL
+      <DropdownMenuContent align="end" className="w-72" onCloseAutoFocus={(event) => {
+        if (getUI().picker) {
+          event.preventDefault()
+        }
+      }}>
+        <DropdownMenuItem onSelect={() => setUI({ picker: { kind: 'team', issueId: issue.id } })}>
+          Move to team… <DropdownMenuShortcut>{shortcutLabel(shortcuts.team.keys[0])}</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => copy(issue.identifier, 'Issue ID')}>
-          <Copy /> Copy issue ID
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => copyIssue(issue, 'copyUrl')}>
+          <Link2 /> Copy issue URL<DropdownMenuShortcut>{shortcutLabel(shortcuts.copyUrl.keys[0])}</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => copy(`${issue.identifier.toLowerCase()}-${slug(issue.title)}`, 'Branch name')}>
-          <GitBranch /> Copy git branch name
+        <DropdownMenuItem onSelect={() => copyIssue(issue, 'copyId')}>
+          <Copy /> Copy issue ID<DropdownMenuShortcut>{shortcutLabel(shortcuts.copyId.keys[0])}</DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuItem
+        <DropdownMenuItem onSelect={() => copyIssue(issue, 'branch')}>
+          <GitBranch /> Copy git branch name<DropdownMenuShortcut>{shortcutLabel(shortcuts.branch.keys[0])}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        {issue.archivedAt ? <DropdownMenuItem onSelect={() => restore.mutate(issue, {
+          onSuccess: () => toast(`${issue.identifier} restored`),
+          onError: (error) => toast.error(error.message),
+        })}>
+          <ArchiveRestore /> Restore issue <DropdownMenuShortcut>#</DropdownMenuShortcut>
+        </DropdownMenuItem> : <DropdownMenuItem
           onSelect={() =>
             archive.mutate(issue.id, {
               onSuccess: () => {
@@ -131,18 +157,14 @@ function IssueMenu({ issue }: { issue: Issue }) {
           }
         >
           <Archive /> Archive
+        </DropdownMenuItem>}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setUI({ deleteIssue: issue })}>
+          <Trash2 /> Delete issue… <DropdownMenuShortcut>{shortcutLabel(shortcuts.deleteIssue.keys[0])}</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
-}
-
-function slug(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 60)
 }
 
 function ParentLink({ issue }: { issue: Issue }) {
@@ -176,6 +198,8 @@ function Title({ issue }: { issue: Issue }) {
   }
   return (
     <textarea
+      data-issue-edit="title"
+      aria-label="Issue title"
       rows={1}
       value={title}
       onChange={(e) => setTitle(e.target.value.replace(/\n/g, ' '))}
@@ -195,6 +219,7 @@ function Description({ issue }: { issue: IssueDetail }) {
   const patch = useIssuePatch(issue)
   return (
     <EditableMarkdown
+      editTarget="description"
       value={issue.description}
       placeholder="Add description..."
       onSave={(description) => patch({ description })}
@@ -289,6 +314,7 @@ function Properties({ issue, wide }: { issue: Issue; wide: boolean }) {
     </>
   ) : (
     <>
+      <ShortcutPicker issue={issue} visible={['status', 'priority', 'assignee', 'labels', 'project', 'parent', 'cycle', 'estimate', 'dueDate']} />
       {status}
       <Field label="Priority">
         <PriorityPicker {...shared} value={issue.priority} onChange={(priority) => patch({ priority })} />

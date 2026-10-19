@@ -7,7 +7,7 @@ import type { Project } from '@/lib/types'
 import { useWide } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { EntityIcon } from './icons'
-import { isTyping } from './issue-view'
+import { useShortcutActions } from '@/lib/shortcuts'
 
 type Range = { start: number; end: number }
 type Mode = 'move' | 'start' | 'end' | 'create'
@@ -73,19 +73,10 @@ export function ProjectTimeline({ projects, zoom, onZoom }: { projects: Project[
     return () => observer.disconnect()
   }, [measure])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const step = e.key === '-' ? 1 : e.key === '=' ? -1 : 0
-      const next = zooms[zooms.indexOf(zoom) + step]
-      if (!step || !next || isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) {
-        return
-      }
-      e.preventDefault()
-      onZoom(next)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [zoom, onZoom])
+  useShortcutActions({
+    zoomIn: () => onZoom(zooms[Math.max(0, zooms.indexOf(zoom) - 1)]),
+    zoomOut: () => onZoom(zooms[Math.min(zooms.length - 1, zooms.indexOf(zoom) + 1)]),
+  })
 
   const x = (day: number) => (day - scale.start) * scale.px
   const dayAt = (clientX: number) => {

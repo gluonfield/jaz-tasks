@@ -6,6 +6,7 @@ import {
   CircleDot,
   Inbox,
   Layers,
+  Keyboard,
   LogOut,
   Monitor,
   Moon,
@@ -51,7 +52,7 @@ export function Sidebar({ className }: { className?: string }) {
     <aside className={cn('flex w-[232px] shrink-0 flex-col gap-px px-2.5 pb-3 pt-2.5 text-[13px]', className)}>
       <div className="mb-2 flex items-center gap-1">
         <WorkspaceMenu name={catalog?.organization.name ?? 'Jaz'} email={catalog?.viewer.email} admin={catalog?.viewer.admin} />
-        <IconButton label="Search" shortcut="⌘K" onClick={() => setUI({ paletteOpen: true })}>
+        <IconButton label="Search" shortcut="⌘K" onClick={() => setUI({ paletteOpen: true, palettePage: 'issues' })}>
           <Search className="size-4" />
         </IconButton>
         <IconButton label="New issue" shortcut="C" onClick={() => openCreateIssue()} className="bg-raised shadow-xs ring-1 ring-border">
@@ -226,6 +227,9 @@ function WorkspaceMenu({ name, email, admin }: { name: string; email?: string; a
               </Link>
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem onSelect={() => setUI({ helpOpen: true })}>
+            <Keyboard /> Keyboard Shortcuts <DropdownMenuShortcut>?</DropdownMenuShortcut>
+          </DropdownMenuItem>
           {!embedded() && (
             <>
               <DropdownMenuSeparator />

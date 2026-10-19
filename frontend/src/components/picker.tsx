@@ -60,7 +60,7 @@ export function Picker({
           onKeyDown={(e) => {
             const digit = Number(e.key)
             const input = e.currentTarget.querySelector('input')
-            if (!e.metaKey && !e.ctrlKey && digit >= 1 && digit <= 9 && !input?.value && options[digit - 1]) {
+            if (!e.nativeEvent.isComposing && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey && digit >= 1 && digit <= 9 && !input?.value && options[digit - 1]) {
               e.preventDefault()
               onSelect(options[digit - 1].value)
               if (!multiple) {

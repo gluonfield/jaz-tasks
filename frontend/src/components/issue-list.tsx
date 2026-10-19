@@ -8,7 +8,8 @@ import { openCreateIssue, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { SortableIssue, dropAnimation, useGroupDrag } from './issue-dnd'
 import { IssueRow } from './issue-row'
-import { type IssueGroup, useListNavigation } from './issue-view'
+import type { IssueGroup } from './issue-view'
+import { useListNavigation } from '@/lib/issue-shortcuts'
 import { useStateIcon } from './properties'
 
 export function IssueList({

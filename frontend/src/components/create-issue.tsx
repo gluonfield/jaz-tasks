@@ -1,3 +1,4 @@
+import { isMac, matchesKey } from '@/lib/shortcut-definitions'
 import { Button } from '@jaz/ui/button'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronRight, X } from 'lucide-react'
@@ -102,7 +103,7 @@ function CreateIssueForm() {
         submit()
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        if (matchesKey(e.nativeEvent, 'Mod+Enter', isMac())) {
           e.preventDefault()
           submit()
         }
@@ -151,6 +152,7 @@ function CreateIssueForm() {
           className="field-sizing-content w-full resize-none bg-transparent text-[18px] font-semibold leading-snug text-ink outline-none placeholder:text-ink-3"
         />
         <textarea
+          data-markdown
           value={draft.description ?? ''}
           onChange={(e) => set({ description: e.target.value })}
           placeholder="Add description..."

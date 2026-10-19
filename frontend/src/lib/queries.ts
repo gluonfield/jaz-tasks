@@ -146,7 +146,7 @@ export function useCatalogMaps() {
 
 const issueFields = /* GraphQL */ `
   id identifier number title priority estimate sortOrder dueDate createdAt updatedAt
-  startedAt completedAt canceledAt labelIds url
+  startedAt completedAt canceledAt archivedAt labelIds url
   team { id } state { id } assignee { id } creator { id } project { id } cycle { id } parent { id }
 `
 
@@ -387,6 +387,32 @@ export function useArchiveIssue() {
     onSettled: () => {
       client.invalidateQueries({ queryKey: ['issues'] })
       client.invalidateQueries({ queryKey: ['inbox'] })
+    },
+  })
+}
+
+export function useDeleteIssue() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (issue: Issue) => gql('mutation ($id: String!) { issueDelete(id: $id) { success } }', { id: issue.id }),
+    onSuccess: (_result, issue) => {
+      client.setQueryData<Issue[]>(['issues'], (issues) => issues?.filter((i) => i.id !== issue.id))
+      client.removeQueries({ queryKey: ['issue', issue.identifier] })
+      void client.invalidateQueries({ queryKey: ['catalog'] })
+      void client.invalidateQueries({ queryKey: ['inbox'] })
+    },
+  })
+}
+
+export function useRestoreIssue() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (issue: Issue) => gql('mutation ($id: String!) { issueUnarchive(id: $id) { success } }', { id: issue.id }),
+    onSuccess: (_result, issue) => {
+      void client.invalidateQueries({ queryKey: ['issues'] })
+      void client.invalidateQueries({ queryKey: ['issue', issue.identifier] })
+      void client.invalidateQueries({ queryKey: ['catalog'] })
+      void client.invalidateQueries({ queryKey: ['inbox'] })
     },
   })
 }

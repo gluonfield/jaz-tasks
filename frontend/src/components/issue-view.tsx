@@ -1,11 +1,11 @@
 import { Button } from '@jaz/ui/button'
 import { LayoutGrid, List, type LucideIcon } from 'lucide-react'
-import { type ReactNode, useEffect, useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { host } from '@/lib/host'
 import { type Ordering, compareIssues, compareStates, workflowOrder } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
 import type { Issue, IssuePatch, WorkflowState } from '@/lib/types'
-import { getUI, setUI, usePreference } from '@/lib/ui'
+import { usePreference } from '@/lib/ui'
 import { DisplayMenu, DisplaySelect } from './display-menu'
 import { EmptyState } from './empty-state'
 import { IssueBoard } from './issue-board'
@@ -145,39 +145,4 @@ export function Tab({ active, children, onClick }: { active: boolean; children: 
       {children}
     </Button>
   )
-}
-
-export function isTyping(e: KeyboardEvent) {
-  const target = e.target as HTMLElement
-  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || !!target.closest('[role=dialog],[role=menu],[data-radix-popper-content-wrapper]')
-}
-
-// useListNavigation gives j/k/arrows/enter over the rendered issue order.
-export function useListNavigation(issues: Issue[]) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) {
-        return
-      }
-      const current = issues.findIndex((i) => i.id === getUI().focusedIssueId)
-      const move = (delta: number) => {
-        e.preventDefault()
-        const next = issues[Math.max(0, Math.min(issues.length - 1, current < 0 ? 0 : current + delta))]
-        if (next) {
-          setUI({ focusedIssueId: next.id })
-          document.querySelector(`[data-issue-id="${next.id}"]`)?.scrollIntoView({ block: 'nearest' })
-        }
-      }
-      if (e.key === 'j' || e.key === 'ArrowDown') {
-        move(1)
-      } else if (e.key === 'k' || e.key === 'ArrowUp') {
-        move(-1)
-      } else if ((e.key === 'Enter' || e.key === 'o') && current >= 0) {
-        e.preventDefault()
-        ;(document.querySelector(`[data-issue-id="${issues[current].id}"]`) as HTMLElement | null)?.click()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [issues])
 }

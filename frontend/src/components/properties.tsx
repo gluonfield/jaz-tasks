@@ -1,3 +1,5 @@
+import { toast } from 'sonner'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Button } from '@jaz/ui/button'
 import { CalendarDays, CircleDashed, CircleSlash, GitFork, Hexagon, RefreshCcw, Tag, Triangle } from 'lucide-react'
 import { type ReactNode, forwardRef, useState } from 'react'
@@ -487,6 +489,10 @@ export function ShortcutPicker({ issue, visible }: { issue: Issue; visible: Pick
   const patch = (value: IssuePatch) => update.mutate({ id: issue.id, patch: value })
   const shared = { teamId: issue.teamId, issueId: issue.id, variant: 'icon' as const, className: 'pointer-events-none absolute left-1/3 top-1/2 size-0 opacity-0' }
   switch (kind) {
+    case 'team':
+      return <TeamPicker issue={issue} />
+    case 'removeLabel':
+      return <RemoveLabelPicker issue={issue} />
     case 'status':
       return <StatusPicker {...shared} value={issue.stateId} onChange={(stateId) => patch({ stateId })} />
     case 'priority':
@@ -506,4 +512,35 @@ export function ShortcutPicker({ issue, visible }: { issue: Issue; visible: Pick
     case 'dueDate':
       return <DueDatePicker {...shared} value={issue.dueDate} onChange={(dueDate) => patch({ dueDate })} />
   }
+}
+
+function RemoveLabelPicker({ issue }: { issue: Issue }) {
+  const [open, setOpen] = usePickerOpen('removeLabel', issue.id)
+  const options = useLabelOptions(issue.teamId).filter((option) => issue.labelIds.includes(option.value))
+  const update = useUpdateIssue()
+  return <Picker open={open} onOpenChange={setOpen} placeholder="Remove label…" options={options} selected={[]}
+    anchor={<span className="absolute left-1/3 top-1/2" />}
+    onSelect={(id) => update.mutate({ id: issue.id, patch: { labelIds: issue.labelIds.filter((label) => label !== id) } })} />
+}
+
+function TeamPicker({ issue }: { issue: Issue }) {
+  const navigate = useNavigate()
+  const router = useRouter()
+  const [open, setOpen] = usePickerOpen('team', issue.id)
+  const { catalog } = useCatalogMaps()
+  const update = useUpdateIssue()
+  return <Picker open={open} onOpenChange={setOpen} placeholder="Move to team…"
+    options={(catalog?.teams ?? []).map((team) => ({ value: team.id, label: team.name }))} selected={[issue.teamId]}
+    anchor={<span className="absolute left-1/3 top-1/2" />}
+    onSelect={async (teamId) => {
+      const pathname = router.state.location.pathname
+      try {
+        const { issueUpdate } = await update.mutateAsync({ id: issue.id, patch: { teamId } })
+        if (pathname.startsWith('/issue/') && router.state.location.pathname === pathname) {
+          await navigate({ to: '/issue/$identifier', params: { identifier: issueUpdate.issue.identifier } })
+        }
+      } catch (error) {
+        toast.error((error as Error).message)
+      }
+    }} />
 }

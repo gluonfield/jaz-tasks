@@ -1,3 +1,4 @@
+import { isMac, matchesKey } from '@/lib/shortcut-definitions'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Markdown } from './markdown'
@@ -9,11 +10,13 @@ export function EditableMarkdown({
   placeholder,
   onSave,
   className,
+  editTarget,
 }: {
   value: string | null
   placeholder: string
   onSave: (text: string | null) => void
   className?: string
+  editTarget?: string
 }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(value ?? '')
@@ -26,12 +29,13 @@ export function EditableMarkdown({
   if (editing) {
     return (
       <textarea
+        data-markdown
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => {
-          if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
+          if (e.key === 'Escape' || (matchesKey(e.nativeEvent, 'Mod+Enter', isMac()))) {
             e.preventDefault()
             e.currentTarget.blur()
           }
@@ -42,7 +46,7 @@ export function EditableMarkdown({
     )
   }
   return (
-    <div onClick={() => setEditing(true)} className={cn('min-h-8 cursor-text', className)}>
+    <div data-issue-edit={editTarget} onClick={() => setEditing(true)} className={cn('min-h-8 cursor-text', className)}>
       {value ? <Markdown>{value}</Markdown> : <p className="text-[14px] text-ink-3">{placeholder}</p>}
     </div>
   )

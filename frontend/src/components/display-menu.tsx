@@ -1,8 +1,10 @@
 import { type LucideIcon, SlidersHorizontal } from 'lucide-react'
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { Kbd } from './kbd'
+import { useShortcutActions } from '@/lib/shortcuts'
+import { shortcutLabel } from '@/lib/shortcut-definitions'
 
 // DisplayMenu picks a view's layout, which ⌘B cycles, above the view's own options.
 export function DisplayMenu<T extends string>({
@@ -16,17 +18,10 @@ export function DisplayMenu<T extends string>({
   setLayout: (layout: T) => void
   children?: ReactNode
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault()
-        const index = layouts.findIndex(([value]) => value === layout)
-        setLayout(layouts[(index + 1) % layouts.length][0])
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [layouts, layout, setLayout])
+  useShortcutActions({ layout: () => {
+    const index = layouts.findIndex(([value]) => value === layout)
+    setLayout(layouts[(index + 1) % layouts.length][0])
+  } })
 
   return (
     <Popover>
@@ -52,8 +47,7 @@ export function DisplayMenu<T extends string>({
         </div>
         {children}
         <p className="mt-3 border-t border-border pt-2.5 text-[11.5px] text-ink-3 pointer-coarse:hidden">
-          Toggle layout <Kbd>⌘</Kbd>
-          <Kbd>B</Kbd>
+          Toggle layout <Kbd>{shortcutLabel('Mod+b')}</Kbd>
         </p>
       </PopoverContent>
     </Popover>

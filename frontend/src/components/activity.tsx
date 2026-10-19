@@ -1,3 +1,4 @@
+import { isMac, matchesKey } from '@/lib/shortcut-definitions'
 import { Button } from '@jaz/ui/button'
 import { ArrowUp, Trash2 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
@@ -232,10 +233,12 @@ function Composer({ identifier }: { identifier: string }) {
   return (
     <div className="ml-7 mt-4 rounded-[var(--radius-card)] border border-border bg-raised px-3.5 pb-2.5 pt-3 shadow-[0_1px_2px_rgb(0_0_0/0.03)] transition-[border-color] focus-within:border-[color-mix(in_oklab,var(--color-ink)_20%,transparent)]">
       <textarea
+        data-markdown
+        data-issue-edit="comment"
         value={body}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          if (matchesKey(e.nativeEvent, 'Mod+Enter', isMac())) {
             e.preventDefault()
             submit()
           }
