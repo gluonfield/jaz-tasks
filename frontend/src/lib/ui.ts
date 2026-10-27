@@ -13,13 +13,14 @@ type UIState = {
   deleteIssue: Issue | null
   // focusedIssueId is the list/board row keyboard shortcuts act on.
   focusedIssueId: string | null
+  focusedGroupKey: string | null
   // picker opens a property picker for the focused issue from the keyboard.
   picker: { kind: PickerKind; issueId: string } | null
 }
 
 export type PickerKind = 'status' | 'priority' | 'assignee' | 'labels' | 'project' | 'parent' | 'cycle' | 'estimate' | 'dueDate' | 'removeLabel' | 'team'
 
-let state: UIState = { createOpen: false, createDefaults: {}, paletteOpen: false, palettePage: 'commands', helpOpen: false, deleteIssue: null, focusedIssueId: null, picker: null }
+let state: UIState = { createOpen: false, createDefaults: {}, paletteOpen: false, palettePage: 'commands', helpOpen: false, deleteIssue: null, focusedIssueId: null, focusedGroupKey: null, picker: null }
 const listeners = new Set<() => void>()
 
 export function setUI(patch: Partial<UIState>) {

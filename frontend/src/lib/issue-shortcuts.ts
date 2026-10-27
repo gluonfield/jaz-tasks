@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { copyIssue } from './issue-copy'
+import type { IssueGroup } from './issue-groups'
 import { workflowOrder } from './issues'
 import { useCatalogMaps, useIssues, useRestoreIssue, useUpdateIssue } from './queries'
 import type { ShortcutActions, ShortcutId } from './shortcut-definitions'
@@ -65,27 +66,30 @@ export function useIssueShortcuts(issue: Issue | undefined) {
   useShortcutActions(actions)
 }
 
-export function useListNavigation(issues: Issue[], columns?: Issue[][]) {
+export function useListNavigation(groups: IssueGroup[], board = false) {
   const focused = useUI((s) => s.focusedIssueId)
-  const current = issues.findIndex((i) => i.id === focused)
-  useIssueShortcuts(issues[current])
-  useEffect(() => () => setUI({ focusedIssueId: null, picker: null }), [])
-  const focus = (issue?: Issue) => {
-    if (issue) {
-      setUI({ focusedIssueId: issue.id })
-      document.querySelector(`[data-issue-id="${CSS.escape(issue.id)}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  const focusedGroup = useUI((s) => s.focusedGroupKey)
+  const entries = groups.flatMap((group) => group.issues.map((issue) => ({ issue, group: group.key })))
+  const current = entries.findIndex((entry) => entry.issue.id === focused && entry.group === focusedGroup)
+  useIssueShortcuts(entries[current]?.issue)
+  useEffect(() => () => setUI({ focusedIssueId: null, focusedGroupKey: null, picker: null }), [])
+  const focus = (entry?: typeof entries[number]) => {
+    if (entry) {
+      setUI({ focusedIssueId: entry.issue.id, focusedGroupKey: entry.group })
+      document.querySelector(`[data-issue-group="${CSS.escape(entry.group)}"] [data-issue-id="${CSS.escape(entry.issue.id)}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     }
   }
-  const move = (delta: number) => focus(issues[Math.max(0, Math.min(issues.length - 1, current < 0 ? 0 : current + delta))])
+  const move = (delta: number) => focus(entries[Math.max(0, Math.min(entries.length - 1, current < 0 ? 0 : current + delta))])
   const across = (delta: number) => {
-    const populated = columns!.filter((items) => items.length)
-    const column = populated.findIndex((items) => items.some((i) => i.id === focused))
-    const row = populated[column]?.findIndex((i) => i.id === focused) ?? 0
+    const populated = groups.filter((group) => group.issues.length)
+    const column = populated.findIndex((group) => group.key === focusedGroup)
+    const row = populated[column]?.issues.findIndex((issue) => issue.id === focused) ?? 0
     const next = populated[column + delta]
-    focus(next?.[Math.min(Math.max(row, 0), next.length - 1)])
+    const issue = next?.issues[Math.min(Math.max(row, 0), next.issues.length - 1)]
+    focus(issue && { issue, group: next.key })
   }
   useShortcutActions({
-    ...(issues.length && { up: () => move(-1), down: () => move(1), back: () => setUI({ focusedIssueId: null }) }),
-    ...(columns && { left: () => across(-1), right: () => across(1) }),
+    ...(entries.length && { up: () => move(-1), down: () => move(1), back: () => setUI({ focusedIssueId: null, focusedGroupKey: null }) }),
+    ...(board && { left: () => across(-1), right: () => across(1) }),
   })
 }

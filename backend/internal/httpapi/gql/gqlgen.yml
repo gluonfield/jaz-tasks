@@ -12,6 +12,10 @@ omit_complexity: true
 nullable_input_omittable: true
 call_argument_directives_with_null: false
 models:
+  SavedView:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.SavedView
+  SavedViewInput:
+    model: github.com/gluonfield/jaz-tasks/backend/internal/storage.SavedView
   InboxUpdate:
     model: github.com/gluonfield/jaz-tasks/backend/internal/storage.InboxUpdate
     fields:

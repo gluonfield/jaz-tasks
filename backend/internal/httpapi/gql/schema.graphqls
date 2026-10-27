@@ -5,6 +5,29 @@
 scalar DateTime
 scalar TimelessDate
 
+type SavedView {
+  id: String!
+  name: String!
+  teamId: String
+  labelIds: [String!]!
+  layout: String!
+  grouping: String!
+  ordering: String!
+  showCompleted: Boolean!
+  showEmpty: Boolean!
+}
+
+input SavedViewInput {
+  name: String!
+  teamId: String
+  labelIds: [String!]!
+  layout: String!
+  grouping: String!
+  ordering: String!
+  showCompleted: Boolean!
+  showEmpty: Boolean!
+}
+
 enum PaginationOrderBy {
   createdAt
   updatedAt
@@ -20,6 +43,7 @@ enum ProjectStatusType {
 }
 
 type Query {
+  savedViews: [SavedView!]!
   viewer: User!
   """Undismissed issue updates for this viewer. Not in Linear's API."""
   inbox: [InboxUpdate!]!
@@ -60,6 +84,9 @@ type Query {
 }
 
 type Mutation {
+  savedViewCreate(input: SavedViewInput!): SavedView!
+  savedViewUpdate(id: String!, input: SavedViewInput!): SavedView!
+  savedViewDelete(id: String!): DeletePayload!
   """Dismiss observed Inbox updates without changing their issues. Not in Linear's API."""
   inboxDismiss(input: [InboxDismissInput!]!): Boolean!
   issueCreate(input: IssueCreateInput!): IssuePayload!

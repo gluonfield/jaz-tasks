@@ -1,4 +1,4 @@
-import type { Issue, StateType, WorkflowState } from './types'
+import type { Issue, IssueDisplay, StateType, WorkflowState } from './types'
 
 // entityColors are Linear's default colors for new labels and projects;
 // they are stored as workspace data, not theme.
@@ -24,7 +24,7 @@ export function workflowOrder(a: WorkflowState, b: WorkflowState) {
   return a.position - b.position
 }
 
-export type Ordering = 'manual' | 'priority' | 'updated' | 'created'
+export type Ordering = IssueDisplay['ordering']
 
 const priorityRank = (p: number) => (p === 0 ? 5 : p)
 

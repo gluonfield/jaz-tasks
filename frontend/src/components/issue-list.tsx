@@ -1,14 +1,15 @@
 import { DndContext, DragOverlay, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ChevronRight, Plus } from 'lucide-react'
+import { ChevronRight, Plus, Tag } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import type { Ordering } from '@/lib/issues'
+import { type IssueGroup, groupDefaults } from '@/lib/issue-groups'
 import type { IssuePatch } from '@/lib/types'
 import { openCreateIssue, useUI } from '@/lib/ui'
 import { cn } from '@/lib/utils'
 import { SortableIssue, dropAnimation, useGroupDrag } from './issue-dnd'
 import { IssueRow } from './issue-row'
-import type { IssueGroup } from './issue-view'
+import { LabelDot } from './icons'
 import { useListNavigation } from '@/lib/issue-shortcuts'
 import { useStateIcon } from './properties'
 
@@ -22,10 +23,11 @@ export function IssueList({
   createDefaults?: IssuePatch & { teamId?: string }
 }) {
   const focusedIssueId = useUI((s) => s.focusedIssueId)
+  const focusedGroupKey = useUI((s) => s.focusedGroupKey)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const stateIcon = useStateIcon()
   const { ids, issues, active, context } = useGroupDrag(groups, ordering)
-  const ordered = useMemo(() => groups.filter((g) => !collapsed.has(g.key)).flatMap((g) => g.issues), [groups, collapsed])
+  const ordered = useMemo(() => groups.filter((g) => !collapsed.has(g.key)), [groups, collapsed])
   useListNavigation(ordered)
 
   return (
@@ -45,13 +47,13 @@ export function IssueList({
                 className="flex items-center gap-2 rounded-[5px] px-1.5 py-1 text-[13px] font-medium text-ink outline-none hover:bg-list-hover"
               >
                 <ChevronRight className={cn('size-3 text-ink-3 transition-transform duration-150', !collapsed.has(group.key) && 'rotate-90')} />
-                {stateIcon(group.state)}
-                {group.state.name}
+                {group.kind === 'state' ? stateIcon(group.state) : group.label ? <LabelDot color={group.label.color} /> : <Tag className="size-3.5 text-ink-3" />}
+                {group.name}
                 <span className="font-normal tabular-nums text-ink-3">{ids[group.key].length}</span>
               </button>
               <button
-                aria-label={`Create issue in ${group.state.name}`}
-                onClick={() => openCreateIssue({ ...createDefaults, teamId: group.state.teamId, stateId: group.state.id })}
+                aria-label={`Create issue in ${group.name}`}
+                onClick={() => openCreateIssue({ ...createDefaults, ...groupDefaults(group) })}
                 className="ml-auto flex size-6 items-center justify-center rounded-[5px] text-ink-3 outline-none hover:bg-list-hover hover:text-ink pointer-coarse:size-9"
               >
                 <Plus className="size-3.5" />
@@ -61,7 +63,7 @@ export function IssueList({
               <SortableContext items={ids[group.key]} strategy={verticalListSortingStrategy}>
                 {ids[group.key].map((id) => (
                   <SortableIssue key={id} id={id}>
-                    <IssueRow issue={issues.get(id)!} focused={id === focusedIssueId} />
+                    <IssueRow issue={issues.get(id)!} groupKey={group.key} focused={issues.get(id)!.id === focusedIssueId && group.key === focusedGroupKey} />
                   </SortableIssue>
                 ))}
               </SortableContext>
@@ -79,5 +81,5 @@ export function IssueList({
 // A section takes drops on its header too, so a collapsed group still accepts issues.
 function Section({ id, children }: { id: string; children: ReactNode }) {
   const { setNodeRef } = useDroppable({ id })
-  return <section ref={setNodeRef}>{children}</section>
+  return <section ref={setNodeRef} data-issue-group={id}>{children}</section>
 }

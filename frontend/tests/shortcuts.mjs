@@ -75,6 +75,9 @@ try {
     if (message.method === 'Runtime.exceptionThrown') {
       errors.push(message.params.exceptionDetails.text)
     }
+    if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
+      console.error(message.params.args.map((arg) => arg.description ?? arg.value).join(' '))
+    }
     if (message.id) {
       const operation = pending.get(message.id)
       if (!operation) {
@@ -114,11 +117,13 @@ try {
   await cdp('Browser.grantPermissions', { origin: ready.url, permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'] })
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(navigator, 'platform', {get: () => 'MacIntel', configurable: true})" })
-  const navigate = async (path) => {
+  const navigate = async (path, hasIssues = true) => {
     const previous = await evaluate('performance.timeOrigin')
     await cdp('Page.navigate', { url: ready.url + path })
     await until(async () => await evaluate(`performance.timeOrigin !== ${previous} && document.readyState === 'complete' && !!document.querySelector('main')`), `Page did not load: ${path}`)
-    await until(async () => await evaluate(`!!document.querySelector('[data-issue-id], [data-issue-edit], [aria-label^="Dismiss update for"]')`), 'App did not hydrate')
+    if (hasIssues) {
+      await until(async () => await evaluate(`!!document.querySelector('[data-issue-id], [data-issue-edit], [aria-label^="Dismiss update for"]')`), 'App did not hydrate')
+    }
     await evaluate('document.activeElement?.blur()')
   }
   const key = async (key, code = '', modifiers = 0) => {
@@ -181,6 +186,53 @@ try {
   const branch = `${issue.identifier.toLowerCase()}-fix-oauth-callbacks-retries`
   const readIssue = async () => (await gql('query ($id: String!) { issue(id: $id) { title description priority estimate dueDate state { name } project { id } cycle { id } assignee { id } labels { nodes { id } } team { id } } }', { id: issue.id })).issue
   const picker = () => evaluate("!!document.querySelector('[data-radix-popper-content-wrapper] input')")
+  const select = (label, value) => evaluate(`(() => {
+    const control = Array.from(document.querySelectorAll('label')).find(label => label.querySelector('span')?.textContent === ${JSON.stringify(label)}).querySelector('select')
+    control.value = ${JSON.stringify(value)}
+    control.dispatchEvent(new Event('change', {bubbles: true}))
+  })()`)
+  const toggle = (text) => evaluate(`Array.from(document.querySelectorAll('label')).find(label => label.textContent.trim() === ${JSON.stringify(text)}).querySelector('input[type=checkbox]').click()`)
+  let labelData
+  const labelBoard = async () => {
+    if (!labelData) {
+      const labels = {}
+      for (const name of ['Product', 'Admin', 'Customers']) {
+        labels[name] = (await gql('mutation ($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { issueLabel { id } } }', { input: { name, teamId: team.id } })).issueLabelCreate.issueLabel.id
+      }
+      const otherTeam = catalog.teams.nodes.find((candidate) => candidate.id !== team.id)
+      await gql('mutation ($input: IssueLabelCreateInput!) { issueLabelCreate(input: $input) { success } }', { input: { name: 'Other team label', teamId: otherTeam.id } })
+      const states = (await gql('query { workflowStates { nodes { id type team { id } } } }')).workflowStates.nodes
+      const done = states.find((state) => state.team.id === team.id && state.type === 'completed')
+      const open = await create('Ship customer dashboard', { labelIds: [labels.Product] })
+      const completed = await create('Publish product release', { labelIds: [labels.Product, labels.Admin], stateId: done.id })
+      const unlabelled = await create('Triage incoming work')
+      labelData = { labels, open, completed, unlabelled }
+    }
+    await navigate('/team/ENG/all')
+    await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+    await until(async () => await evaluate("Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'board')"), 'Display unavailable')
+    await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'board').click()")
+    await select('Group by', 'label')
+    await key('Escape', 'Escape')
+    await until(async () => await evaluate(`!!document.querySelector('[data-issue-group="${labelData.labels.Product}"]')`), 'Label board unavailable')
+    return labelData
+  }
+  const drag = async (source, destination) => {
+    const boxes = await evaluate(`(() => {
+      const bounds = selector => {
+        const box = document.querySelector(selector).getBoundingClientRect()
+        return {x: box.x + box.width / 2, y: box.y + box.height / 2}
+      }
+      return [bounds(${JSON.stringify(source)}), bounds(${JSON.stringify(destination)})]
+    })()`)
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', ...boxes[0] })
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, ...boxes[0] })
+    for (let step = 1; step <= 12; step += 1) {
+      await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', buttons: 1, x: boxes[0].x + (boxes[1].x - boxes[0].x) * step / 12, y: boxes[0].y + (boxes[1].y - boxes[0].y) * step / 12 })
+      await pause(40)
+    }
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', buttons: 0, clickCount: 1, ...boxes[1] })
+  }
   const tests = {
     async list_copy() {
       await navigate('/issues')
@@ -472,6 +524,176 @@ try {
       await key('Enter', 'Enter')
       assert.equal(await evaluate("document.querySelector('[aria-label=\"Toggle issue details\"]').getAttribute('aria-pressed')"), 'false', 'Enter must activate the focused button')
     },
+    async label_grouping() {
+      const { labels, open, completed, unlabelled } = await labelBoard()
+      const card = (group, issue) => `[data-issue-group="${group}"] [data-issue-id="${issue.id}"]`
+      assert.ok(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, open))})`), 'Product must contain its open issue')
+      assert.ok(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, completed))}) && !!document.querySelector(${JSON.stringify(card(labels.Admin, completed))})`), 'Multi-label completed issue must appear in both columns')
+      assert.ok(await evaluate(`!!document.querySelector(${JSON.stringify(card('no-label', unlabelled))})`), 'Unlabelled issue must remain visible')
+      assert.ok(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Customers}"]')`), 'Empty labels must have a column')
+      assert.equal(await evaluate("document.querySelector('main').innerText.includes('Other team label')"), false, 'Team view must exclude another team’s labels')
+      await navigate('/team/ENG/all')
+      assert.ok(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Product}"]')`), 'Grouping must survive reload')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+      await toggle('Show empty groups')
+      assert.equal(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Customers}"]')`), false, 'Empty label columns must be hidden')
+      await key('Escape', 'Escape')
+      await navigate('/team/ENG/all')
+      assert.equal(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Customers}"]')`), false, 'Empty-column setting must survive reload')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+      await toggle('Show empty groups')
+      await click('input[type=checkbox]')
+      assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, completed))}) || !!document.querySelector(${JSON.stringify(card(labels.Admin, completed))})`), false, 'Completed toggle must hide every occurrence')
+      assert.ok(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, open))})`), 'Completed toggle must keep open work')
+      await click('input[type=checkbox]')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'list').click()")
+      await key('Escape', 'Escape')
+      assert.ok(await evaluate(`!!document.querySelector('[role=grid]') && !!document.querySelector(${JSON.stringify(card(labels.Admin, completed))})`), 'List must use label grouping too')
+      await key('b', 'KeyB', 4)
+      await click(`[data-issue-group="${labels.Customers}"] button[aria-label="Create issue in Customers"]`)
+      await until(async () => await evaluate("document.activeElement?.getAttribute('placeholder') === 'Issue title'"), 'Column create unavailable')
+      await cdp('Input.insertText', { text: 'Follow up with customer' })
+      await key('Enter', 'Enter', 4)
+      await until(async () => !(await evaluate("!!document.querySelector('[role=dialog]')")), 'Column create did not submit')
+      const created = (await gql('query { issues { nodes { title labelIds team { id } } } }')).issues.nodes.find((issue) => issue.title === 'Follow up with customer')
+      assert.deepEqual(created.labelIds, [labels.Customers], 'Column create must assign its label')
+      assert.equal(created.team.id, team.id, 'Column create must preserve its team')
+      const columns = await evaluate(`Array.from(document.querySelectorAll('[data-issue-group]')).map(column => Array.from(column.querySelectorAll('[data-issue-id]')).map(card => ({id: card.dataset.issueId, identifier: card.innerText.match(/ENG-\\d+/)[0]}))).filter(column => column.length)`)
+      const first = columns.findIndex((column) => column.some((issue) => issue.id === completed.id))
+      let row = columns[first].findIndex((issue) => issue.id === completed.id)
+      await hover(completed.id)
+      await key('p', 'KeyP')
+      assert.equal(await evaluate("document.querySelectorAll('[data-radix-popper-content-wrapper] input').length"), 1, 'Repeated cards must open one visible-property picker')
+      await key('Escape', 'Escape')
+      await key('l', 'KeyL')
+      assert.equal(await evaluate("document.querySelectorAll('[data-radix-popper-content-wrapper] input').length"), 1, 'Repeated cards must open one hidden-property picker')
+      await key('Escape', 'Escape')
+      for (const column of columns.slice(first + 1)) {
+        row = Math.min(row, column.length - 1)
+        await key('ArrowRight', 'ArrowRight')
+        await key('.', 'Period', 4)
+        assert.equal(await clipboard(), column[row].identifier, 'Navigation must progress past repeated cards')
+      }
+    },
+    async label_drag() {
+      const { labels, completed } = await labelBoard()
+      await cdp('Emulation.setDeviceMetricsOverride', { width: 4000, height: 900, deviceScaleFactor: 1, mobile: false })
+      const read = async () => (await gql('query ($id: String!) { issue(id: $id) { labelIds state { id type } } }', { id: completed.id })).issue
+      const original = await read()
+      const source = `[data-issue-group="${labels.Product}"] [data-issue-id="${completed.id}"]`
+      const target = `[data-issue-group="${labels.Customers}"] > div`
+      await evaluate(`document.querySelector(${JSON.stringify(source)}).scrollIntoView({block: 'nearest', inline: 'nearest'})`)
+      await drag(source, target)
+      await until(async () => {
+        const value = await read()
+        return value.labelIds.includes(labels.Customers) && !value.labelIds.includes(labels.Product)
+      }, 'Drag must replace the source label')
+      assert.ok((await read()).labelIds.includes(labels.Admin), 'Drag must preserve other labels')
+      assert.equal((await read()).state.id, original.state.id, 'Drag must preserve completion status')
+      await navigate('/team/ENG/all')
+      await drag(`[data-issue-group="${labels.Customers}"] [data-issue-id="${completed.id}"]`, `[data-issue-group="${labels.Admin}"] [data-issue-id="${completed.id}"]`)
+      await until(async () => (await read()).labelIds.length === 1, 'Dropping onto an existing occurrence must remove the source label without duplication')
+      assert.deepEqual((await read()).labelIds, [labels.Admin])
+      await navigate('/team/ENG/all')
+      await evaluate("document.querySelector('[data-issue-group=\"no-label\"]').scrollIntoView({inline: 'nearest'})")
+      const origin = `[data-issue-group="${labels.Admin}"] [data-issue-id="${completed.id}"]`
+      await evaluate(`document.querySelector(${JSON.stringify(origin)}).scrollIntoView({block: 'nearest', inline: 'nearest'})`)
+      await drag(origin, '[data-issue-group="no-label"] > div')
+      await until(async () => !(await read()).labelIds.length, 'No label drop must clear labels')
+      assert.equal((await read()).state.id, original.state.id, 'Clearing labels must preserve status')
+    },
+    async status_drag() {
+      await navigate('/team/ENG/all')
+      await cdp('Emulation.setDeviceMetricsOverride', { width: 2800, height: 900, deviceScaleFactor: 1, mobile: false })
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'board').click()")
+      await select('Group by', 'state')
+      await key('Escape', 'Escape')
+      const before = await create('Reorder before this task')
+      const moving = await create('Move across workflow columns')
+      await navigate('/team/ENG/all')
+      await drag(`[data-issue-id="${moving.id}"]`, `[data-issue-id="${before.id}"]`)
+      await until(async () => {
+        const sortOrders = (await gql('query { issues { nodes { id sortOrder } } }')).issues.nodes
+        return sortOrders.find((issue) => issue.id === moving.id).sortOrder > sortOrders.find((issue) => issue.id === before.id).sortOrder
+      }, 'Manual reordering must move below the target')
+      await navigate('/team/ENG/all')
+      await drag(`[data-issue-id="${moving.id}"]`, '[data-issue-group="completed:Done"] > div')
+      await until(async () => (await gql('query ($id: String!) { issue(id: $id) { state { type } } }', { id: moving.id })).issue.state.type === 'completed', 'Status drag must persist the destination workflow state')
+    },
+    async saved_views() {
+      const { labels, open } = await labelBoard()
+      const states = (await gql('query { workflowStates { nodes { id type team { id } } } }')).workflowStates.nodes
+      const done = states.find((state) => state.team.id === team.id && state.type === 'completed')
+      await create('Publish customer release', { labelIds: [labels.Product], stateId: done.id })
+      await create('Review supplier invoices', { labelIds: [labels.Admin] })
+      await create('File supplier invoice', { labelIds: [labels.Admin], stateId: done.id })
+      await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 900, deviceScaleFactor: 1, mobile: false })
+      await navigate('/views', false)
+      await until(async () => await evaluate("Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Create view')"), 'Views unavailable')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Create view').click()")
+      await until(async () => await evaluate("!!document.querySelector('[role=dialog] form')"), 'View creation unavailable')
+      await click('[role=dialog] input:not([type=checkbox])')
+      await cdp('Input.insertText', { text: 'Customer delivery' })
+      await select('Team', team.id)
+      for (const name of ['Product', 'Admin', 'Customers']) {
+        await toggle(name)
+      }
+      await select('Ordering', 'priority')
+      await click('[role=dialog] button[type=submit]')
+      await until(async () => await evaluate("location.pathname.startsWith('/view/') && !!document.querySelector('[data-issue-id]')"), 'Created view did not open')
+      const id = await evaluate("location.pathname.split('/').pop()")
+      const read = async () => (await gql('query { savedViews { id name teamId labelIds layout grouping ordering showCompleted showEmpty } }')).savedViews.find((view) => view.id === id)
+      const saved = await read()
+      assert.equal(saved.name, 'Customer delivery')
+      assert.equal(saved.teamId, team.id)
+      assert.deepEqual(new Set(saved.labelIds), new Set(Object.values(labels)))
+      assert.equal(saved.layout, 'board')
+      assert.equal(saved.grouping, 'label')
+      assert.equal(saved.ordering, 'priority')
+      assert.equal(saved.showCompleted, true)
+      assert.equal(saved.showEmpty, false)
+      assert.ok(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Product}"] [data-issue-id="${open.id}"]')`), 'Saved filter must keep matching tasks')
+      await evaluate(`localStorage.setItem('jaz-tasks:layout:view:${id}', 'list'); localStorage.setItem('jaz-tasks:grouping:view:${id}', 'state')`)
+      await navigate(`/view/${id}`)
+      assert.ok(await evaluate(`!document.querySelector('[role=grid]') && !!document.querySelector('[data-issue-group="${labels.Product}"]')`), 'Shared settings must override personal browser preferences')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+      await toggle('Show empty groups')
+      await until(async () => (await read()).showEmpty, 'Display edit must persist in the server')
+      for (const [name, width, dark] of [['labels-light', 1400, false], ['labels-dark', 1400, true], ['labels-narrow', 390, false]]) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 })
+        await evaluate(`document.documentElement.classList.toggle('dark', ${dark})`)
+        await pause(200)
+        assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Label board overflows the page')
+        const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+        await writeFile(`${output}/${name}.png`, Buffer.from(shot.data, 'base64'))
+      }
+      await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 900, deviceScaleFactor: 1, mobile: false })
+      await select('Group by', 'state')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'list').click()")
+      await until(async () => {
+        const view = await read()
+        return view.grouping === 'state' && view.layout === 'list'
+      }, 'Shared display update did not save')
+      await key('Escape', 'Escape')
+      await navigate(`/view/${id}`)
+      assert.ok(await evaluate("!!document.querySelector('[role=grid]')"), 'Shared layout must survive reload')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Edit view').click()")
+      await click('[role=dialog] input:not([type=checkbox])')
+      await key('a', 'KeyA', 4)
+      await cdp('Input.insertText', { text: 'Customer work' })
+      await click('[role=dialog] button[type=submit]')
+      await until(async () => (await read()).name === 'Customer work', 'View rename did not save')
+      await navigate('/views', false)
+      await until(async () => await evaluate(`!!document.querySelector('a[href="/view/${id}"]')`), 'Saved view missing from Views')
+      await click(`a[href="/view/${id}"]`)
+      await until(async () => await evaluate("Array.from(document.querySelectorAll('button')).some(button => button.textContent === 'Edit view')"), 'Saved view did not reopen')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Edit view').click()")
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Delete view').click()")
+      assert.ok(await read(), 'Deletion must require confirmation')
+      await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Confirm delete').click()")
+      await until(async () => !(await read()), 'View deletion did not persist')
+    },
     async help() {
       await navigate('/issues')
       await key('?', 'Slash', 8)
@@ -509,6 +731,15 @@ try {
       results.push({ name, passed: true })
       console.log(`PASS ${name}`)
     } catch (error) {
+      const detail = await evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Show Error')
+        button?.click()
+        return button ? document.body.innerText : ''
+      })()`)
+      if (detail) {
+        await pause(100)
+        console.error(await evaluate('document.body.innerText'))
+      }
       results.push({ name, passed: false, error: error.message })
       console.error(`FAIL ${name}: ${error.message}`)
       const shot = await cdp('Page.captureScreenshot', { format: 'png' })

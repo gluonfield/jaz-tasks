@@ -8,7 +8,7 @@ A self-hosted issue tracker in the style of Linear, shared by people and AI agen
 
 - **Issues:** status, priority, assignee, labels, estimate, due date, cycle, sub-issues, comments and history.
 - **Projects:** status, lead, teams, start and target dates, and a markdown brief that holds the plan. The timeline lays projects out by date; drag a bar to reschedule it.
-- **Views:** list and board grouped by status with drag and drop, My issues, Inbox and saved views. Linear's keyboard shortcuts work: `C` create, `⌘K` command palette, `J`/`K` move, `S`/`P`/`A`/`L` status, priority, assignee, labels, `⌘B` switch layout.
+- **Views:** list and board grouped by status or label with drag and drop, My issues and Inbox. **Views → Create view** saves a name, team/label filters, layout, grouping, ordering and visibility settings in the workspace database, shared with all members. Display changes to saved views are shared too; ordinary team and built-in views keep personal browser preferences. Hide empty columns with **Display → Show empty groups**. Multi-label issues appear in each label column; dragging between labels replaces the source label and preserves the others, and dropping into **No label** clears labels. Linear's keyboard shortcuts work: `C` create, `⌘K` command palette, `J`/`K` move, `S`/`P`/`A`/`L` status, priority, assignee, labels, `⌘B` switch layout.
 - **Workspaces:** OpenID Connect sign-in, a workspace for each new person, invites and switching. Every query, tool and token is scoped to one workspace, and tests attack other tenants by id through GraphQL and MCP.
 
 ## Clients

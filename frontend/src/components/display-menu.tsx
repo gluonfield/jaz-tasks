@@ -56,7 +56,7 @@ export function DisplayMenu<T extends string>({
 
 export function DisplaySelect<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (value: T) => void }) {
   return (
-    <div className="mt-3 flex items-center justify-between text-[12.5px]">
+    <label className="mt-3 flex items-center justify-between text-[12.5px]">
       <span className="text-ink-2">{label}</span>
       <select
         value={value}
@@ -69,6 +69,6 @@ export function DisplaySelect<T extends string>({ label, value, options, onChang
           </option>
         ))}
       </select>
-    </div>
+    </label>
   )
 }

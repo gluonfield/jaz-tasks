@@ -10,7 +10,7 @@ import { EntityIcon, LabelDot } from './icons'
 import { IssueContextMenu } from './issue-menu'
 import { AssigneePicker, DueDatePicker, PriorityPicker, ShortcutPicker, StatusPicker, SubIssueCount } from './properties'
 
-export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issue; focused: boolean }) {
+export const IssueRow = memo(function IssueRow({ issue, focused, groupKey }: { issue: Issue; focused: boolean; groupKey?: string }) {
   const navigate = useNavigate()
   const { labels, projects, states } = useCatalogMaps()
   const patch = useIssuePatch(issue)
@@ -24,7 +24,8 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
       <div
         role="row"
         data-issue-id={issue.id}
-        onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id })}
+        onMouseMove={() => !focused && setUI({ focusedIssueId: issue.id, focusedGroupKey: groupKey ?? null })}
+        onContextMenu={() => setUI({ focusedIssueId: issue.id, focusedGroupKey: groupKey ?? null })}
         onClick={() => navigate({ to: '/issue/$identifier', params: { identifier: issue.identifier } })}
         className={cn(
           'group relative flex min-h-9 cursor-default items-center gap-2 pl-[18px] pr-4 text-[13px] transition-colors duration-75 pointer-coarse:min-h-11 max-md:flex-wrap max-md:gap-x-1.5 max-md:gap-y-0.5 max-md:py-2',
@@ -32,10 +33,10 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
         )}
       >
         {focused && <span className="absolute inset-y-0 left-0 w-[2px] bg-primary/70" />}
-        <ShortcutPicker issue={issue} visible={minimal ? ['status', 'assignee'] : issue.dueDate ? ['priority', 'status', 'assignee', 'dueDate'] : ['priority', 'status', 'assignee']} />
-        {!minimal && <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} issueId={issue.id} />}
+        {focused && <ShortcutPicker issue={issue} visible={minimal ? ['status', 'assignee'] : issue.dueDate ? ['priority', 'status', 'assignee', 'dueDate'] : ['priority', 'status', 'assignee']} />}
+        {!minimal && <PriorityPicker variant="icon" value={issue.priority} onChange={(priority) => patch({ priority })} teamId={issue.teamId} issueId={focused ? issue.id : undefined} />}
         <span className="w-[62px] shrink-0 truncate text-[12.5px] text-ink-3 max-md:w-auto">{issue.identifier}</span>
-        <StatusPicker variant="icon" value={issue.stateId} onChange={(stateId) => patch({ stateId })} teamId={issue.teamId} issueId={issue.id} className="-ml-1 max-md:-order-1" />
+        <StatusPicker variant="icon" value={issue.stateId} onChange={(stateId) => patch({ stateId })} teamId={issue.teamId} issueId={focused ? issue.id : undefined} className="-ml-1 max-md:-order-1" />
         <span className="flex min-w-0 flex-1 items-center gap-2 max-md:contents">
           <span className={cn('truncate font-medium text-ink max-md:order-first max-md:line-clamp-2 max-md:basis-full max-md:whitespace-normal', done && 'text-ink-2')}>{issue.title}</span>
           {!minimal && <SubIssueCount issueId={issue.id} />}
@@ -61,7 +62,7 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
                   value={issue.dueDate}
                   onChange={(dueDate) => patch({ dueDate })}
                   teamId={issue.teamId}
-                  issueId={issue.id}
+                  issueId={focused ? issue.id : undefined}
                   done={done}
                   className="h-[22px] rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-1"
                 />
@@ -76,7 +77,7 @@ export const IssueRow = memo(function IssueRow({ issue, focused }: { issue: Issu
               <span className="w-14 text-right text-[12px] tabular-nums text-ink-3 max-md:hidden">{formatDate(issue.createdAt)}</span>
             </>
           )}
-          <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} issueId={issue.id} className="max-md:ml-auto" />
+          <AssigneePicker variant="icon" value={issue.assigneeId} onChange={(assigneeId) => patch({ assigneeId })} teamId={issue.teamId} issueId={focused ? issue.id : undefined} className="max-md:ml-auto" />
         </div>
       </div>
     </IssueContextMenu>

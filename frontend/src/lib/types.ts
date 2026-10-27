@@ -1,5 +1,15 @@
 export type StateType = 'triage' | 'backlog' | 'unstarted' | 'started' | 'completed' | 'canceled'
 
+export type IssueDisplay = {
+  layout: 'list' | 'board'
+  grouping: 'state' | 'label'
+  ordering: 'manual' | 'priority' | 'updated' | 'created'
+  showCompleted: boolean
+  showEmpty: boolean
+}
+
+export type SavedView = IssueDisplay & { id: string; name: string; teamId: string | null; labelIds: string[] }
+
 export type Team = { id: string; key: string; name: string; icon: string | null; color: string | null }
 
 export type Invite = { id: string; email: string; createdAt: string }

@@ -12,18 +12,17 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
+import { sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { type ReactNode, useMemo, useState } from 'react'
 import { type Ordering, sortOrderBetween } from '@/lib/issues'
+import { type IssueGroup, groupPatch, issueGroupId } from '@/lib/issue-groups'
 import { useCatalogMaps, useUpdateIssue } from '@/lib/queries'
-import type { IssuePatch } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import type { IssueGroup } from './issue-view'
 
 type Groups = Record<string, string[]>
 
-const toGroups = (groups: IssueGroup[]): Groups => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => i.id)]))
+const toGroups = (groups: IssueGroup[]): Groups => Object.fromEntries(groups.map((g) => [g.key, g.issues.map((i) => issueGroupId(g, i))]))
 
 // A dropped issue settles into its slot as its lift shadow fades, so the
 // overlay ends exactly as the resting issue looks.
@@ -36,25 +35,20 @@ export const dropAnimation: DropAnimation = {
   ],
 }
 
-// useGroupDrag moves issues between status groups, as board columns or list
-// sections: a drop sets the status of the group it lands in and, under manual
-// ordering, the sort order of its slot.
 export function useGroupDrag(groups: IssueGroup[], ordering: Ordering) {
   const { catalog } = useCatalogMaps()
   const update = useUpdateIssue()
   const [activeId, setActiveId] = useState<string | null>(null)
-  // arranged is the layout as the drag left it. It holds a dropped issue where
-  // it landed until the issue list it was made from changes.
-  const [arranged, setArranged] = useState<{ from: IssueGroup[]; groups: Groups } | null>(null)
-  const saved = useMemo(() => toGroups(groups), [groups])
-  const ids = arranged?.from === groups ? arranged.groups : saved
-  const issues = useMemo(() => new Map(groups.flatMap((g) => g.issues).map((i) => [i.id, i])), [groups])
+  const ids = useMemo(() => toGroups(groups), [groups])
+  const [overGroup, setOverGroup] = useState<string | null>(null)
+  const issues = useMemo(() => new Map(groups.flatMap((g) => g.issues.map((issue) => [issueGroupId(g, issue), issue] as const))), [groups])
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   const groupOf = (id: string) => (id in ids ? id : Object.keys(ids).find((key) => ids[key].includes(id)))
+  const sourceOf = (id: string) => groups.find((group) => ids[group.key].includes(id))
 
   // The group under the pointer takes the issue, even an empty one beside a
   // full one, and its nearest issue sets the slot. The keyboard, which has no
@@ -70,58 +64,39 @@ export function useGroupDrag(groups: IssueGroup[], ordering: Ordering) {
     return items.length ? closestCenter({ ...args, droppableContainers: items }) : [{ id: group }]
   }
 
-  // Crossing into another group moves the issue there, above or below the
-  // issue it hovers, so the view shows where it will land.
-  const onDragOver = ({ active, over }: DragOverEvent) => {
-    const id = String(active.id)
-    const from = groupOf(id)
-    const to = over && groupOf(String(over.id))
-    if (!over || !from || !to || from === to) {
-      return
-    }
-    const target = ids[to]
-    const translated = active.rect.current.translated
-    const below = !!translated && translated.top + translated.height / 2 > over.rect.top + over.rect.height / 2
-    const index = over.id === to ? target.length : target.indexOf(String(over.id)) + (below ? 1 : 0)
-    setArranged({
-      from: groups,
-      groups: { ...ids, [from]: ids[from].filter((c) => c !== id), [to]: [...target.slice(0, index), id, ...target.slice(index)] },
-    })
-  }
+  const onDragOver = ({ over }: DragOverEvent) => setOverGroup(over ? groupOf(String(over.id)) ?? null : null)
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveId(null)
+    setOverGroup(null)
     const id = String(active.id)
     const issue = issues.get(id)
-    const group = groupOf(id)
-    const state = catalog?.states.find((s) => s.teamId === issue?.teamId && `${s.type}:${s.name}` === group)
-    if (!issue || !group || !over || !state) {
-      setArranged(null)
+    const source = sourceOf(id)
+    const destination = over && groups.find((group) => group.key === groupOf(String(over.id)))
+    const patch = issue && source && destination && groupPatch(issue, source, destination, catalog?.states ?? [])
+    if (!issue || !source || !destination || !over || !patch) {
       return
     }
-    const overIndex = ids[group].indexOf(String(over.id))
-    const order = overIndex < 0 ? ids[group] : arrayMove(ids[group], ids[group].indexOf(id), overIndex)
-    setArranged({ from: groups, groups: { ...ids, [group]: order } })
-    const index = order.indexOf(id)
-    const patch: IssuePatch = {}
-    if (state.id !== issue.stateId) {
-      patch.stateId = state.id
-    }
-    if (ordering === 'manual' && saved[group]?.indexOf(id) !== index) {
-      patch.sortOrder = sortOrderBetween(issues.get(order[index - 1]), issues.get(order[index + 1]))
+    const group = destination.key
+    const target = ids[group].filter((key) => issues.get(key)?.id !== issue.id)
+    const overIndex = source.key === group ? ids[group].indexOf(String(over.id)) : target.indexOf(String(over.id))
+    const index = overIndex < 0 ? target.length : overIndex
+    if (ordering === 'manual' && (source.key !== group || ids[group].indexOf(id) !== index)) {
+      patch.sortOrder = sortOrderBetween(issues.get(target[index - 1]), issues.get(target[index]))
     }
     if (Object.keys(patch).length) {
-      update.mutate({ id, patch })
+      update.mutate({ id: issue.id, patch })
     }
   }
 
   const activeIssue = activeId ? issues.get(activeId) : undefined
-  // The lifted issue shows the status of the group it is over.
-  const activeState = activeId ? groups.find((g) => g.key === groupOf(activeId))?.state : undefined
+  const activeSource = activeId ? sourceOf(activeId) : undefined
+  const activeDestination = activeId ? groups.find((group) => group.key === (overGroup ?? groupOf(activeId))) : undefined
+  const activePatch = activeIssue && activeSource && activeDestination && groupPatch(activeIssue, activeSource, activeDestination, catalog?.states ?? [])
   return {
     ids,
     issues,
-    active: activeIssue && activeState ? { ...activeIssue, stateId: activeState.id } : activeIssue,
+    active: activeIssue && activePatch ? { ...activeIssue, ...activePatch } : activeIssue,
     context: {
       sensors,
       collisionDetection,
@@ -130,7 +105,7 @@ export function useGroupDrag(groups: IssueGroup[], ordering: Ordering) {
       onDragEnd,
       onDragCancel: () => {
         setActiveId(null)
-        setArranged(null)
+        setOverGroup(null)
       },
     },
   }

@@ -1,12 +1,18 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { Button } from '@jaz/ui/button'
 import { Layers } from 'lucide-react'
+import { useState } from 'react'
 import { ViewHeader } from '@/components/issue-view'
+import { SavedViewDialog } from '@/components/saved-view-dialog'
 import { useCatalogMaps, useIssues } from '@/lib/queries'
-import { views } from '@/lib/views'
+import { useSavedViews } from '@/lib/saved-views'
+import { savedViewDefinition, views } from '@/lib/views'
 
 export const Route = createFileRoute('/_app/views')({ component: Views })
 
 function Views() {
+  const [creating, setCreating] = useState(false)
+  const { data: saved = [], error, refetch } = useSavedViews()
   const { states, catalog } = useCatalogMaps()
   const { data: issues = [] } = useIssues()
   return (
@@ -17,9 +23,13 @@ function Views() {
             <Layers className="size-4 text-ink-2" /> Views
           </>
         }
-      />
+      >
+        <Button onClick={() => setCreating(true)}>Create view</Button>
+      </ViewHeader>
+      <SavedViewDialog open={creating} onOpenChange={setCreating} />
       <div className="scrollbar-quiet flex-1 overflow-y-auto pb-[var(--safe-area-bottom)]">
-        {views.map((view) => {
+        {error && <div className="flex items-center gap-3 px-5 py-3 text-[13px] text-ink-2">Couldn’t load saved views.<Button onClick={() => void refetch()}>Retry</Button></div>}
+        {[...saved.map(savedViewDefinition), ...views].map((view) => {
           const count = issues.filter((i) => view.match(i, { states, viewerId: catalog?.viewer.id })).length
           return (
             <Link

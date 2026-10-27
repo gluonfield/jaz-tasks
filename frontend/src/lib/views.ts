@@ -1,5 +1,5 @@
 import { dueStatus } from './issues'
-import type { Issue, WorkflowState } from './types'
+import type { Issue, SavedView, WorkflowState } from './types'
 
 type Context = { states: Map<string, WorkflowState>; viewerId?: string }
 
@@ -39,4 +39,16 @@ export const views = [
 
 function open(issue: Issue, { states }: Context) {
   return !['completed', 'canceled'].includes(states.get(issue.stateId)?.type ?? '')
+}
+
+export function savedViewDefinition(view: SavedView) {
+  return {
+    id: view.id,
+    name: view.name,
+    description: `${view.layout === 'board' ? 'Board' : 'List'} · Grouped by ${view.grouping === 'label' ? 'label' : 'status'}`,
+    match: (issue: Issue, context: Context) =>
+      (!view.teamId || issue.teamId === view.teamId) &&
+      (!view.labelIds.length || issue.labelIds.some((id) => view.labelIds.includes(id))) &&
+      (view.showCompleted || open(issue, context)),
+  }
 }
