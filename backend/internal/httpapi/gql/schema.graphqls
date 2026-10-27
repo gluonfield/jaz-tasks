@@ -28,6 +28,17 @@ input SavedViewInput {
   showEmpty: Boolean!
 }
 
+input SavedViewUpdateInput {
+  name: String
+  teamId: String
+  labelIds: [String!]
+  layout: String
+  grouping: String
+  ordering: String
+  showCompleted: Boolean
+  showEmpty: Boolean
+}
+
 enum PaginationOrderBy {
   createdAt
   updatedAt
@@ -85,7 +96,7 @@ type Query {
 
 type Mutation {
   savedViewCreate(input: SavedViewInput!): SavedView!
-  savedViewUpdate(id: String!, input: SavedViewInput!): SavedView!
+  savedViewUpdate(id: String!, input: SavedViewUpdateInput!): SavedView!
   savedViewDelete(id: String!): DeletePayload!
   """Dismiss observed Inbox updates without changing their issues. Not in Linear's API."""
   inboxDismiss(input: [InboxDismissInput!]!): Boolean!

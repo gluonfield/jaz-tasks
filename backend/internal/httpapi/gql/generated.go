@@ -174,7 +174,7 @@ type IssueSearchResultResolver interface {
 }
 type MutationResolver interface {
 	SavedViewCreate(ctx context.Context, input storage.SavedView) (*storage.SavedView, error)
-	SavedViewUpdate(ctx context.Context, id string, input storage.SavedView) (*storage.SavedView, error)
+	SavedViewUpdate(ctx context.Context, id string, input SavedViewUpdateInput) (*storage.SavedView, error)
 	SavedViewDelete(ctx context.Context, id string) (*DeletePayload, error)
 	InboxDismiss(ctx context.Context, input []tracker.InboxDismissInput) (bool, error)
 	IssueCreate(ctx context.Context, input tracker.IssueCreateInput) (*IssuePayload, error)
@@ -337,6 +337,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputProjectStatusFilter,
 		ec.unmarshalInputProjectUpdateInput,
 		ec.unmarshalInputSavedViewInput,
+		ec.unmarshalInputSavedViewUpdateInput,
 		ec.unmarshalInputStringComparator,
 		ec.unmarshalInputTeamCreateInput,
 		ec.unmarshalInputTeamFilter,
@@ -2120,8 +2121,8 @@ func (ec *executionContext) field_Mutation_savedViewUpdate_args(ctx context.Cont
 	}
 	args["id"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (storage.SavedView, error) {
-			return ec.unmarshalNSavedViewInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐSavedView(ctx, v)
+		func(ctx context.Context, v any) (SavedViewUpdateInput, error) {
+			return ec.unmarshalNSavedViewUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐSavedViewUpdateInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -8093,7 +8094,7 @@ func (ec *executionContext) _Mutation_savedViewUpdate(ctx context.Context, field
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().SavedViewUpdate(ctx, fc.Args["id"].(string), fc.Args["input"].(storage.SavedView))
+			return ec.Resolvers.Mutation().SavedViewUpdate(ctx, fc.Args["id"].(string), fc.Args["input"].(SavedViewUpdateInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v *storage.SavedView) graphql.Marshaler {
@@ -16495,6 +16496,85 @@ func (ec *executionContext) unmarshalInputSavedViewInput(ctx context.Context, ob
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSavedViewUpdateInput(ctx context.Context, obj any) (SavedViewUpdateInput, error) {
+	var it SavedViewUpdateInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "teamId", "labelIds", "layout", "grouping", "ordering", "showCompleted", "showEmpty"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = graphql.OmittableOf(data)
+		case "teamId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TeamID = graphql.OmittableOf(data)
+		case "labelIds":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("labelIds"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LabelIds = graphql.OmittableOf(data)
+		case "layout":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("layout"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Layout = graphql.OmittableOf(data)
+		case "grouping":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grouping"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Grouping = graphql.OmittableOf(data)
+		case "ordering":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ordering"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ordering = graphql.OmittableOf(data)
+		case "showCompleted":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showCompleted"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ShowCompleted = graphql.OmittableOf(data)
+		case "showEmpty":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showEmpty"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ShowEmpty = graphql.OmittableOf(data)
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputStringComparator(ctx context.Context, obj any) (tracker.StringComparator, error) {
 	var it tracker.StringComparator
 	if obj == nil {
@@ -24729,6 +24809,11 @@ func (ec *executionContext) marshalNSavedView2ᚖgithubᚗcomᚋgluonfieldᚋjaz
 
 func (ec *executionContext) unmarshalNSavedViewInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋstorageᚐSavedView(ctx context.Context, v any) (storage.SavedView, error) {
 	res, err := ec.unmarshalInputSavedViewInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNSavedViewUpdateInput2githubᚗcomᚋgluonfieldᚋjazᚑtasksᚋbackendᚋinternalᚋhttpapiᚋgqlᚐSavedViewUpdateInput(ctx context.Context, v any) (SavedViewUpdateInput, error) {
+	res, err := ec.unmarshalInputSavedViewUpdateInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 

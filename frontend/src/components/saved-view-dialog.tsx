@@ -26,19 +26,20 @@ function ViewForm({ view, close }: { view?: SavedView; close: () => void }) {
   const remove = useDeleteView()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [draft, setDraft] = useState<Omit<SavedView, 'id'>>(() => ({
+  const [changes, setChanges] = useState<Partial<Omit<SavedView, 'id'>>>({})
+  const draft: Omit<SavedView, 'id'> = {
     name: '', teamId: catalog?.teams.length === 1 ? catalog.teams[0].id : null,
-    layout: 'board', grouping: 'label', ordering: 'manual', showCompleted: true, showEmpty: false,
+    layout: 'board', grouping: 'label', ordering: 'manual', showCompleted: true, showEmpty: false, labelIds: [],
     ...view,
-    labelIds: (view?.labelIds ?? []).filter((id) => catalog?.labels.some((label) => label.id === id)),
-  }))
-  const change = (patch: Partial<typeof draft>) => setDraft((current) => ({ ...current, ...patch }))
+    ...changes,
+  }
+  const change = (patch: Partial<Omit<SavedView, 'id'>>) => setChanges((current) => ({ ...current, ...patch }))
   const labels = (catalog?.labels ?? []).filter((label) => !label.isGroup && (!draft.teamId || !label.teamId || label.teamId === draft.teamId))
   const pending = save.isPending || remove.isPending
   return (
     <form onSubmit={async (event) => {
       event.preventDefault()
-      const saved = await save.mutateAsync({ ...draft, name: draft.name.trim(), ...(view && { id: view.id }) }).catch(() => null)
+      const saved = await save.mutateAsync(view ? { id: view.id, patch: changes } : { input: draft }).catch(() => null)
       if (saved) {
         close()
         await navigate({ to: '/view/$viewId', params: { viewId: saved.id } })

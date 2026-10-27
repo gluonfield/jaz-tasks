@@ -1,6 +1,9 @@
 -- name: ListSavedViews :many
 SELECT * FROM saved_views WHERE workspace_id = @workspace_id ORDER BY name, id;
 
+-- name: LockSavedView :one
+SELECT * FROM saved_views WHERE workspace_id = @workspace_id AND id = @id FOR UPDATE;
+
 -- name: CreateSavedView :one
 INSERT INTO saved_views (id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty)
 VALUES (@id, @workspace_id, @name, @team_id, @label_ids::text[], @layout, @grouping, @ordering, @show_completed, @show_empty)

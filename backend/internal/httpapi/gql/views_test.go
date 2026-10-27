@@ -40,7 +40,7 @@ func TestSavedViewsAreSharedAndWorkspaceScoped(t *testing.T) {
 	if len(out.Errors) != 0 || len(out.Data["savedViews"].([]any)) != 1 || out.Data["savedViews"].([]any)[0].(map[string]any)["id"] != id {
 		t.Fatalf("teammate cannot read saved view: %+v", out)
 	}
-	updated := strings.ReplaceAll(strings.ReplaceAll(input, `showEmpty: false`, `showEmpty: true`), `grouping: "label"`, `grouping: "state"`)
+	updated := `{showEmpty: true, grouping: "state"}`
 	_, out = c.do(fmt.Sprintf(`mutation { savedViewUpdate(id: %q, input: %s) { %s } }`, id, updated, fields), key)
 	if len(out.Errors) != 0 {
 		t.Fatal(out.Errors)
@@ -85,5 +85,57 @@ func TestSavedViewsAreSharedAndWorkspaceScoped(t *testing.T) {
 	_, out = c.do(`{ savedViews { id } }`, c.key)
 	if len(out.Errors) != 0 || len(out.Data["savedViews"].([]any)) != 0 {
 		t.Fatalf("deletion not shared: %+v", out)
+	}
+}
+
+func TestSavedViewUpdatesPreserveUnchangedFields(t *testing.T) {
+	c := newClient(t)
+	a := readA(t, c)
+	_, out := c.do(fmt.Sprintf(`mutation { savedViewCreate(input: {name: "Shared", teamId: %q, labelIds: [%q], layout: "board", grouping: "label", ordering: "manual", showCompleted: true, showEmpty: false}) { id } }`, a.team, a.label), c.key)
+	if len(out.Errors) != 0 {
+		t.Fatal(out.Errors)
+	}
+	id := get(out.Data, "savedViewCreate.id").(string)
+	for _, patch := range []string{`{name: "Renamed"}`, `{showEmpty: true}`, `{layout: "list", showCompleted: false}`} {
+		_, out = c.do(fmt.Sprintf(`mutation { savedViewUpdate(id: %q, input: %s) { id } }`, id, patch), c.key)
+		if len(out.Errors) != 0 {
+			t.Fatalf("partial update failed: %+v", out.Errors)
+		}
+	}
+	_, out = c.do(`{ savedViews { name teamId labelIds layout grouping ordering showCompleted showEmpty } }`, c.key)
+	view := out.Data["savedViews"].([]any)[0].(map[string]any)
+	if view["name"] != "Renamed" || view["teamId"] != a.team || view["grouping"] != "label" || view["ordering"] != "manual" ||
+		view["showEmpty"] != true || view["showCompleted"] != false || view["layout"] != "list" || view["labelIds"].([]any)[0] != a.label {
+		t.Fatalf("partial update erased another edit: %+v", view)
+	}
+	_, out = c.do(fmt.Sprintf(`mutation { savedViewUpdate(id: %q, input: {teamId: null, labelIds: []}) { teamId labelIds } }`, id), c.key)
+	if len(out.Errors) != 0 || get(out.Data, "savedViewUpdate.teamId") != nil || len(get(out.Data, "savedViewUpdate.labelIds").([]any)) != 0 {
+		t.Fatalf("clearing filters failed: %+v", out)
+	}
+	_, out = c.do(fmt.Sprintf(`mutation { savedViewUpdate(id: %q, input: {name: "Rejected", grouping: "invalid"}) { id } }`, id), c.key)
+	if len(out.Errors) == 0 || out.Errors[0].Extensions["code"] != "INPUT_ERROR" {
+		t.Fatalf("invalid update accepted: %+v", out)
+	}
+	_, out = c.do(`{ savedViews { name grouping } }`, c.key)
+	view = out.Data["savedViews"].([]any)[0].(map[string]any)
+	if view["name"] != "Renamed" || view["grouping"] != "label" {
+		t.Fatalf("rejected update partially wrote a view: %+v", view)
+	}
+}
+
+func TestDeletedLabelsLeaveNoSavedViewReferences(t *testing.T) {
+	c := newClient(t)
+	a := readA(t, c)
+	_, out := c.do(fmt.Sprintf(`mutation { savedViewCreate(input: {name: "Shared", labelIds: [%q], layout: "board", grouping: "label", ordering: "manual", showCompleted: true, showEmpty: false}) { id } }`, a.label), c.key)
+	if len(out.Errors) != 0 {
+		t.Fatal(out.Errors)
+	}
+	_, out = c.do(fmt.Sprintf(`mutation { issueLabelDelete(id: %q) { success } }`, a.label), c.key)
+	if len(out.Errors) != 0 {
+		t.Fatal(out.Errors)
+	}
+	_, out = c.do(`{ savedViews { labelIds } }`, c.key)
+	if labels := out.Data["savedViews"].([]any)[0].(map[string]any)["labelIds"].([]any); len(labels) != 0 {
+		t.Fatalf("deleted label remains in shared filter: %+v", labels)
 	}
 }

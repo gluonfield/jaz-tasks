@@ -25,9 +25,9 @@ type IssueViewProps = {
   empty?: ReactNode
 }
 
-export function IssueView(props: IssueViewProps & { display?: IssueDisplay; onDisplayChange?: (patch: Partial<IssueDisplay>) => void }) {
-  return props.display && props.onDisplayChange
-    ? <ConfiguredIssueView {...props} display={props.display} onDisplayChange={props.onDisplayChange} />
+export function IssueView(props: IssueViewProps & { settings?: { value: IssueDisplay; onChange: (patch: Partial<IssueDisplay>) => void } }) {
+  return props.settings
+    ? <ConfiguredIssueView {...props} display={props.settings.value} onDisplayChange={props.settings.onChange} />
     : <LocalIssueView {...props} />
 }
 

@@ -122,6 +122,21 @@ func (q *Queries) RemoveLabelFromIssues(ctx context.Context, arg RemoveLabelFrom
 	return err
 }
 
+const removeLabelFromViews = `-- name: RemoveLabelFromViews :exec
+UPDATE saved_views SET label_ids = array_remove(label_ids, $1::text)
+WHERE workspace_id = $2 AND $1::text = ANY(label_ids)
+`
+
+type RemoveLabelFromViewsParams struct {
+	LabelID     string
+	WorkspaceID string
+}
+
+func (q *Queries) RemoveLabelFromViews(ctx context.Context, arg RemoveLabelFromViewsParams) error {
+	_, err := q.db.Exec(ctx, removeLabelFromViews, arg.LabelID, arg.WorkspaceID)
+	return err
+}
+
 const updateLabel = `-- name: UpdateLabel :one
 UPDATE issue_labels
 SET parent_id = $3, name = $4, color = $5, description = $6, updated_at = now()

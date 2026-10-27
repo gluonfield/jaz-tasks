@@ -4,6 +4,8 @@ import { gql } from './api'
 import type { SavedView } from './types'
 
 const fields = 'id name teamId labelIds layout grouping ordering showCompleted showEmpty'
+type ViewInput = Omit<SavedView, 'id'>
+type ViewWrite = { input: ViewInput } | { id: string; patch: Partial<ViewInput> }
 
 export function useSavedViews() {
   return useQuery({
@@ -16,25 +18,25 @@ export function useSavedViews() {
 export function useSaveView() {
   const client = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...input }: Omit<SavedView, 'id'> & { id?: string }) => {
-      const data = id
-        ? await gql<{ savedViewUpdate: SavedView }>(`mutation ($id: String!, $input: SavedViewInput!) { savedViewUpdate(id: $id, input: $input) { ${fields} } }`, { id, input })
-        : await gql<{ savedViewCreate: SavedView }>(`mutation ($input: SavedViewInput!) { savedViewCreate(input: $input) { ${fields} } }`, { input })
+    mutationKey: ['saved-views'],
+    mutationFn: async (write: ViewWrite) => {
+      const data = 'id' in write
+        ? await gql<{ savedViewUpdate: SavedView }>(`mutation ($id: String!, $input: SavedViewUpdateInput!) { savedViewUpdate(id: $id, input: $input) { ${fields} } }`, { id: write.id, input: write.patch })
+        : await gql<{ savedViewCreate: SavedView }>(`mutation ($input: SavedViewInput!) { savedViewCreate(input: $input) { ${fields} } }`, write)
       return 'savedViewCreate' in data ? data.savedViewCreate : data.savedViewUpdate
     },
-    onMutate: async (view) => {
+    onMutate: async (write) => {
       await client.cancelQueries({ queryKey: ['saved-views'] })
-      const previous = client.getQueryData<SavedView[]>(['saved-views'])
-      if (view.id) {
-        client.setQueryData<SavedView[]>(['saved-views'], (views) => views?.map((existing) => existing.id === view.id ? { ...existing, ...view } : existing))
+      if ('id' in write) {
+        client.setQueryData<SavedView[]>(['saved-views'], (views) => views?.map((existing) => existing.id === write.id ? { ...existing, ...write.patch } : existing))
       }
-      return { previous }
     },
-    onError: (error, _view, context) => {
-      client.setQueryData(['saved-views'], context?.previous)
-      toast.error(error.message)
+    onError: (error) => toast.error(error.message),
+    onSettled: () => {
+      if (client.isMutating({ mutationKey: ['saved-views'] }) === 1) {
+        return client.invalidateQueries({ queryKey: ['saved-views'] })
+      }
     },
-    onSettled: () => client.invalidateQueries({ queryKey: ['saved-views'] }),
   })
 }
 

@@ -128,6 +128,17 @@ type ProjectUpdateInput struct {
 type Query struct {
 }
 
+type SavedViewUpdateInput struct {
+	Name          graphql.Omittable[*string]  `json:"name,omitempty"`
+	TeamID        graphql.Omittable[*string]  `json:"teamId,omitempty"`
+	LabelIds      graphql.Omittable[[]string] `json:"labelIds,omitempty"`
+	Layout        graphql.Omittable[*string]  `json:"layout,omitempty"`
+	Grouping      graphql.Omittable[*string]  `json:"grouping,omitempty"`
+	Ordering      graphql.Omittable[*string]  `json:"ordering,omitempty"`
+	ShowCompleted graphql.Omittable[*bool]    `json:"showCompleted,omitempty"`
+	ShowEmpty     graphql.Omittable[*bool]    `json:"showEmpty,omitempty"`
+}
+
 type TeamPayload struct {
 	Success bool          `json:"success"`
 	Team    *storage.Team `json:"team,omitempty"`

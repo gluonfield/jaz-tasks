@@ -24,7 +24,7 @@ type IssueReader func(ctx context.Context, id string) (Issue, error)
 type TrackerStore interface {
 	SavedViews(ctx context.Context, workspaceID string) ([]SavedView, error)
 	CreateSavedView(ctx context.Context, view SavedView) (SavedView, error)
-	UpdateSavedView(ctx context.Context, view SavedView) (SavedView, error)
+	UpdateSavedView(ctx context.Context, workspaceID, id string, mutate SavedViewMutation) (SavedView, error)
 	DeleteSavedView(ctx context.Context, workspaceID, id string) error
 
 	CountWorkspaces(ctx context.Context) (int64, error)

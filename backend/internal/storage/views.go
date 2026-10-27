@@ -12,3 +12,6 @@ type SavedView struct {
 	ShowCompleted bool
 	ShowEmpty     bool
 }
+
+// SavedViewMutation edits a row locked for the transaction's duration.
+type SavedViewMutation func(SavedView) (SavedView, error)

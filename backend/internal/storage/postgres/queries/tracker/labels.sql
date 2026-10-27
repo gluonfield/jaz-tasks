@@ -18,3 +18,7 @@ DELETE FROM issue_labels WHERE workspace_id = $1 AND id = $2;
 -- name: RemoveLabelFromIssues :exec
 UPDATE issues SET label_ids = array_remove(label_ids, @label_id::text)
 WHERE workspace_id = @workspace_id AND @label_id::text = ANY(label_ids);
+
+-- name: RemoveLabelFromViews :exec
+UPDATE saved_views SET label_ids = array_remove(label_ids, @label_id::text)
+WHERE workspace_id = @workspace_id AND @label_id::text = ANY(label_ids);

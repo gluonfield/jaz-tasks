@@ -99,6 +99,9 @@ func (s *Store) UpdateIssueLabel(ctx context.Context, label storage.IssueLabel) 
 
 func (s *Store) DeleteIssueLabel(ctx context.Context, workspaceID, id string) error {
 	return s.tx(ctx, func(q *db.Queries) error {
+		if err := q.RemoveLabelFromViews(ctx, db.RemoveLabelFromViewsParams{LabelID: id, WorkspaceID: workspaceID}); err != nil {
+			return err
+		}
 		if err := q.RemoveLabelFromIssues(ctx, db.RemoveLabelFromIssuesParams{LabelID: id, WorkspaceID: workspaceID}); err != nil {
 			return err
 		}

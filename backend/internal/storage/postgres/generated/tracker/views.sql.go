@@ -109,6 +109,33 @@ func (q *Queries) ListSavedViews(ctx context.Context, workspaceID string) ([]Sav
 	return items, nil
 }
 
+const lockSavedView = `-- name: LockSavedView :one
+SELECT id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty FROM saved_views WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+`
+
+type LockSavedViewParams struct {
+	WorkspaceID string
+	ID          string
+}
+
+func (q *Queries) LockSavedView(ctx context.Context, arg LockSavedViewParams) (SavedView, error) {
+	row := q.db.QueryRow(ctx, lockSavedView, arg.WorkspaceID, arg.ID)
+	var i SavedView
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.TeamID,
+		&i.LabelIDs,
+		&i.Layout,
+		&i.Grouping,
+		&i.Ordering,
+		&i.ShowCompleted,
+		&i.ShowEmpty,
+	)
+	return i, err
+}
+
 const updateSavedView = `-- name: UpdateSavedView :one
 UPDATE saved_views
 SET name = $1, team_id = $2, label_ids = $3::text[], layout = $4,

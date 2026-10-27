@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import { copyIssue } from './issue-copy'
 import type { IssueGroup } from './issue-groups'
@@ -69,9 +69,15 @@ export function useIssueShortcuts(issue: Issue | undefined) {
 export function useListNavigation(groups: IssueGroup[], board = false) {
   const focused = useUI((s) => s.focusedIssueId)
   const focusedGroup = useUI((s) => s.focusedGroupKey)
-  const entries = groups.flatMap((group) => group.issues.map((issue) => ({ issue, group: group.key })))
-  const current = entries.findIndex((entry) => entry.issue.id === focused && entry.group === focusedGroup)
-  useIssueShortcuts(entries[current]?.issue)
+  const entries = useMemo(() => groups.flatMap((group) => group.issues.map((issue) => ({ issue, group: group.key }))), [groups])
+  const selected = entries.find((entry) => entry.issue.id === focused && entry.group === focusedGroup) ?? entries.find((entry) => entry.issue.id === focused)
+  const current = selected ? entries.indexOf(selected) : -1
+  useIssueShortcuts(selected?.issue)
+  useEffect(() => {
+    if (focused && selected?.group !== focusedGroup) {
+      setUI({ focusedIssueId: selected?.issue.id ?? null, focusedGroupKey: selected?.group ?? null, picker: null })
+    }
+  }, [focused, focusedGroup, selected])
   useEffect(() => () => setUI({ focusedIssueId: null, focusedGroupKey: null, picker: null }), [])
   const focus = (entry?: typeof entries[number]) => {
     if (entry) {

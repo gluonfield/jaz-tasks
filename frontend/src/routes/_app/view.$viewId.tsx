@@ -37,8 +37,7 @@ function ViewIssues() {
       <SavedViewDialog open={editing} onOpenChange={setEditing} view={custom} />
       <IssueView
         viewKey={`view:${viewId}`}
-        display={custom}
-        onDisplayChange={custom ? (patch) => save.mutate({ ...custom, ...patch }) : undefined}
+        settings={custom ? { value: custom, onChange: (patch) => save.mutate({ id: custom.id, patch }) } : undefined}
         actions={custom && <Button onClick={() => setEditing(true)}>Edit view</Button>}
         labelIds={custom?.labelIds}
         createDefaults={custom?.teamId ? { teamId: custom.teamId } : undefined}
@@ -52,9 +51,9 @@ function ViewIssues() {
             </Link>
             <ChevronRight className="size-3 text-ink-3 max-md:hidden" />
             {view.name}
-        </>
-      }
-    />
+          </>
+        }
+      />
     </>
   )
 }
