@@ -34,7 +34,7 @@ func New(authn *authapi.Handler, graphql *gql.Handler, agents *mcpapi.Handler, w
 	if web != "" {
 		mux.Handle("/", spa(string(web)))
 	}
-	return httpx.Compress(mux)
+	return httpx.Secure(httpx.Compress(mux))
 }
 
 // authenticate accepts a session cookie, an OAuth access token or an API key,

@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.95
 	github.com/charmbracelet/log v1.0.0
 	github.com/gluonfield/jaz-tasks/auth v0.1.1
-	github.com/gluonfield/jaz-tasks/httpx v0.1.0
+	github.com/gluonfield/jaz-tasks/httpx v0.1.2
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/jsonschema-go v0.4.3
 	github.com/jackc/pgx/v5 v5.11.0
@@ -57,7 +57,7 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/time v0.15.0
 	golang.org/x/tools v0.49.0 // indirect
 )
 

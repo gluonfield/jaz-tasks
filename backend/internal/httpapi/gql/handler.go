@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/executor"
@@ -37,8 +38,12 @@ func NewHandler(svc *tracker.Service, members *workspaces.Service, keys *auth.Se
 	srv.AddTransport(transport.POST{})
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](256))
 	srv.Use(extension.Introspection{})
+	srv.Use(operationLimit{})
+	srv.SetParserTokenLimit(10_000)
 	srv.SetErrorPresenter(presenter)
 	exec := executor.New(schema)
+	exec.Use(operationLimit{})
+	exec.SetParserTokenLimit(10_000)
 	exec.SetErrorPresenter(presenter)
 	return &Handler{tracker: svc, server: srv, exec: exec}
 }
@@ -54,6 +59,11 @@ type Request struct {
 // Execute runs an operation without HTTP, for callers such as the MCP App
 // bridge that already authenticated the actor.
 func (h *Handler) Execute(ctx context.Context, actor auth.Actor, req Request) *graphql.Response {
+	if len(req.Query)+len(req.Variables) > maxOperationBytes {
+		return graphql.ErrorResponse(ctx, "operation is too large")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	ctx = graphql.StartOperationTrace(withScope(ctx, h.tracker.Scope(actor)))
 	params := &graphql.RawParams{Query: req.Query, OperationName: req.OperationName}
 	if len(req.Variables) > 0 {
@@ -79,7 +89,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, auth.ErrUnauthenticated.Error(), http.StatusUnauthorized)
 		return
 	}
-	h.server.ServeHTTP(w, r.WithContext(withScope(r.Context(), h.tracker.Scope(actor))))
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	r.Body = http.MaxBytesReader(w, r.Body, maxOperationBytes)
+	h.server.ServeHTTP(w, r.WithContext(withScope(ctx, h.tracker.Scope(actor))))
 }
 
 // presentError tags tracker errors the way Linear tags user errors and hides

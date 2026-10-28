@@ -112,6 +112,10 @@ curl -s localhost:7400/graphql -H "Authorization: $KEY" -H 'Content-Type: applic
   -d '{"query":"{ issues(filter: { state: { type: { eq: \"started\" } } }) { nodes { identifier title } } }"}'
 ```
 
+Queries have a 1 MiB payload limit, 10,000 parser tokens, depth 20 and a bounded field budget that accounts for page sizes. HTTP and the embedded MCP bridge enforce the same policy, with a 10-second execution deadline. Split larger requests or use smaller pages when the API returns `COMPLEXITY_LIMIT_EXCEEDED`.
+
+Public OAuth client registration accepts a 32 KiB body, a 256-byte name and up to eight redirect URIs of 2,048 bytes each. Each server allows a burst of ten registrations, replenishing one every ten seconds; rate-limited clients receive `429` and `Retry-After`.
+
 ## Run it
 
 ```sh

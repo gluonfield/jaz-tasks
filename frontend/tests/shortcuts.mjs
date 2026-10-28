@@ -633,6 +633,7 @@ try {
       await navigate('/team/ENG/all')
       await drag(`[data-issue-id="${moving.id}"]`, '[data-issue-group="completed:Done"] > div')
       await until(async () => (await gql('query ($id: String!) { issue(id: $id) { state { type } } }', { id: moving.id })).issue.state.type === 'completed', 'Status drag must persist the destination workflow state')
+      await until(async () => await evaluate(`document.querySelectorAll('[data-issue-id="${moving.id}"]').length === 1`), 'Drop animation must finish before targeting the card')
       await hover(moving.id)
       await key('s', 'KeyS')
       await until(picker, 'Status picker unavailable')

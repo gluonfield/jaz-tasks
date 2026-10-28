@@ -237,17 +237,17 @@ type PageArgs struct {
 }
 
 const (
-	defaultPageSize = 50
-	maxPageSize     = 250
+	DefaultPageSize = 50
+	MaxPageSize     = 250
 )
 
 func (a PageArgs) bounds() (offset, limit int, err error) {
-	limit = defaultPageSize
+	limit = DefaultPageSize
 	if a.First != nil {
 		limit = int(*a.First)
 	}
-	if limit < 0 || limit > maxPageSize {
-		return 0, 0, invalid("first must be between 0 and %d", maxPageSize)
+	if limit < 0 || limit > MaxPageSize {
+		return 0, 0, invalid("first must be between 0 and %d", MaxPageSize)
 	}
 	if a.After != nil && *a.After != "" {
 		if offset, err = strconv.Atoi(*a.After); err != nil || offset < 0 {

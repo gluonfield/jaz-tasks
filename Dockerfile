@@ -5,7 +5,7 @@ RUN bun install --frozen-lockfile
 COPY frontend/ ./
 RUN bun run build
 
-FROM golang:1.26-alpine AS server
+FROM golang:1.26.10-alpine AS server
 WORKDIR /src
 COPY backend/go.mod backend/go.sum ./
 COPY httpx/ /httpx/
