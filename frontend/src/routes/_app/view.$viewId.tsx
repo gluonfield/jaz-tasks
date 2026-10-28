@@ -7,6 +7,7 @@ import { SavedViewDialog } from '@/components/saved-view-dialog'
 import { useCatalogMaps, useIssues } from '@/lib/queries'
 import { savedViewDefinition, views } from '@/lib/views'
 import { useSavedViews, useSaveView } from '@/lib/saved-views'
+import { useNow } from '@/lib/use-now'
 
 export const Route = createFileRoute('/_app/view/$viewId')({ component: ViewIssues })
 
@@ -17,11 +18,12 @@ function ViewIssues() {
   const { viewId } = Route.useParams()
   const { states, catalog } = useCatalogMaps()
   const { data: issues, isLoading } = useIssues()
+  const now = useNow()
   const custom = saved?.find((view) => view.id === viewId)
   const view = useMemo(() => custom ? savedViewDefinition(custom) : views.find((view) => view.id === viewId), [custom, viewId])
   const matched = useMemo(
-    () => (issues ?? []).filter((issue) => view?.match(issue, { states, viewerId: catalog?.viewer.id })),
-    [issues, view, states, catalog],
+    () => (issues ?? []).filter((issue) => view?.match(issue, { states, viewerId: catalog?.viewer.id, now })),
+    [issues, view, states, catalog, now],
   )
   if (!view && loadingViews) {
     return null
@@ -37,6 +39,7 @@ function ViewIssues() {
       <SavedViewDialog open={editing} onOpenChange={setEditing} view={custom} />
       <IssueView
         viewKey={`view:${viewId}`}
+        defaultCompletedFilter={view.defaultCompletedFilter}
         settings={custom ? { value: custom, onChange: (patch) => save.mutate({ id: custom.id, patch }) } : undefined}
         actions={custom && <Button onClick={() => setEditing(true)}>Edit view</Button>}
         labelIds={custom?.labelIds}

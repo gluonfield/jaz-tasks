@@ -67,6 +67,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if err := seedDateIssues(ctx, store, trackerService.Scope(seeded.Actor)); err != nil {
+		return err
+	}
 	people := workspaces.NewService(store, workspaces.Config{})
 	logger := log.New(io.Discard)
 	authn, err := authapi.NewHandler(keys, people, signin.Config{PublicURL: origin}, logger)

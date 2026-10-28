@@ -19,7 +19,7 @@ func TestSavedViewMutationsAreAtomic(t *testing.T) {
 	}
 	view, err := store.CreateSavedView(ctx, storage.SavedView{
 		ID: shortuuid.New(), WorkspaceID: workspace.ID, Name: "Shared", LabelIDs: []string{},
-		Layout: "board", Grouping: "label", Ordering: "manual",
+		Layout: "board", Grouping: "label", Ordering: "manual", CompletedFilter: "7d", DueDateFilter: "any",
 	})
 	if err != nil {
 		t.Fatal(err)

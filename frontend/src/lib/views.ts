@@ -1,10 +1,12 @@
 import { dueStatus } from './issues'
-import type { Issue, SavedView, WorkflowState } from './types'
+import { matchesIssueDisplay } from './issue-filters'
+import type { Issue, IssueDisplay, SavedView, WorkflowState } from './types'
 
-type Context = { states: Map<string, WorkflowState>; viewerId?: string }
+type Context = { states: Map<string, WorkflowState>; viewerId?: string; now: number }
+type View = { id: string; name: string; description: string; defaultCompletedFilter?: IssueDisplay['completedFilter']; match: (issue: Issue, context: Context) => boolean }
 
 // Built-in views are saved filters evaluated over the local issue set.
-export const views = [
+export const views: View[] = [
   {
     id: 'urgent',
     name: 'Urgent & high priority',
@@ -33,7 +35,8 @@ export const views = [
     id: 'completed',
     name: 'Recently completed',
     description: 'Issues completed in the last 14 days',
-    match: (i: Issue) => !!i.completedAt && Date.now() - new Date(i.completedAt).getTime() < 14 * 86_400_000,
+    defaultCompletedFilter: 'all',
+    match: (i: Issue, c: Context) => !!i.completedAt && c.now - new Date(i.completedAt).getTime() < 14 * 86_400_000,
   },
 ]
 
@@ -41,7 +44,7 @@ function open(issue: Issue, { states }: Context) {
   return !['completed', 'canceled'].includes(states.get(issue.stateId)?.type ?? '')
 }
 
-export function savedViewDefinition(view: SavedView) {
+export function savedViewDefinition(view: SavedView): View {
   return {
     id: view.id,
     name: view.name,
@@ -49,6 +52,6 @@ export function savedViewDefinition(view: SavedView) {
     match: (issue: Issue, context: Context) =>
       (!view.teamId || issue.teamId === view.teamId) &&
       (!view.labelIds.length || issue.labelIds.some((id) => view.labelIds.includes(id))) &&
-      (view.showCompleted || open(issue, context)),
+      matchesIssueDisplay(issue, context.states, view, context.now),
   }
 }

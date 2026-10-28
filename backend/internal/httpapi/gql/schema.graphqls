@@ -13,7 +13,8 @@ type SavedView {
   layout: String!
   grouping: String!
   ordering: String!
-  showCompleted: Boolean!
+  completedFilter: String!
+  dueDateFilter: String!
   showEmpty: Boolean!
 }
 
@@ -24,7 +25,8 @@ input SavedViewInput {
   layout: String!
   grouping: String!
   ordering: String!
-  showCompleted: Boolean!
+  completedFilter: String!
+  dueDateFilter: String!
   showEmpty: Boolean!
 }
 
@@ -35,7 +37,8 @@ input SavedViewUpdateInput {
   layout: String
   grouping: String
   ordering: String
-  showCompleted: Boolean
+  completedFilter: String
+  dueDateFilter: String
   showEmpty: Boolean
 }
 

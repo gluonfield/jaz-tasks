@@ -29,7 +29,7 @@ function ViewForm({ view, close }: { view?: SavedView; close: () => void }) {
   const [changes, setChanges] = useState<Partial<Omit<SavedView, 'id'>>>({})
   const draft: Omit<SavedView, 'id'> = {
     name: '', teamId: catalog?.teams.length === 1 ? catalog.teams[0].id : null,
-    layout: 'board', grouping: 'label', ordering: 'manual', showCompleted: true, showEmpty: false, labelIds: [],
+    layout: 'board', grouping: 'label', ordering: 'manual', completedFilter: '7d', dueDateFilter: 'any', showEmpty: false, labelIds: [],
     ...view,
     ...changes,
   }

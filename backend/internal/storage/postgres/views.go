@@ -28,7 +28,7 @@ func (s *Store) UpdateSavedView(ctx context.Context, workspaceID, id string, mut
 		}
 		updated, err = q.UpdateSavedView(ctx, db.UpdateSavedViewParams{
 			ID: id, WorkspaceID: workspaceID, Name: view.Name, TeamID: view.TeamID, LabelIDs: view.LabelIDs,
-			Layout: view.Layout, Grouping: view.Grouping, Ordering: view.Ordering, ShowCompleted: view.ShowCompleted, ShowEmpty: view.ShowEmpty,
+			Layout: view.Layout, Grouping: view.Grouping, Ordering: view.Ordering, CompletedFilter: view.CompletedFilter, ShowEmpty: view.ShowEmpty, DueDateFilter: view.DueDateFilter,
 		})
 		return err
 	})

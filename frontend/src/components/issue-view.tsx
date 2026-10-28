@@ -2,10 +2,12 @@ import { Button } from '@jaz/ui/button'
 import { type ReactNode, useMemo } from 'react'
 import { host } from '@/lib/host'
 import { type Grouping, groupByLabel, groupByState } from '@/lib/issue-groups'
+import { matchesIssueDisplay } from '@/lib/issue-filters'
 import type { Ordering } from '@/lib/issues'
 import { useCatalogMaps } from '@/lib/queries'
 import type { Issue, IssueDisplay, IssuePatch, WorkflowState } from '@/lib/types'
 import { usePreference } from '@/lib/ui'
+import { useNow } from '@/lib/use-now'
 import { IssueDisplayMenu } from './issue-display'
 import { EmptyState } from './empty-state'
 import { IssueBoard } from './issue-board'
@@ -23,6 +25,7 @@ type IssueViewProps = {
   labelIds?: string[]
   createDefaults?: IssuePatch & { teamId?: string }
   empty?: ReactNode
+  defaultCompletedFilter?: IssueDisplay['completedFilter']
 }
 
 export function IssueView(props: IssueViewProps & { settings?: { value: IssueDisplay; onChange: (patch: Partial<IssueDisplay>) => void } }) {
@@ -36,26 +39,27 @@ function LocalIssueView(props: IssueViewProps) {
   const [layout, setLayout] = usePreference<'list' | 'board'>(`layout:${viewKey}`, host.view ?? 'list')
   const [ordering, setOrdering] = usePreference<Ordering>(`ordering:${viewKey}`, 'manual')
   const [grouping, setGrouping] = usePreference<Grouping>(`grouping:${viewKey}`, 'state')
-  const [showCompleted, setShowCompleted] = usePreference<'yes' | 'no'>(`completed:${viewKey}`, 'yes')
+  const [completed, setCompleted] = usePreference<IssueDisplay['completedFilter'] | 'yes' | 'no'>(`completed:${viewKey}`, props.defaultCompletedFilter ?? (host.minimal ? 'all' : '7d'))
+  const completedFilter = completed === 'yes' ? 'all' : completed === 'no' ? 'hidden' : completed
+  const [dueDateFilter, setDueDateFilter] = usePreference<IssueDisplay['dueDateFilter']>(`due:${viewKey}`, 'any')
   const [showEmpty, setShowEmpty] = usePreference<'yes' | 'no'>(`empty:${viewKey}`, 'yes')
-  return <ConfiguredIssueView {...props} display={{ layout, grouping, ordering, showCompleted: showCompleted === 'yes', showEmpty: showEmpty === 'yes' }} onDisplayChange={(patch) => {
+  return <ConfiguredIssueView {...props} display={{ layout, grouping, ordering, completedFilter, dueDateFilter, showEmpty: showEmpty === 'yes' }} onDisplayChange={(patch) => {
     if (patch.layout) setLayout(patch.layout)
     if (patch.grouping) setGrouping(patch.grouping)
     if (patch.ordering) setOrdering(patch.ordering)
-    if (patch.showCompleted !== undefined) setShowCompleted(patch.showCompleted ? 'yes' : 'no')
+    if (patch.completedFilter) setCompleted(patch.completedFilter)
+    if (patch.dueDateFilter) setDueDateFilter(patch.dueDateFilter)
     if (patch.showEmpty !== undefined) setShowEmpty(patch.showEmpty ? 'yes' : 'no')
   }} />
 }
 
 function ConfiguredIssueView({ title, tabs, actions, issues, loading, teamStates, labelIds, createDefaults, empty, display, onDisplayChange }: IssueViewProps & { display: IssueDisplay; onDisplayChange: (patch: Partial<IssueDisplay>) => void }) {
-  const { layout, grouping, ordering, showCompleted, showEmpty } = display
+  const { layout, grouping, ordering, showEmpty } = display
   const { catalog, states } = useCatalogMaps()
+  const now = useNow()
   const visible = useMemo(
-    () =>
-      showCompleted
-        ? issues
-        : issues.filter((i) => !['completed', 'canceled'].includes(states.get(i.stateId)?.type ?? '')),
-    [issues, showCompleted, states],
+    () => issues.filter((issue) => matchesIssueDisplay(issue, states, display, now)),
+    [issues, display, states, now],
   )
   const groups = useMemo(
     () => {

@@ -4,7 +4,8 @@ export type IssueDisplay = {
   layout: 'list' | 'board'
   grouping: 'state' | 'label'
   ordering: 'manual' | 'priority' | 'updated' | 'created'
-  showCompleted: boolean
+  completedFilter: 'hidden' | 'week' | '7d' | '30d' | 'all'
+  dueDateFilter: 'any' | 'week'
   showEmpty: boolean
 }
 

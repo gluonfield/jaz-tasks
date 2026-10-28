@@ -129,14 +129,15 @@ type Query struct {
 }
 
 type SavedViewUpdateInput struct {
-	Name          graphql.Omittable[*string]  `json:"name,omitempty"`
-	TeamID        graphql.Omittable[*string]  `json:"teamId,omitempty"`
-	LabelIds      graphql.Omittable[[]string] `json:"labelIds,omitempty"`
-	Layout        graphql.Omittable[*string]  `json:"layout,omitempty"`
-	Grouping      graphql.Omittable[*string]  `json:"grouping,omitempty"`
-	Ordering      graphql.Omittable[*string]  `json:"ordering,omitempty"`
-	ShowCompleted graphql.Omittable[*bool]    `json:"showCompleted,omitempty"`
-	ShowEmpty     graphql.Omittable[*bool]    `json:"showEmpty,omitempty"`
+	Name            graphql.Omittable[*string]  `json:"name,omitempty"`
+	TeamID          graphql.Omittable[*string]  `json:"teamId,omitempty"`
+	LabelIds        graphql.Omittable[[]string] `json:"labelIds,omitempty"`
+	Layout          graphql.Omittable[*string]  `json:"layout,omitempty"`
+	Grouping        graphql.Omittable[*string]  `json:"grouping,omitempty"`
+	Ordering        graphql.Omittable[*string]  `json:"ordering,omitempty"`
+	CompletedFilter graphql.Omittable[*string]  `json:"completedFilter,omitempty"`
+	DueDateFilter   graphql.Omittable[*string]  `json:"dueDateFilter,omitempty"`
+	ShowEmpty       graphql.Omittable[*bool]    `json:"showEmpty,omitempty"`
 }
 
 type TeamPayload struct {

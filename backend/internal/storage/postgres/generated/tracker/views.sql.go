@@ -10,22 +10,23 @@ import (
 )
 
 const createSavedView = `-- name: CreateSavedView :one
-INSERT INTO saved_views (id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty)
-VALUES ($1, $2, $3, $4, $5::text[], $6, $7, $8, $9, $10)
-RETURNING id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty
+INSERT INTO saved_views (id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, completed_filter, show_empty, due_date_filter)
+VALUES ($1, $2, $3, $4, $5::text[], $6, $7, $8, $9, $10, $11)
+RETURNING id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, completed_filter, show_empty, due_date_filter
 `
 
 type CreateSavedViewParams struct {
-	ID            string
-	WorkspaceID   string
-	Name          string
-	TeamID        *string
-	LabelIDs      []string
-	Layout        string
-	Grouping      string
-	Ordering      string
-	ShowCompleted bool
-	ShowEmpty     bool
+	ID              string
+	WorkspaceID     string
+	Name            string
+	TeamID          *string
+	LabelIDs        []string
+	Layout          string
+	Grouping        string
+	Ordering        string
+	CompletedFilter string
+	ShowEmpty       bool
+	DueDateFilter   string
 }
 
 func (q *Queries) CreateSavedView(ctx context.Context, arg CreateSavedViewParams) (SavedView, error) {
@@ -38,8 +39,9 @@ func (q *Queries) CreateSavedView(ctx context.Context, arg CreateSavedViewParams
 		arg.Layout,
 		arg.Grouping,
 		arg.Ordering,
-		arg.ShowCompleted,
+		arg.CompletedFilter,
 		arg.ShowEmpty,
+		arg.DueDateFilter,
 	)
 	var i SavedView
 	err := row.Scan(
@@ -51,8 +53,9 @@ func (q *Queries) CreateSavedView(ctx context.Context, arg CreateSavedViewParams
 		&i.Layout,
 		&i.Grouping,
 		&i.Ordering,
-		&i.ShowCompleted,
+		&i.CompletedFilter,
 		&i.ShowEmpty,
+		&i.DueDateFilter,
 	)
 	return i, err
 }
@@ -75,7 +78,7 @@ func (q *Queries) DeleteSavedView(ctx context.Context, arg DeleteSavedViewParams
 }
 
 const listSavedViews = `-- name: ListSavedViews :many
-SELECT id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty FROM saved_views WHERE workspace_id = $1 ORDER BY name, id
+SELECT id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, completed_filter, show_empty, due_date_filter FROM saved_views WHERE workspace_id = $1 ORDER BY name, id
 `
 
 func (q *Queries) ListSavedViews(ctx context.Context, workspaceID string) ([]SavedView, error) {
@@ -96,8 +99,9 @@ func (q *Queries) ListSavedViews(ctx context.Context, workspaceID string) ([]Sav
 			&i.Layout,
 			&i.Grouping,
 			&i.Ordering,
-			&i.ShowCompleted,
+			&i.CompletedFilter,
 			&i.ShowEmpty,
+			&i.DueDateFilter,
 		); err != nil {
 			return nil, err
 		}
@@ -110,7 +114,7 @@ func (q *Queries) ListSavedViews(ctx context.Context, workspaceID string) ([]Sav
 }
 
 const lockSavedView = `-- name: LockSavedView :one
-SELECT id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty FROM saved_views WHERE workspace_id = $1 AND id = $2 FOR UPDATE
+SELECT id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, completed_filter, show_empty, due_date_filter FROM saved_views WHERE workspace_id = $1 AND id = $2 FOR UPDATE
 `
 
 type LockSavedViewParams struct {
@@ -130,8 +134,9 @@ func (q *Queries) LockSavedView(ctx context.Context, arg LockSavedViewParams) (S
 		&i.Layout,
 		&i.Grouping,
 		&i.Ordering,
-		&i.ShowCompleted,
+		&i.CompletedFilter,
 		&i.ShowEmpty,
+		&i.DueDateFilter,
 	)
 	return i, err
 }
@@ -139,22 +144,23 @@ func (q *Queries) LockSavedView(ctx context.Context, arg LockSavedViewParams) (S
 const updateSavedView = `-- name: UpdateSavedView :one
 UPDATE saved_views
 SET name = $1, team_id = $2, label_ids = $3::text[], layout = $4,
-    grouping = $5, ordering = $6, show_completed = $7, show_empty = $8
-WHERE workspace_id = $9 AND id = $10
-RETURNING id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, show_completed, show_empty
+    grouping = $5, ordering = $6, completed_filter = $7, show_empty = $8, due_date_filter = $9
+WHERE workspace_id = $10 AND id = $11
+RETURNING id, workspace_id, name, team_id, label_ids, layout, grouping, ordering, completed_filter, show_empty, due_date_filter
 `
 
 type UpdateSavedViewParams struct {
-	Name          string
-	TeamID        *string
-	LabelIDs      []string
-	Layout        string
-	Grouping      string
-	Ordering      string
-	ShowCompleted bool
-	ShowEmpty     bool
-	WorkspaceID   string
-	ID            string
+	Name            string
+	TeamID          *string
+	LabelIDs        []string
+	Layout          string
+	Grouping        string
+	Ordering        string
+	CompletedFilter string
+	ShowEmpty       bool
+	DueDateFilter   string
+	WorkspaceID     string
+	ID              string
 }
 
 func (q *Queries) UpdateSavedView(ctx context.Context, arg UpdateSavedViewParams) (SavedView, error) {
@@ -165,8 +171,9 @@ func (q *Queries) UpdateSavedView(ctx context.Context, arg UpdateSavedViewParams
 		arg.Layout,
 		arg.Grouping,
 		arg.Ordering,
-		arg.ShowCompleted,
+		arg.CompletedFilter,
 		arg.ShowEmpty,
+		arg.DueDateFilter,
 		arg.WorkspaceID,
 		arg.ID,
 	)
@@ -180,8 +187,9 @@ func (q *Queries) UpdateSavedView(ctx context.Context, arg UpdateSavedViewParams
 		&i.Layout,
 		&i.Grouping,
 		&i.Ordering,
-		&i.ShowCompleted,
+		&i.CompletedFilter,
 		&i.ShowEmpty,
+		&i.DueDateFilter,
 	)
 	return i, err
 }

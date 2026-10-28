@@ -1101,8 +1101,10 @@ func (ec *executionContext) childFields_SavedView(ctx context.Context, field gra
 		return ec.fieldContext_SavedView_grouping(ctx, field)
 	case "ordering":
 		return ec.fieldContext_SavedView_ordering(ctx, field)
-	case "showCompleted":
-		return ec.fieldContext_SavedView_showCompleted(ctx, field)
+	case "completedFilter":
+		return ec.fieldContext_SavedView_completedFilter(ctx, field)
+	case "dueDateFilter":
+		return ec.fieldContext_SavedView_dueDateFilter(ctx, field)
 	case "showEmpty":
 		return ec.fieldContext_SavedView_showEmpty(ctx, field)
 	}
@@ -11831,27 +11833,50 @@ func (ec *executionContext) fieldContext_SavedView_ordering(_ context.Context, f
 	return graphql.NewScalarFieldContext("SavedView", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
-func (ec *executionContext) _SavedView_showCompleted(ctx context.Context, field graphql.CollectedField, obj *storage.SavedView) (ret graphql.Marshaler) {
+func (ec *executionContext) _SavedView_completedFilter(ctx context.Context, field graphql.CollectedField, obj *storage.SavedView) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_SavedView_showCompleted(ctx, field)
+			return ec.fieldContext_SavedView_completedFilter(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
-			return obj.ShowCompleted, nil
+			return obj.CompletedFilter, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_SavedView_showCompleted(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("SavedView", field, false, false, errors.New("field of type Boolean does not have child fields"))
+func (ec *executionContext) fieldContext_SavedView_completedFilter(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SavedView", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _SavedView_dueDateFilter(ctx context.Context, field graphql.CollectedField, obj *storage.SavedView) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_SavedView_dueDateFilter(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DueDateFilter, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_SavedView_dueDateFilter(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("SavedView", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _SavedView_showEmpty(ctx context.Context, field graphql.CollectedField, obj *storage.SavedView) (ret graphql.Marshaler) {
@@ -16428,7 +16453,7 @@ func (ec *executionContext) unmarshalInputSavedViewInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "teamId", "labelIds", "layout", "grouping", "ordering", "showCompleted", "showEmpty"}
+	fieldsInOrder := [...]string{"name", "teamId", "labelIds", "layout", "grouping", "ordering", "completedFilter", "dueDateFilter", "showEmpty"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -16477,13 +16502,20 @@ func (ec *executionContext) unmarshalInputSavedViewInput(ctx context.Context, ob
 				return it, err
 			}
 			it.Ordering = data
-		case "showCompleted":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showCompleted"))
-			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+		case "completedFilter":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("completedFilter"))
+			data, err := ec.unmarshalNString2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ShowCompleted = data
+			it.CompletedFilter = data
+		case "dueDateFilter":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dueDateFilter"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DueDateFilter = data
 		case "showEmpty":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showEmpty"))
 			data, err := ec.unmarshalNBoolean2bool(ctx, v)
@@ -16507,7 +16539,7 @@ func (ec *executionContext) unmarshalInputSavedViewUpdateInput(ctx context.Conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "teamId", "labelIds", "layout", "grouping", "ordering", "showCompleted", "showEmpty"}
+	fieldsInOrder := [...]string{"name", "teamId", "labelIds", "layout", "grouping", "ordering", "completedFilter", "dueDateFilter", "showEmpty"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -16556,13 +16588,20 @@ func (ec *executionContext) unmarshalInputSavedViewUpdateInput(ctx context.Conte
 				return it, err
 			}
 			it.Ordering = graphql.OmittableOf(data)
-		case "showCompleted":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showCompleted"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+		case "completedFilter":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("completedFilter"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.ShowCompleted = graphql.OmittableOf(data)
+			it.CompletedFilter = graphql.OmittableOf(data)
+		case "dueDateFilter":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("dueDateFilter"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DueDateFilter = graphql.OmittableOf(data)
 		case "showEmpty":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("showEmpty"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -22462,8 +22501,13 @@ func (ec *executionContext) _SavedView(ctx context.Context, sel ast.SelectionSet
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "showCompleted":
-			out.Values[i] = ec._SavedView_showCompleted(ctx, field, obj)
+		case "completedFilter":
+			out.Values[i] = ec._SavedView_completedFilter(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dueDateFilter":
+			out.Values[i] = ec._SavedView_dueDateFilter(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

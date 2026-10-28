@@ -31,14 +31,15 @@ func (s *Scope) CreateView(ctx context.Context, view storage.SavedView) (storage
 }
 
 type SavedViewUpdateInput struct {
-	Name          *string
-	TeamID        Optional[string]
-	LabelIDs      []string
-	Layout        *string
-	Grouping      *string
-	Ordering      *string
-	ShowCompleted *bool
-	ShowEmpty     *bool
+	Name            *string
+	TeamID          Optional[string]
+	LabelIDs        []string
+	Layout          *string
+	Grouping        *string
+	Ordering        *string
+	CompletedFilter *string
+	ShowEmpty       *bool
+	DueDateFilter   *string
 }
 
 func (s *Scope) UpdateView(ctx context.Context, id string, in SavedViewUpdateInput) (storage.SavedView, error) {
@@ -63,8 +64,11 @@ func (s *Scope) UpdateView(ctx context.Context, id string, in SavedViewUpdateInp
 		if in.Ordering != nil {
 			view.Ordering = *in.Ordering
 		}
-		if in.ShowCompleted != nil {
-			view.ShowCompleted = *in.ShowCompleted
+		if in.CompletedFilter != nil {
+			view.CompletedFilter = *in.CompletedFilter
+		}
+		if in.DueDateFilter != nil {
+			view.DueDateFilter = *in.DueDateFilter
 		}
 		if in.ShowEmpty != nil {
 			view.ShowEmpty = *in.ShowEmpty
@@ -92,7 +96,9 @@ func (s *Scope) viewCatalog(ctx context.Context) (viewCatalog, error) {
 func (c viewCatalog) check(view *storage.SavedView) error {
 	if view.Name == "" || !slices.Contains([]string{"list", "board"}, view.Layout) ||
 		!slices.Contains([]string{"state", "label"}, view.Grouping) ||
-		!slices.Contains([]string{"manual", "priority", "updated", "created"}, view.Ordering) {
+		!slices.Contains([]string{"manual", "priority", "updated", "created"}, view.Ordering) ||
+		!slices.Contains([]string{"hidden", "week", "7d", "30d", "all"}, view.CompletedFilter) ||
+		!slices.Contains([]string{"any", "week"}, view.DueDateFilter) {
 		return invalid("view requires a name and valid display settings")
 	}
 	if view.TeamID != nil {

@@ -7,6 +7,7 @@ import { SavedViewDialog } from '@/components/saved-view-dialog'
 import { useCatalogMaps, useIssues } from '@/lib/queries'
 import { useSavedViews } from '@/lib/saved-views'
 import { savedViewDefinition, views } from '@/lib/views'
+import { useNow } from '@/lib/use-now'
 
 export const Route = createFileRoute('/_app/views')({ component: Views })
 
@@ -15,6 +16,7 @@ function Views() {
   const { data: saved = [], error, refetch } = useSavedViews()
   const { states, catalog } = useCatalogMaps()
   const { data: issues = [] } = useIssues()
+  const now = useNow()
   return (
     <div className="flex h-full flex-col">
       <ViewHeader
@@ -30,7 +32,7 @@ function Views() {
       <div className="scrollbar-quiet flex-1 overflow-y-auto pb-[var(--safe-area-bottom)]">
         {error && <div className="flex items-center gap-3 px-5 py-3 text-[13px] text-ink-2">Couldn’t load saved views.<Button onClick={() => void refetch()}>Retry</Button></div>}
         {[...saved.map(savedViewDefinition), ...views].map((view) => {
-          const count = issues.filter((i) => view.match(i, { states, viewerId: catalog?.viewer.id })).length
+          const count = issues.filter((i) => view.match(i, { states, viewerId: catalog?.viewer.id, now })).length
           return (
             <Link
               key={view.id}

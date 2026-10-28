@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { gql } from './api'
 import type { SavedView } from './types'
 
-const fields = 'id name teamId labelIds layout grouping ordering showCompleted showEmpty'
+const fields = 'id name teamId labelIds layout grouping ordering completedFilter dueDateFilter showEmpty'
 type ViewInput = Omit<SavedView, 'id'>
 type ViewWrite = { input: ViewInput } | { id: string; patch: Partial<ViewInput> }
 

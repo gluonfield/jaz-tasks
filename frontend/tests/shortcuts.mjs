@@ -110,6 +110,7 @@ try {
     return result.result.value
   }
   await cdp('Emulation.setFocusEmulationEnabled', { enabled: true })
+  await cdp('Page.enable')
   await cdp('Runtime.enable')
   await cdp('Network.enable')
   await cdp('Network.setCacheDisabled', { cacheDisabled: true })
@@ -192,6 +193,17 @@ try {
     control.dispatchEvent(new Event('change', {bubbles: true}))
   })()`)
   const toggle = (text) => evaluate(`Array.from(document.querySelectorAll('label')).find(label => label.textContent.trim() === ${JSON.stringify(text)}).querySelector('input[type=checkbox]').click()`)
+  const dateClock = async (run) => {
+    await cdp('Emulation.setTimezoneOverride', { timezoneId: 'Europe/London' })
+    const script = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: "Date.now = () => window.__tasksNow ?? Date.parse('2026-10-25T23:59:59.500Z')" })
+    try {
+      await run()
+    } finally {
+      await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: script.identifier })
+      await cdp('Emulation.setTimezoneOverride', { timezoneId: '' })
+      await evaluate('Date.now = () => new Date().getTime()')
+    }
+  }
   let labelData
   const labelBoard = async () => {
     if (!labelData) {
@@ -491,6 +503,7 @@ try {
       await until(async () => await evaluate(`location.pathname.startsWith('/issue/${target.key}-')`), 'Team move did not update route')
       const moved = await gql('query ($id: String!) { issue(id: $id) { team { id } } }', { id: moving.id })
       assert.equal(moved.issue.team.id, target.id, 'Team move did not persist')
+      await gql('mutation ($id: String!) { issueDelete(id: $id) { success } }', { id: moving.id })
     },
     async restore() {
       const archived = await create('Restore this keyboard fixture')
@@ -542,10 +555,10 @@ try {
       assert.equal(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Customers}"]')`), false, 'Empty-column setting must survive reload')
       await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
       await toggle('Show empty groups')
-      await click('input[type=checkbox]')
+      await select('Completed tasks', 'hidden')
       assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, completed))}) || !!document.querySelector(${JSON.stringify(card(labels.Admin, completed))})`), false, 'Completed toggle must hide every occurrence')
       assert.ok(await evaluate(`!!document.querySelector(${JSON.stringify(card(labels.Product, open))})`), 'Completed toggle must keep open work')
-      await click('input[type=checkbox]')
+      await select('Completed tasks', '7d')
       await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'list').click()")
       await key('Escape', 'Escape')
       assert.ok(await evaluate(`!!document.querySelector('[role=grid]') && !!document.querySelector(${JSON.stringify(card(labels.Admin, completed))})`), 'List must use label grouping too')
@@ -652,7 +665,7 @@ try {
       await click('[role=dialog] button[type=submit]')
       await until(async () => await evaluate("location.pathname.startsWith('/view/') && !!document.querySelector('[data-issue-id]')"), 'Created view did not open')
       const id = await evaluate("location.pathname.split('/').pop()")
-      const read = async () => (await gql('query { savedViews { id name teamId labelIds layout grouping ordering showCompleted showEmpty } }')).savedViews.find((view) => view.id === id)
+      const read = async () => (await gql('query { savedViews { id name teamId labelIds layout grouping ordering completedFilter dueDateFilter showEmpty } }')).savedViews.find((view) => view.id === id)
       const saved = await read()
       assert.equal(saved.name, 'Customer delivery')
       assert.equal(saved.teamId, team.id)
@@ -660,7 +673,8 @@ try {
       assert.equal(saved.layout, 'board')
       assert.equal(saved.grouping, 'label')
       assert.equal(saved.ordering, 'priority')
-      assert.equal(saved.showCompleted, true)
+      assert.equal(saved.completedFilter, '7d')
+      assert.equal(saved.dueDateFilter, 'any')
       assert.equal(saved.showEmpty, false)
       assert.ok(await evaluate(`!!document.querySelector('[data-issue-group="${labels.Product}"] [data-issue-id="${open.id}"]')`), 'Saved filter must keep matching tasks')
       await evaluate(`localStorage.setItem('jaz-tasks:layout:view:${id}', 'list'); localStorage.setItem('jaz-tasks:grouping:view:${id}', 'state')`)
@@ -707,6 +721,77 @@ try {
       assert.ok(await read(), 'Deletion must require confirmation')
       await evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Confirm delete').click()")
       await until(async () => !(await read()), 'View deletion did not persist')
+    },
+    async date_filters() {
+      await dateClock(async () => {
+        const dateTeam = catalog.teams.nodes.find((candidate) => candidate.key === 'DATE')
+        const preference = `jaz-tasks:completed:team:${dateTeam.id}:all`
+        await evaluate(`localStorage.setItem(${JSON.stringify(preference)}, 'yes')`)
+        await navigate('/team/DATE/all')
+        const fixtures = (await gql('query { issues(first: 250) { nodes { id title team { id } } } }')).issues.nodes.filter((item) => item.team.id === dateTeam.id)
+        const visible = async () => {
+          const ids = await evaluate("Array.from(document.querySelectorAll('[data-issue-id]')).map(row => row.dataset.issueId)")
+          return fixtures.filter((item) => ids.includes(item.id)).map((item) => item.title).sort()
+        }
+        const expect = async (titles) => {
+          const expected = [...titles].sort()
+          await until(async () => JSON.stringify(await visible()) === JSON.stringify(expected), `Expected ${expected.join(', ')}; saw ${(await visible()).join(', ')}`)
+        }
+        const display = () => evaluate("Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Display').click()")
+        const open = ['Open without date', 'Due Monday', 'Due Sunday', 'Due next Monday', 'Due previous Sunday', 'Reopened work']
+        await expect(fixtures.map((item) => item.title))
+        await evaluate(`localStorage.setItem(${JSON.stringify(preference)}, 'no')`)
+        await navigate('/team/DATE/all')
+        await expect(open)
+        await evaluate(`localStorage.removeItem(${JSON.stringify(preference)})`)
+        await navigate('/team/DATE/all')
+        assert.equal(await evaluate('Date.now()'), Date.parse('2026-10-25T23:59:59.500Z'), 'Date scenario must run on Sunday')
+        await expect([...open, 'Done Tuesday', 'Done Sunday', 'Done seven days ago', 'Canceled Sunday'])
+        await display()
+        await select('Completed tasks', 'week')
+        await expect([...open, 'Done Monday midnight', 'Done Tuesday', 'Done Sunday', 'Done seven days ago', 'Done before seven days', 'Canceled Sunday'])
+        await select('Completed tasks', 'hidden')
+        await expect(open)
+        await select('Completed tasks', '30d')
+        await expect([...open, 'Done Monday midnight', 'Done previous Sunday', 'Done Tuesday', 'Done Sunday', 'Done seven days ago', 'Done before seven days', 'Done this month', 'Canceled Sunday'])
+        await select('Completed tasks', 'all')
+        await expect(fixtures.map((item) => item.title))
+        await select('Due date', 'week')
+        await expect(['Due Monday', 'Due Sunday', 'Done Monday midnight', 'Done Sunday', 'Done long ago'])
+        await select('Completed tasks', 'hidden')
+        await expect(['Due Monday', 'Due Sunday'])
+        await select('Completed tasks', 'week')
+        const weekly = ['Due Monday', 'Due Sunday', 'Done Monday midnight', 'Done Sunday']
+        await expect(weekly)
+        await key('Escape', 'Escape')
+        await navigate('/team/DATE/all')
+        await expect(weekly)
+        await display()
+        for (const [name, width, dark] of [['dates-light', 1280, false], ['dates-dark', 1280, true], ['dates-narrow', 390, false]]) {
+          await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 })
+          await evaluate(`document.documentElement.classList.toggle('dark', ${dark})`)
+          await pause(150)
+          assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Date controls overflow the page')
+          const shot = await cdp('Page.captureScreenshot', { format: 'png' })
+          await writeFile(`${output}/${name}.png`, Buffer.from(shot.data, 'base64'))
+        }
+        await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+        await key('Escape', 'Escape')
+        const input = { name: 'Weekly delivery', teamId: dateTeam.id, labelIds: [], layout: 'board', grouping: 'state', ordering: 'manual', completedFilter: 'week', dueDateFilter: 'week', showEmpty: false }
+        const id = (await gql('mutation ($input: SavedViewInput!) { savedViewCreate(input: $input) { id } }', { input })).savedViewCreate.id
+        await navigate(`/view/${id}`)
+        await expect(weekly)
+        await navigate('/views', false)
+        await until(async () => await evaluate(`document.querySelector('a[href="/view/${id}"]')?.textContent.includes('4 issues')`), 'Saved-view count ignores date filters')
+        await click(`a[href="/view/${id}"]`)
+        await expect(weekly)
+        await evaluate(`window.__tasksNow = Date.parse('2026-10-26T00:00:00Z')
+          window.dispatchEvent(new Event('focus'))`)
+        await expect(['Due next Monday'])
+        await click('a[href="/views"]')
+        await until(async () => await evaluate(`document.querySelector('a[href="/view/${id}"]')?.textContent.includes('1 issues')`), 'Week did not advance automatically in the view count')
+        await gql('mutation ($id: String!) { savedViewDelete(id: $id) { success } }', { id })
+      })
     },
     async help() {
       await navigate('/issues')

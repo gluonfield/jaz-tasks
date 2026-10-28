@@ -19,7 +19,7 @@ func (mutationResolver) SavedViewUpdate(ctx context.Context, id string, input Sa
 	return ref(scope(ctx).UpdateView(ctx, id, tracker.SavedViewUpdateInput{
 		Name: input.Name.Value(), TeamID: omittable(input.TeamID), LabelIDs: input.LabelIds.Value(),
 		Layout: input.Layout.Value(), Grouping: input.Grouping.Value(), Ordering: input.Ordering.Value(),
-		ShowCompleted: input.ShowCompleted.Value(), ShowEmpty: input.ShowEmpty.Value(),
+		CompletedFilter: input.CompletedFilter.Value(), ShowEmpty: input.ShowEmpty.Value(), DueDateFilter: input.DueDateFilter.Value(),
 	}))
 }
 
